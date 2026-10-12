@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy OS - Onboarding</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Efectos de luz de fondo para dar la vibra de Galaxia -->
+    <div class="ambient-light light-1"></div>
+    <div class="ambient-light light-2"></div>
+
+    <div class="onboarding-container">
+        <div class="brand-header">
+            <!-- Logo minimalista en SVG de Galaxy OS -->
+            <svg class="galaxy-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="4" fill="url(#galaxy-grad)"/>
+                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(30 16 16)" stroke="url(#galaxy-grad)" stroke-width="1.5"/>
+                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(-30 16 16)" stroke="url(#galaxy-grad)" stroke-width="1.5"/>
+                <defs>
+                    <linearGradient id="galaxy-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#00f2fe" />
+                        <stop offset="1" stop-color="#4facfe" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span class="brand-text">Galaxy OS</span>
+        </div>
+
+        <!-- PASO 1: Tipo de Negocio -->
+        <div id="step-1" class="step active">
+            <h2>Configura tu entorno</h2>
+            <p class="subtitle">Selecciona la industria de tu negocio para adaptar el núcleo de la IA.</p>
+            <div class="input-group">
+                <select id="business_type" class="input-field custom-select">
+                    <option value="" disabled selected>Elige una industria...</option>
+                    <option value="textil">Tienda Textil / Sábanas</option>
+                    <option value="clinica">Clínica / Salud</option>
+                    <option value="supermercado">Supermercado</option>
+                    <option value="restaurante">Restaurante</option>
+                    <option value="servicios">Servicios Profesionales</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="nextStep(2)">Continuar</button>
+        </div>
+
+        <!-- PASO 2: Detalles del Negocio -->
+        <div id="step-2" class="step hidden">
+            <h2>Detalles del Negocio</h2>
+            <p class="subtitle">Personaliza la identidad de tu agente autónomo.</p>
+            
+            <div class="input-group">
+                <input type="text" id="business_name" class="input-field" placeholder="Nombre del Negocio (Ej: Confort Hogar Cumaná)">
+            </div>
+            <div class="input-group">
+                <textarea id="ai_prompt" class="input-field" rows="3" placeholder="Instrucciones para la IA (Tono de voz, directrices...)"></textarea>
+            </div>
+            <div class="row">
+                <input type="text" id="currency" class="input-field" value="USD" placeholder="Moneda (USD, VES)">
+                <input type="text" id="timezone" class="input-field" value="America/Caracas" placeholder="Zona Horaria">
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(1)">Atrás</button>
+                <button class="btn btn-primary" onclick="nextStep(3)">Continuar</button>
+            </div>
+        </div>
+
+        <!-- PASO 3: Datos del Propietario -->
+        <div id="step-3" class="step hidden">
+            <h2>Acceso Ejecutivo</h2>
+            <p class="subtitle">Crea las credenciales de administrador (Owner).</p>
+
+            <div class="input-group">
+                <input type="text" id="owner_full_name" class="input-field" placeholder="Nombre Completo">
+            </div>
+            <div class="input-group">
+                <input type="email" id="owner_email" class="input-field" placeholder="Correo Electrónico">
+            </div>
+            <div class="input-group">
+                <input type="text" id="owner_phone" class="input-field" placeholder="Teléfono (Ej: +58 414...)">
+            </div>
+            <div class="input-group">
+                <input type="password" id="owner_password" class="input-field" placeholder="Contraseña segura">
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="prevStep(2)">Atrás</button>
+                <button class="btn btn-primary btn-launch" onclick="submitOnboarding()">Lanzar Sistema 🚀</button>
+            </div>
+        </div>
+
+        <!-- PASO 4: Éxito -->
+        <div id="step-4" class="step hidden text-center">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+            <h2>¡Despliegue Exitoso!</h2>
+            <p class="subtitle">Tu ecosistema Galaxy está en línea y operando.</p>
+            <div class="id-box">
+                <span class="id-label">SYSTEM ID / TENANT</span>
+                <strong id="final_business_id">Generando...</strong>
+            </div>
+            <button class="btn btn-primary btn-full" onclick="goToDashboard()">Inicializar Dashboard</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

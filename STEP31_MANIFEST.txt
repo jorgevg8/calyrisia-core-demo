@@ -1,0 +1,6 @@
+STEP=31
+NAME=Business Onboarding
+BASE=Galaxy Core Paso 30 MVP Integrado V1
+ONBOARDING_URL=/onboarding/
+API_CREATE=/api/v1/onboarding/business
+API_SUMMARY=/api/v1/onboarding/business/{business_id}

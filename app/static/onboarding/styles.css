@@ -1,0 +1,273 @@
+:root {
+    --primary-color: #00f2fe;
+    --primary-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+    --bg-dark: #090e17; /* Azul/Negro ultra profundo */
+    --card-bg: rgba(22, 27, 40, 0.65); /* Cristal oscuro */
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --input-bg: rgba(0, 0, 0, 0.25);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --input-focus: rgba(0, 242, 254, 0.3);
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-dark);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    color: var(--text-main);
+    overflow: hidden; /* Para contener las luces ambientales */
+}
+
+/* Luces de fondo estilo Nebula */
+.ambient-light {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    z-index: -1;
+    opacity: 0.5;
+}
+
+.light-1 {
+    top: -10%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: rgba(79, 172, 254, 0.4);
+}
+
+.light-2 {
+    bottom: -20%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: rgba(124, 58, 237, 0.3);
+}
+
+/* Panel principal (Glassmorphism) */
+.onboarding-container {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 45px 40px;
+    border-radius: 24px;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 10;
+}
+
+/* Marca superior */
+.brand-header {
+    text-align: center;
+    margin-bottom: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.galaxy-logo {
+    width: 32px;
+    height: 32px;
+    animation: rotateSlow 20s linear infinite;
+}
+
+.brand-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+/* Títulos y textos */
+h2 {
+    margin: 0 0 8px 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    margin: 0 0 25px 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    font-weight: 300;
+}
+
+/* Campos de entrada */
+.step {
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--input-border);
+    border-radius: 12px;
+    box-sizing: border-box;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: #ffffff;
+    background-color: var(--input-bg);
+    transition: all 0.3s ease;
+}
+
+.input-field::placeholder {
+    color: #64748b;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 0 4px var(--input-focus);
+}
+
+textarea.input-field {
+    resize: vertical;
+    min-height: 90px;
+}
+
+.row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 16px;
+}
+
+/* Select adaptado a fondo oscuro */
+.custom-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    cursor: pointer;
+}
+
+.custom-select option {
+    background-color: var(--bg-dark);
+    color: #fff;
+}
+
+/* Botones */
+.btn-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.btn {
+    padding: 14px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-primary {
+    background: var(--primary-gradient);
+    color: #000;
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.5);
+    background: linear-gradient(135deg, #26f3fe 0%, #68baff 100%);
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.btn-full { width: 100%; }
+.btn-launch { flex: 2; }
+
+/* Utilidades */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+
+/* Pantalla final (Éxito) */
+.success-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(0, 242, 254, 0.1);
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.success-icon svg {
+    width: 30px;
+    height: 30px;
+}
+
+.id-box {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px dashed rgba(0, 242, 254, 0.4);
+    padding: 18px;
+    border-radius: 12px;
+    margin: 25px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.id-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 1.5px;
+}
+
+#final_business_id {
+    word-break: break-all;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    color: #ffffff;
+    font-size: 0.95rem;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); filter: blur(4px); }
+    to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

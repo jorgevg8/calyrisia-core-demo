@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galaxy Operations Center</title>
+  <style>
+    :root{--bg:#0b0f19;--surface:#151c2c;--border:#2e3a53;--text:#f8fafc;--muted:#94a3b8;--primary:#3b82f6;--success:#10b981;--danger:#ef4444;--warning:#f59e0b}
+    *{box-sizing:border-box;font-family:Arial,sans-serif} body{margin:0;background:var(--bg);color:var(--text);padding:24px}
+    .wrap{max-width:1100px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.btn{border:0;border-radius:8px;padding:10px 14px;background:var(--primary);color:#fff;cursor:pointer}.btn.danger{background:var(--danger)}.btn.outline{background:transparent;border:1px solid var(--border)}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px}.label{color:var(--muted);font-size:12px;text-transform:uppercase}.value{font-size:28px;font-weight:700;margin-top:6px}
+    .item{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}.row{display:flex;justify-content:space-between;gap:12px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;background:#22304a;margin-right:6px}.tag.warn{background:#4a3412;color:#fbbf24}.tag.ok{background:#103a2b;color:#34d399}.tag.danger{background:#451b1b;color:#f87171}.muted{color:var(--muted);font-size:13px}.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}.empty{padding:36px;text-align:center;color:var(--muted)}
+    @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><h1 style="margin:0">Galaxy Operations Center</h1><div class="muted" id="tenant">Tenant: —</div></div><div class="actions"><button class="btn" onclick="loadQueue()">Actualizar</button><button class="btn outline" onclick="window.location='/dashboard/'">Dashboard</button></div></div>
+  <div class="grid">
+    <div class="card"><div class="label">Aprobaciones pendientes</div><div class="value" id="pending">0</div></div>
+    <div class="card"><div class="label">Aprobaciones expiradas</div><div class="value" id="expired">0</div></div>
+    <div class="card"><div class="label">Handoffs abiertos</div><div class="value" id="handoffs">0</div></div>
+    <div class="card"><div class="label">Total</div><div class="value" id="total">0</div></div>
+  </div>
+  <div id="queue"></div>
+</div>
+<script>
+const token=localStorage.getItem('galaxy_token');
+const esc=(s)=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function headers(){return {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}}
+async function loadQueue(){
+  if(!token){window.location='/dashboard/';return;}
+  const r=await fetch('/api/v1/operations/queue',{headers:headers()});
+  if(!r.ok){document.getElementById('queue').innerHTML='<div class="empty">No fue posible cargar la cola. Inicia sesión nuevamente.</div>';return;}
+  const d=await r.json();
+  document.getElementById('tenant').innerText=`Tenant: ${d.business_id}`;
+  document.getElementById('pending').innerText=d.counts.approvals_pending??0;
+  document.getElementById('expired').innerText=d.counts.approvals_expired??0;
+  document.getElementById('handoffs').innerText=d.counts.handoffs_open??0;
+  document.getElementById('total').innerText=d.counts.total??0;
+  if(!d.items?.length){document.getElementById('queue').innerHTML='<div class="empty">No hay tareas pendientes.</div>';return;}
+  document.getElementById('queue').innerHTML=d.items.map(i=>i.type==='approval'?approvalHtml(i):handoffHtml(i)).join('');
+}
+function approvalHtml(i){
+  const expired=i.status==='expired';
+  return `<div class="item"><div class="row"><div><strong>Approval</strong> <span class="tag ${expired?'danger':'warn'}">${esc(i.status)}</span></div><div class="muted">${esc(i.tool_name||i.action_type||'workflow')}</div></div><p>${esc(i.reason||'Sin motivo')}</p><div class="muted">ID: ${esc(i.id)} · Action: ${esc(i.action_id)}</div><div class="actions">${expired?'':`<button class="btn" onclick="decide('${i.id}','approve')">Aprobar</button><button class="btn danger" onclick="decide('${i.id}','reject')">Rechazar</button>`}<button class="btn outline" onclick="viewApproval('${i.id}')">Detalle</button></div></div>`;
+}
+function handoffHtml(i){
+  return `<div class="item"><div class="row"><div><strong>Human Handoff</strong> <span class="tag ok">${esc(i.status)}</span></div><div class="muted">${esc(i.channel||'—')}</div></div><p>${esc(i.reason||'Cliente requiere atención humana')}</p><div class="muted">${esc(i.customer_name||'Cliente')} · Conversation: ${esc(i.id)}</div><div class="actions"><button class="btn" onclick="ack('${i.id}')">Aceptar</button><button class="btn outline" onclick="resolveHandoff('${i.id}')">Resolver</button></div></div>`;
+}
+async function decide(id, decision){const reason=prompt(decision==='approve'?'Razón de aprobación:':'Razón del rechazo:')||'';const r=await fetch(`/api/v1/operations/approvals/${id}/${decision}`,{method:'POST',headers:headers(),body:JSON.stringify({reason})});const d=await r.json();if(!r.ok){alert(d.detail||'No se pudo procesar');return;}await loadQueue();}
+async function ack(id){const r=await fetch(`/api/v1/operations/handoffs/${id}/acknowledge`,{method:'POST',headers:headers(),body:JSON.stringify({reason:'Handoff aceptado desde Operations Center'})});const d=await r.json();if(!r.ok){alert(d.detail||'No se pudo aceptar el handoff');return;}await loadQueue();}
+async function resolveHandoff(id){const r=await fetch(`/api/v1/operations/handoffs/${id}/resolve`,{method:'POST',headers:headers(),body:JSON.stringify({reason:'Handoff resuelto desde Operations Center'})});const d=await r.json();if(!r.ok){alert(d.detail||'No se pudo resolver el handoff');return;}await loadQueue();}
+async function viewApproval(id){const r=await fetch(`/api/v1/operations/approvals/${id}`,{headers:headers()});const d=await r.json();alert(JSON.stringify(d.approval||d,null,2));}
+loadQueue();
+</script>
+</body>
+</html>

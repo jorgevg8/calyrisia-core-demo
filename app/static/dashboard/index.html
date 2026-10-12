@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CALYRISIA | Centro de Mando Premium</title>
+    <!-- Fuentes Premium -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Iconos Profesionales (Phosphor) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        :root {
+            /* Paleta Espacial y Metálica Premium */
+            --primary-color: #00f2fe;
+            --primary-metallic: linear-gradient(135deg, #e0f2fe 0%, #38bdf8 50%, #0284c7 100%);
+            --ai-metallic: linear-gradient(135deg, #f3e8ff 0%, #c084fc 50%, #7e22ce 100%);
+            --money-metallic: linear-gradient(135deg, #d1fae5 0%, #34d399 50%, #059669 100%);
+            --silver-metallic: linear-gradient(135deg, #f8fafc 0%, #cbd5e1 50%, #64748b 100%);
+            
+            --bg-deep-space: #02040a;
+            --glass-bg: rgba(10, 14, 23, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.15);
+            --surface-hover: rgba(255, 255, 255, 0.05);
+            
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(0, 0, 0, 0.3);
+            
+            --success: #10b981;
+            --danger: #f43f5e;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            background-color: var(--bg-deep-space);
+            /* Fondo Espacial con estrellas simuladas y nebulosas */
+            background-image: 
+                radial-gradient(ellipse at 15% 50%, rgba(0, 242, 254, 0.08), transparent 40%),
+                radial-gradient(ellipse at 85% 30%, rgba(139, 92, 246, 0.08), transparent 40%),
+                url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="1" fill="rgba(255,255,255,0.03)"/><circle cx="80" cy="70" r="1.5" fill="rgba(255,255,255,0.04)"/><circle cx="50" cy="90" r="0.5" fill="rgba(255,255,255,0.02)"/></svg>');
+            background-size: cover, cover, 150px 150px;
+            color: var(--text-main); 
+            font-family: 'Inter', sans-serif;
+            display: flex; height: 100vh; overflow: hidden; position: relative; 
+        }
+
+        h1, h2, h3, h4, h5 { font-family: 'Outfit', sans-serif; letter-spacing: -0.02em; font-weight: 500; }
+        .muted { color: var(--text-muted); font-weight: 300; }
+        .hidden { display: none !important; }
+
+        /* Animaciones Premium */
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); filter: blur(5px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
+        @keyframes glowPulse { 0% { box-shadow: 0 0 15px rgba(0, 242, 254, 0.1); } 50% { box-shadow: 0 0 30px rgba(0, 242, 254, 0.3); } 100% { box-shadow: 0 0 15px rgba(0, 242, 254, 0.1); } }
+
+        .animate-fade-up { animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .delay-1 { animation-delay: 0.1s; } .delay-2 { animation-delay: 0.2s; } .delay-3 { animation-delay: 0.3s; }
+
+        /* Custom Scrollbar Cromado */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        /* Glassmorphism Metálico */
+        .glass-panel { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); 
+            border: 1px solid var(--glass-border); 
+            border-top: 1px solid var(--glass-highlight);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.05); 
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+        }
+
+        /* Botones e Inputs UX Fluid */
+        input, select { 
+            width: 100%; border-radius: 12px; padding: 14px 18px; border: 1px solid var(--glass-border); 
+            font-size: 14px; background: var(--input-bg); color: var(--text-main); transition: all 0.3s ease; 
+        }
+        input:focus, select:focus { outline: none; border-color: var(--primary-color); background: rgba(0,0,0,0.5); box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.15);}
+        
+        button { 
+            border-radius: 12px; padding: 12px 24px; font-size: 14px; font-weight: 600; cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: 'Outfit', sans-serif;
+            text-transform: uppercase; letter-spacing: 0.5px; font-size: 12px;
+        }
+        .btn-action { background: var(--primary-metallic); color: #000; border: none; box-shadow: 0 8px 20px -6px rgba(0, 242, 254, 0.5); }
+        .btn-action:hover { transform: scale(1.02) translateY(-2px); filter: brightness(1.15); box-shadow: 0 12px 25px -6px rgba(0, 242, 254, 0.7); }
+        .btn-money { background: var(--money-metallic); color: #000; border: none; box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.5); }
+        .btn-money:hover { transform: scale(1.02) translateY(-2px); filter: brightness(1.15); }
+        .btn-secondary { background: var(--surface-hover); border: 1px solid var(--glass-border); color: var(--text-main); }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255,255,255,0.2); transform: translateY(-1px);}
+        .btn-logout { background: transparent; border: 1px solid rgba(244, 63, 94, 0.3); color: #fb7185; }
+
+        /* Sidebar Simplificada y Animada */
+        .sidebar { width: 270px; display: flex; flex-direction: column; background: rgba(2, 4, 10, 0.6); backdrop-filter: blur(40px); z-index: 10; border-right: 1px solid var(--glass-border);}
+        .sidebar-brand { padding: 35px 25px; margin: 0; display: flex; align-items: center; gap: 12px;}
+        .sidebar-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); margin: 10px 20px; }
+        .sidebar-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin: 15px 25px 5px; font-weight: 600; }
+        
+        .sidebar .nav-item { 
+            padding: 12px 20px; margin: 4px 16px; color: var(--text-muted); font-weight: 400; cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; align-items: center; gap: 14px; border-radius: 12px; font-size: 14px;
+        }
+        .sidebar .nav-item i { font-size: 18px; transition: transform 0.3s ease; opacity: 0.7; }
+        .sidebar .nav-item:hover { color: var(--text-main); background: var(--surface-hover); transform: translateX(6px); }
+        .sidebar .nav-item:hover i { transform: scale(1.1); opacity: 1; color: var(--primary-color); }
+        
+        .sidebar .nav-item.active { 
+            background: linear-gradient(90deg, rgba(0, 242, 254, 0.1) 0%, transparent 100%); 
+            color: #fff; font-weight: 500; border: 1px solid rgba(0, 242, 254, 0.15); 
+        }
+        .sidebar .nav-item.active i { color: var(--primary-color); opacity: 1; }
+
+        /* Topbar y UI Principal */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .topbar { height: 75px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; z-index: 20; }
+        .topbar-info span { font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 2px; }
+        .topbar-info strong { font-size: 13px; font-family: 'Outfit', sans-serif; color: #fff; opacity: 0.8; }
+        
+        .view-section { display: none; padding: 20px 40px 60px; overflow-y: auto; height: calc(100vh - 75px); scroll-behavior: smooth; }
+        .view-section.active { display: block; }
+        .section-header { margin-bottom: 35px; }
+        .section-header h2 { font-size: 28px; font-weight: 500; margin-bottom: 6px; color: #fff; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Grids y Cartas de Datos */
+
+        .payment-alert { margin: 0 0 24px; padding: 18px 20px; border: 1px solid rgba(245,158,11,.45); background: rgba(120,53,15,.16); border-radius: 16px; display: flex; gap: 16px; justify-content: space-between; align-items: center; }
+        .payment-alert h3 { color: #fbbf24; margin-bottom: 4px; }
+        .payment-rows { display: grid; gap: 12px; }
+        .payment-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px; border-radius: 14px; border: 1px solid var(--glass-border); background: rgba(255,255,255,.025); }
+        .payment-row-main { min-width: 0; }
+        .payment-row-main h4 { margin-bottom: 5px; }
+        .payment-row-main p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+        .payment-row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-payment-approve { background: var(--money-metallic); border: 0; color: #052e16; }
+        .btn-payment-reject { background: rgba(244,63,94,.12); color: #fda4af; border: 1px solid rgba(244,63,94,.35); }
+        .payment-status { display: inline-block; margin-top: 6px; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); }
+        @media (max-width: 640px) { .payment-alert, .payment-row { align-items: stretch; flex-direction: column; } .payment-row-actions button { flex: 1; } }
+
+        .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; margin-bottom: 20px;}
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        
+        .panel { padding: 25px; }
+        .panel h3 { font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; color: var(--text-main); font-weight: 500;}
+        .panel h3 i { color: var(--primary-color); font-size: 20px; }
+
+        .list-item { 
+            padding: 16px; border: 1px solid var(--glass-border); border-radius: 14px; margin-bottom: 12px; 
+            display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); transition: all 0.3s ease; 
+        }
+        .list-item:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.1); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .list-item-content h4 { font-size: 14px; margin-bottom: 4px; color: #fff; font-weight: 500; }
+        .list-item-content p { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+        
+        /* Badges Sutiles */
+        .badge { padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge.danger { background: rgba(244, 63, 94, 0.1); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.2); }
+        .badge.warning { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge.success { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge.ai { background: rgba(139, 92, 246, 0.1); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.2); }
+
+        /* Tarjetas KPI Metálicas */
+        .kpi-card { 
+            padding: 22px; border-radius: 16px; position: relative; overflow: hidden; 
+            background: linear-gradient(180deg, rgba(20, 30, 45, 0.4) 0%, rgba(5, 10, 15, 0.6) 100%);
+            border: 1px solid var(--glass-border); border-top: 1px solid rgba(255,255,255,0.1); transition: all 0.4s ease;
+        }
+        .kpi-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.15); box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5); }
+        .kpi-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .kpi-card-header h3 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500;}
+        .kpi-card .value { font-size: 32px; font-weight: 300; color: #fff; font-family: 'Outfit', sans-serif; letter-spacing: -1px; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+        
+        .opp-value { font-size: 28px; font-weight: 400; font-family: 'Outfit'; margin: 10px 0; background: var(--money-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Modos de Chat Compartidos */
+        .chat-container { display: flex; flex-direction: column; height: 60vh; padding: 0; overflow: hidden; border-radius: 16px; }
+        .chat-box { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-msg { padding: 14px 18px; max-width: 80%; line-height: 1.5; font-size: 13px; animation: fadeUp 0.3s ease-out forwards; }
+        .chat-bot { align-self: flex-start; background: rgba(255,255,255,0.05); border-radius: 16px 16px 16px 4px; border: 1px solid var(--glass-border); color: #e2e8f0; }
+        .chat-user { align-self: flex-end; background: var(--primary-metallic); color: #000; border-radius: 16px 16px 4px 16px; font-weight: 500; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2); }
+        .chat-input-area { padding: 15px 20px; background: rgba(0,0,0,0.4); border-top: 1px solid var(--glass-border); display: flex; gap: 10px; align-items: center; }
+
+        /* WIDGET WEBCHAT OMNICANAL FLOTANTE */
+        .webchat-widget { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; }
+        .webchat-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--primary-metallic); box-shadow: 0 10px 30px rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; font-size: 32px; color: #000; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: none; }
+        .webchat-btn:hover { transform: scale(1.1); box-shadow: 0 15px 35px rgba(0, 242, 254, 0.6); }
+        .webchat-panel { width: 380px; height: 600px; background: rgba(7, 11, 20, 0.95); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transform: translateY(20px) scale(0.95); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); transform-origin: bottom right; }
+        .webchat-panel.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
+        .webchat-header { padding: 20px; background: linear-gradient(180deg, rgba(0,242,254,0.1) 0%, transparent 100%); border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        
+        .login-wrap { display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; position: relative; z-index: 10; }
+        .login-card { padding: 45px; width: 100%; max-width: 400px; animation: fadeUp 0.6s ease-out; }
+    </style>
+</head>
+<body>
+
+<!-- SVG MACRO DEFINITION: EL ÁTOMO CALYRISIA (Reutilizable) -->
+<svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="atom-animated" viewBox="0 0 100 100" fill="none">
+        <defs>
+            <linearGradient id="caly-blue" x1="0" y1="0" x2="100" y2="100"><stop offset="0%" stop-color="#00f2fe"/><stop offset="100%" stop-color="#4facfe"/></linearGradient>
+            <linearGradient id="caly-purple" x1="0" y1="100" x2="100" y2="0"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#4c1d95"/></linearGradient>
+            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+        </defs>
+        
+        <!-- Breathing Core -->
+        <circle cx="50" cy="50" r="10" fill="url(#caly-blue)" filter="url(#glow)">
+            <animate attributeName="r" values="9;12;9" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.7;1;0.7" dur="2s" repeatCount="indefinite" />
+        </circle>
+        <circle cx="50" cy="50" r="4" fill="#ffffff" />
+
+        <!-- Rotating Orbits with Electrons -->
+        <g stroke-width="2" stroke-linecap="round">
+            <g>
+                <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="15s" repeatCount="indefinite"/>
+                <ellipse cx="50" cy="50" rx="40" ry="12" stroke="url(#caly-blue)" opacity="0.6" transform="rotate(30 50 50)"/>
+                <circle cx="90" cy="50" r="2.5" fill="#ffffff" filter="url(#glow)" transform="rotate(30 50 50)">
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="2.5s" repeatCount="indefinite" additive="sum"/>
+                </circle>
+            </g>
+            <g>
+                <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="-360 50 50" dur="20s" repeatCount="indefinite"/>
+                <ellipse cx="50" cy="50" rx="40" ry="12" stroke="url(#caly-purple)" opacity="0.6" transform="rotate(90 50 50)"/>
+                <circle cx="90" cy="50" r="2.5" fill="#ffffff" filter="url(#glow)" transform="rotate(90 50 50)">
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="3s" repeatCount="indefinite" additive="sum"/>
+                </circle>
+            </g>
+            <g>
+                <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="25s" repeatCount="indefinite"/>
+                <ellipse cx="50" cy="50" rx="40" ry="12" stroke="url(#caly-blue)" opacity="0.6" transform="rotate(150 50 50)"/>
+                <circle cx="90" cy="50" r="2.5" fill="#ffffff" filter="url(#glow)" transform="rotate(150 50 50)">
+                    <animateTransform attributeName="transform" type="rotate" from="0 50 50" to="360 50 50" dur="3.5s" repeatCount="indefinite" additive="sum"/>
+                </circle>
+            </g>
+        </g>
+    </symbol>
+</svg>
+
+<!-- PANTALLA DE LOGIN -->
+<div id="loginView" class="login-wrap hidden">
+    <div class="login-card glass-panel">
+        <div class="brand-header" style="justify-content: center; margin-bottom: 35px;">
+            <svg style="width: 48px; height: 48px;"><use href="#atom-animated"></use></svg>
+            <span class="brand-text" style="font-size: 1.8rem; font-weight: 500; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CALYRISIA</span>
+        </div>
+        <form id="loginForm">
+            <div style="margin-bottom: 20px;">
+                <input id="email" type="email" required autocomplete="username" placeholder="Correo Ejecutivo">
+            </div>
+            <div style="margin-bottom: 30px;">
+                <input id="password" type="password" required autocomplete="current-password" placeholder="Clave de Acceso">
+            </div>
+            <button type="submit" class="btn-action" style="width: 100%; padding: 14px;">Ingresar <i class="ph ph-arrow-right"></i></button>
+            <div id="loginError" class="error" style="color: #f43f5e; margin-top: 15px; text-align: center; font-size: 13px;"></div>
+        </form>
+    </div>
+</div>
+
+<!-- DASHBOARD PRINCIPAL -->
+<div id="dashboardView" style="display: flex; width: 100%;" class="hidden">
+    
+    <!-- SIDEBAR SIMPLIFICADA Y ELEGANTE -->
+    <div class="sidebar">
+        <div class="brand-header sidebar-brand">
+            <svg style="width: 32px; height: 32px;"><use href="#atom-animated"></use></svg>
+            <span class="brand-text" style="font-size: 1.1rem; font-weight: 500; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CALYRISIA</span>
+        </div>
+        
+        <div style="padding: 10px 0; flex: 1; display: flex; flex-direction: column; gap: 2px;">
+            <div class="sidebar-label">Vista de Negocio</div>
+            <div class="nav-item active" onclick="switchView('overview')"><i class="ph ph-chart-line-up"></i> Panel Ejecutivo</div>
+            <div class="nav-item" onclick="switchView('crm')"><i class="ph ph-users"></i> Clientes & Riesgo</div>
+            <div class="nav-item" onclick="switchView('operations')"><i class="ph ph-check-square-offset"></i> Aprobaciones <span id="pending-payments-nav-badge" class="badge danger hidden" style="margin-left:auto;">0</span></div>
+            
+            <div class="sidebar-divider"></div>
+            
+            <div class="sidebar-label">Asistencia</div>
+            <div class="nav-item" onclick="switchView('copilot')"><i class="ph ph-sparkle"></i> Copiloto Ejecutivo</div>
+            
+            <div style="margin-top: auto;">
+                <div class="sidebar-divider"></div>
+                <div class="sidebar-label">Configuración & Logs</div>
+                <div class="nav-item" onclick="switchView('team')"><i class="ph ph-users-three"></i> Equipo</div>
+                <div class="nav-item" onclick="switchView('settings')"><i class="ph ph-plugs"></i> Canales</div>
+                <div class="nav-item" onclick="switchView('autonomy')" style="font-size: 12px;"><i class="ph ph-terminal"></i> Developer / Auditoría IA</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="topbar">
+            <div class="topbar-info">
+                <span>Tenant Actual</span>
+                <strong id="display-business-id" style="font-family: monospace; font-weight: normal; color: var(--text-muted);">Cargando...</strong>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <span class="badge success" id="roleBadge" style="background: rgba(16, 185, 129, 0.1); border: none; color: #34d399;"><i class="ph ph-circle-fill" style="font-size: 8px;"></i> ONLINE</span>
+                <button class="btn-secondary" onclick="loadDashboard()" style="padding: 8px 16px;"><i class="ph ph-arrows-clockwise"></i></button>
+                <button class="btn-logout" onclick="logout()" style="padding: 8px 16px;"><i class="ph ph-sign-out"></i></button>
+            </div>
+        </div>
+
+        <!-- VISTA 1: OVERVIEW (Limpia y Ejecutiva) -->
+        <div id="view-overview" class="view-section active">
+            <div class="section-header animate-fade-up">
+                <h2 id="businessName">Panel de Control</h2>
+                <p id="businessMeta" class="muted">Inteligencia y telemetría de negocio simplificada.</p>
+            </div>
+
+            <!-- KPIs Rápidos -->
+            <div class="kpi-grid">
+                <div class="kpi-card animate-fade-up delay-1">
+                    <div class="kpi-card-header"><h3>Ingresos Generados</h3><i class="ph ph-trend-up" style="color: var(--success);"></i></div>
+                    <div class="value" id="kpi-sales">$0.00</div>
+                </div>
+                <div class="kpi-card animate-fade-up delay-1">
+                    <div class="kpi-card-header"><h3>Interacciones IA</h3><i class="ph ph-chats" style="color: var(--primary-color);"></i></div>
+                    <div class="value" id="kpi-chats">0</div>
+                </div>
+                <div class="kpi-card animate-fade-up delay-2">
+                    <div class="kpi-card-header"><h3>Requieren Atención</h3><i class="ph ph-bell-ringing" style="color: var(--warning);"></i></div>
+                    <div class="value" id="kpi-handoffs">0</div>
+                </div>
+                <div class="kpi-card animate-fade-up delay-2">
+                    <div class="kpi-card-header"><h3>Ingresos de Hoy</h3><i class="ph ph-calendar-check" style="color: var(--success);"></i></div>
+                    <div class="value" id="kpi-sales-today">$0.00</div>
+                </div>
+            </div>
+
+            <div id="pending-payments-alert" class="payment-alert hidden">
+                <div>
+                    <h3><i class="ph ph-bell-ringing"></i> Pagos pendientes de revisión</h3>
+                    <p class="muted" id="pending-payments-summary">Hay pagos de Webchat esperando tu aprobación.</p>
+                </div>
+                <button class="btn-payment-approve" onclick="switchView('operations')"><i class="ph ph-check-circle"></i> Revisar pagos</button>
+            </div>
+
+            <!-- Radar de Oportunidades y Anomalías enfocadas en Negocio -->
+            <div class="panel-grid animate-fade-up delay-2">
+                <div class="panel glass-panel opp-card">
+                    <h3><i class="ph ph-sparkle"></i> Oportunidades Listas para Ejecutar</h3>
+                    <div class="list-item" style="flex-direction: column; align-items: flex-start; background: transparent; border-color: rgba(16, 185, 129, 0.2);">
+                        <div style="display: flex; justify-content: space-between; width: 100%;">
+                            <span class="badge ai">VENTA B2B</span>
+                            <span class="badge success" style="background: var(--money-metallic); color: #000; border: none;">Prioridad Alta</span>
+                        </div>
+                        <div class="opp-value">+$1,500.00</div>
+                        <h4>Venta Express - Pantalones Negros (50 unds)</h4>
+                        <p class="muted" style="margin-bottom: 15px;">El cliente solicitó cotización. La IA está lista para despacharla.</p>
+                        <button class="btn-money" style="width: 100%;"><i class="ph ph-check"></i> Ejecutar Automáticamente</button>
+                    </div>
+                </div>
+
+                <div class="panel glass-panel" style="border-color: rgba(244, 63, 94, 0.3);">
+                    <h3 style="color: #fb7185;"><i class="ph ph-warning-octagon"></i> Alertas Operativas</h3>
+                    <div class="list-item" style="background: transparent; border-color: rgba(244, 63, 94, 0.2);">
+                        <div class="list-item-content">
+                            <h4 style="color: #f8fafc;">Caída en tiempo de respuesta</h4>
+                            <p class="muted" style="margin-top: 4px;">El soporte tardó 19 min promedio hoy (Normal: 4 min).</p>
+                        </div>
+                        <button class="btn-secondary" style="padding: 6px 12px; font-size: 10px;">Verificar</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel-grid animate-fade-up delay-3">
+                <div class="panel glass-panel">
+                    <h3><i class="ph ph-brain"></i> Insights Estratégicos</h3>
+                    <div id="insights-container"><div class="list-item"><p class="muted">Analizando datos...</p></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISTA 2: NÚCLEO AUTÓNOMO (La vista Developer oculta de la jerga) -->
+        <div id="view-autonomy" class="view-section">
+            <div class="section-header animate-fade-up">
+                <h2>Cerebro Autónomo & Logs</h2>
+                <p class="muted">Trazabilidad técnica profunda de la Inteligencia Artificial.</p>
+            </div>
+
+            <div class="panel-grid animate-fade-up delay-1">
+                <div class="panel glass-panel">
+                    <h3><i class="ph ph-cpu"></i> Orquestador & Optimización CFO</h3>
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <h4>Enrutamiento de Petición</h4>
+                            <p class="muted" style="margin-top: 4px; font-style: italic; font-size: 11px;">"Necesito comprar urgentemente 50 pantalones..."</p>
+                            <p style="margin-top: 6px; font-size: 11px;"><i class="ph ph-arrow-elbow-down-right"></i> Delegado a: <strong style="color: var(--primary-color);">Sales Agent</strong></p>
+                        </div>
+                    </div>
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <h4>Auditoría de Costos IA</h4>
+                            <p class="muted" style="margin-top: 4px; font-size: 11px;">Costo Token: <strong>$0.0042</strong> | Valor Retorno: <strong>$1500</strong></p>
+                        </div>
+                        <span class="badge success">EXECUTE</span>
+                    </div>
+                </div>
+
+                <div class="panel glass-panel" style="border-color: rgba(139, 92, 246, 0.3);">
+                    <h3 style="color: #c4b5fd;"><i class="ph ph-graduation-cap"></i> Evolución y Aprendizaje</h3>
+                    <div class="list-item" style="border-color: rgba(139, 92, 246, 0.2);">
+                        <div class="list-item-content">
+                            <h4 style="font-size: 12px;">Nueva regla inyectada en memoria</h4>
+                            <p class="muted" style="margin-top: 4px; font-size: 11px;">"Las respuestas en tiempo real aumentan la conversión de ventas B2B un 40%."</p>
+                        </div>
+                        <span class="badge ai">APPLIED</span>
+                    </div>
+                </div>
+
+                <div class="panel glass-panel" style="grid-column: 1 / -1;">
+                    <h3><i class="ph ph-terminal"></i> Terminal de Auditoría Cruda</h3>
+                    <div id="audit-container" style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); height: 250px; overflow-y: auto;">
+                        <p class="muted" style="font-family: monospace; font-size: 11px;">[SYSTEM] Initializing audit stream...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LAS DEMÁS VISTAS MANTIENEN SU ESTRUCTURA BÁSICA -->
+        <div id="view-crm" class="view-section">
+            <div class="section-header"><h2>Clientes & Riesgo</h2><p class="muted">Métricas de satisfacción y prevención de fugas.</p></div>
+            <div class="panel glass-panel"><p class="muted">Analizando base de clientes...</p></div>
+        </div>
+        
+        <div id="view-operations" class="view-section">
+            <div class="section-header"><h2>Centro de Aprobaciones</h2><p class="muted">Valida las solicitudes de pago iniciadas desde el Webchat. La aprobación de esta demo registra la venta en Galaxy; no verifica transferencias reales de Binance.</p></div>
+            <div class="panel glass-panel" style="margin-bottom:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+                    <h3><i class="ph ph-clock-countdown" style="color:var(--warning);"></i> Pagos pendientes</h3>
+                    <button class="btn-secondary" onclick="loadPendingWebchatPayments()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+                </div>
+                <div id="webchat-payment-pending-list" class="payment-rows"><p class="muted">Cargando solicitudes...</p></div>
+            </div>
+            <div class="panel glass-panel">
+                <h3 style="margin-bottom:14px;"><i class="ph ph-receipt"></i> Historial de pagos recientes</h3>
+                <div id="webchat-payment-history-list" class="payment-rows"><p class="muted">Cargando historial...</p></div>
+            </div>
+        </div>
+        
+        <div id="view-team" class="view-section">
+            <div class="section-header"><h2>Gestión de Equipo</h2><p class="muted">Administra los accesos de tu staff.</p></div>
+            <div class="panel glass-panel"><p class="muted">Panel de usuarios corporativos.</p></div>
+        </div>
+        
+        <div id="view-settings" class="view-section">
+            <div class="section-header"><h2>Conexión de Canales</h2><p class="muted">Configura Telegram, WhatsApp y Webhooks.</p></div>
+            <div class="panel glass-panel"><p class="muted">Panel de integraciones API.</p></div>
+        </div>
+
+        <!-- VISTA COPILOT (Clean) -->
+        <div id="view-copilot" class="view-section">
+            <div class="section-header animate-fade-up">
+                <h2>Copiloto Ejecutivo</h2>
+                <p class="muted">Tu asistente personal conectado a los datos de la empresa.</p>
+            </div>
+            <div class="chat-container glass-panel animate-fade-up delay-1">
+                <div class="chat-box" id="copilot-chat-box">
+                    <div class="chat-msg chat-bot">
+                        <strong>Hola Jefe.</strong> Soy el Copiloto de CALYRISIA. Pídeme resúmenes de ventas, estatus de inventario o que redacte un reporte.
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="copilot-input" placeholder="Comanda a tu IA..." onkeypress="if(event.key === 'Enter') sendCopilotMessage()">
+                    <button class="btn-action" style="padding: 12px 18px;" onclick="sendCopilotMessage()"><i class="ph ph-paper-plane-right"></i></button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==============================================
+     NUEVO: WIDGET WEBCHAT OMNICANAL FLOTANTE
+     ============================================== -->
+<div class="webchat-widget">
+    <div class="webchat-panel" id="webchat-panel">
+        <div class="webchat-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <svg style="width: 26px; height: 26px;"><use href="#atom-animated"></use></svg>
+                <div>
+                    <h4 style="font-size: 14px; color: #fff;">Soporte Omnicanal</h4>
+                    <p style="font-size: 10px; color: var(--success);">IA Activa (Simulador)</p>
+                </div>
+            </div>
+            <i class="ph ph-x" style="cursor: pointer; color: var(--text-muted);" onclick="toggleWebchat()"></i>
+        </div>
+        <div class="chat-box" id="webchat-box" style="flex: 1; padding: 20px; overflow-y: auto; background: rgba(0,0,0,0.2);">
+            <div class="chat-msg chat-bot" style="font-size: 12px; background: rgba(255,255,255,0.05); border: none;">
+                Hola! Soy el Agente Virtual. Pruébame enviando un mensaje como si fueras un cliente externo. (Ej: "¿Tienen stock?")
+            </div>
+        </div>
+        <div class="chat-input-area" style="padding: 12px; background: rgba(0,0,0,0.5);">
+            <input type="text" id="webchat-input" placeholder="Escribe un mensaje..." style="border-radius: 20px; padding: 10px 15px; font-size: 12px;" onkeypress="if(event.key === 'Enter') sendWebchatMessage()">
+            <button class="btn-action" style="padding: 10px 14px; border-radius: 50%; min-width: 40px;" onclick="sendWebchatMessage()"><i class="ph ph-paper-plane-right"></i></button>
+        </div>
+    </div>
+    <button class="webchat-btn" onclick="toggleWebchat()">
+        <i class="ph ph-chat-teardrop-dots"></i>
+    </button>
+</div>
+
+<script>
+/* =========================================================================
+   LÓGICA REAL COMPLETA DE CALYRISIA
+========================================================================= */
+
+const tokenKey = 'galaxy_access_token';
+const roleKey = 'galaxy_role';
+let currentBusinessId = null;
+
+// UUIDs de sesión fijos para simular a un cliente específico en el widget webchat
+const demoCustomerId = "11111111-1111-1111-1111-111111111111"; 
+const demoConversationId = "22222222-2222-2222-2222-222222222222";
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function showLogin(message = '') {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.querySelector('.webchat-widget').style.display = 'none';
+    if(message) document.getElementById('loginError').textContent = message;
+}
+
+function showDashboard() {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('dashboardView').classList.remove('hidden');
+    document.querySelector('.webchat-widget').style.display = 'flex';
+}
+
+function switchView(viewId) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar .nav-item').forEach(el => el.classList.remove('active'));
+    const targetView = document.getElementById('view-' + viewId);
+    if (targetView) targetView.classList.add('active');
+    const navItem = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'" + viewId + "'"));
+    if (navItem) navItem.classList.add('active');
+    if (viewId === 'operations') loadPendingWebchatPayments();
+}
+
+function logout(silent = false) {
+    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(roleKey);
+    if(!silent) showLogin('Sesión cerrada de forma segura.');
+}
+
+async function api(path, options = {}) {
+    const token = localStorage.getItem(tokenKey);
+    const headers = { ...(options.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(path, { ...options, headers });
+    
+    if (response.status === 401) {
+        logout(true); showLogin('Token expirado. Identifícate nuevamente.'); throw new Error('unauthorized');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+    return data;
+}
+
+/* ---------------------------------------------------------
+   WIDGET WEBCHAT OMNICANAL
+--------------------------------------------------------- */
+function toggleWebchat() {
+    const panel = document.getElementById('webchat-panel');
+    panel.classList.toggle('open');
+}
+
+async function sendWebchatMessage() {
+    if(!currentBusinessId) return alert("Sincroniza el dashboard primero.");
+    const inputEl = document.getElementById('webchat-input');
+    const message = inputEl.value.trim();
+    if (!message) return;
+
+    const chatBox = document.getElementById('webchat-box');
+    chatBox.innerHTML += `<div class="chat-msg chat-user" style="font-size: 12px; padding: 10px 15px;">${escapeHtml(message)}</div>`;
+    inputEl.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const loadingId = 'loading-web-' + Date.now();
+    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-size: 11px; padding: 10px 15px;"><i class="ph ph-spinner ph-spin"></i> Agente escribiendo...</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        const data = await api("/api/v1/webchat/message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                business_id: currentBusinessId,
+                customer_id: demoCustomerId,
+                conversation_id: demoConversationId,
+                message: message,
+                channel: "webchat"
+            })
+        });
+        
+        document.getElementById(loadingId).remove();
+        let formattedText = escapeHtml(data.response || data.message || "Recibido.").replace(/\n/g, '<br>');
+        chatBox.innerHTML += `<div class="chat-msg chat-bot" style="font-size: 12px; padding: 10px 15px;">${formattedText}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        chatBox.innerHTML += `<div class="chat-msg chat-bot error" style="background: rgba(244, 63, 94, 0.1); color: #fb7185; font-size: 12px;">Error: ${error.message}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+}
+
+/* ---------------------------------------------------------
+   CARGAR AUTONOMÍA Y AUDITORÍA (MODO DEVELOPER)
+--------------------------------------------------------- */
+async function loadAutonomyData() {
+    try {
+        const auditData = await api('/api/v1/autonomy/audit?limit=20');
+        const auditContainer = document.getElementById('audit-container');
+        if (auditData && auditData.length > 0) {
+            auditContainer.innerHTML = '';
+            auditData.forEach(log => {
+                const dateObj = new Date(log.created_at);
+                const timeStr = dateObj.toLocaleTimeString();
+                let colorStr = log.actor === 'AI_AGENT' ? '#c4b5fd' : '#34d399';
+                
+                auditContainer.innerHTML += `
+                    <div style="margin-bottom: 8px; font-family: monospace; font-size: 11px; line-height: 1.4;">
+                        <span style="color: var(--text-muted);">[${timeStr}]</span> 
+                        <span style="color: ${colorStr};">[${escapeHtml(log.actor)}]</span> 
+                        <strong style="color: #fff;">${escapeHtml(log.action)}</strong> 
+                        <span style="color: var(--text-muted); opacity: 0.7;">> ${escapeHtml(JSON.stringify(log.details))}</span>
+                    </div>`;
+            });
+        }
+    } catch (e) { console.error("Error cargando Audit Data:", e); }
+}
+
+/* ---------------------------------------------------------
+   PAGOS PENDIENTES DEL WEBCHAT (DEMO)
+--------------------------------------------------------- */
+function paymentDate(value) {
+    if (!value) return 'Fecha no disponible';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? 'Fecha no disponible' : date.toLocaleString();
+}
+
+function renderPaymentRow(payment, isPending) {
+    const amount = `$${Number(payment.amount || 0).toFixed(2)} ${escapeHtml(payment.currency || 'USD')}`;
+    const method = String(payment.payment_method || '').includes('binance') ? 'Binance (demo)' : escapeHtml(payment.payment_method || 'Pago Webchat');
+    const statusLabel = payment.status === 'approved' ? 'Aprobado' : (payment.status === 'rejected' ? 'Rechazado' : 'Pendiente');
+    const actions = isPending ? `
+        <div class="payment-row-actions">
+            <button class="btn-payment-approve" onclick="decideWebchatPayment('${escapeHtml(payment.id)}','approve')"><i class="ph ph-check"></i> Aprobar pago</button>
+            <button class="btn-payment-reject" onclick="decideWebchatPayment('${escapeHtml(payment.id)}','reject')"><i class="ph ph-x"></i> Rechazar</button>
+        </div>` : `<span class="payment-status">${statusLabel}</span>`;
+    const orderNote = payment.order_id ? `<p>Pedido generado: ${escapeHtml(payment.order_id).slice(0, 8)}…</p>` : '';
+    return `<div class="payment-row">
+        <div class="payment-row-main">
+            <h4>${amount} · ${escapeHtml(payment.customer_name || 'Cliente Webchat')}</h4>
+            <p>${method} · Solicitud ${escapeHtml(payment.id).slice(0, 8)}…</p>
+            <p>Solicitado: ${escapeHtml(paymentDate(payment.created_at))}</p>
+            ${orderNote}${actions}
+        </div>
+    </div>`;
+}
+
+let paymentRefreshInFlight = false;
+async function loadPendingWebchatPayments() {
+    if (paymentRefreshInFlight) return;
+    paymentRefreshInFlight = true;
+    const pendingContainer = document.getElementById('webchat-payment-pending-list');
+    const historyContainer = document.getElementById('webchat-payment-history-list');
+    const navBadge = document.getElementById('pending-payments-nav-badge');
+    const alertBox = document.getElementById('pending-payments-alert');
+    try {
+        const data = await api('/api/v1/dashboard/webchat-payments?status=all&limit=100');
+        const payments = data.payments || [];
+        const pending = payments.filter(p => p.status === 'pending');
+        const history = payments.filter(p => p.status !== 'pending').slice(0, 20);
+
+        if (navBadge) {
+            navBadge.textContent = String(pending.length);
+            navBadge.classList.toggle('hidden', pending.length === 0);
+        }
+        if (alertBox) alertBox.classList.toggle('hidden', pending.length === 0);
+        if (pending.length && document.getElementById('pending-payments-summary')) {
+            const total = pending.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+            document.getElementById('pending-payments-summary').textContent = `${pending.length} solicitud(es) esperan revisión por $${total.toFixed(2)} USD.`;
+        }
+        if (pendingContainer) pendingContainer.innerHTML = pending.length
+            ? pending.map(p => renderPaymentRow(p, true)).join('')
+            : '<p class="muted">No hay pagos pendientes de aprobación.</p>';
+        if (historyContainer) historyContainer.innerHTML = history.length
+            ? history.map(p => renderPaymentRow(p, false)).join('')
+            : '<p class="muted">Todavía no hay pagos aprobados o rechazados.</p>';
+    } catch (error) {
+        console.error('No se pudieron cargar los pagos de Webchat:', error);
+        if (pendingContainer) pendingContainer.innerHTML = `<p style="color:#fda4af;">No se pudieron cargar los pagos: ${escapeHtml(error.message)}</p>`;
+        if (historyContainer) historyContainer.innerHTML = '<p class="muted">Historial no disponible.</p>';
+    } finally {
+        paymentRefreshInFlight = false;
+    }
+}
+
+async function decideWebchatPayment(paymentId, decision) {
+    const actionLabel = decision === 'approve' ? 'aprobar' : 'rechazar';
+    if (!window.confirm(`¿Confirmas ${actionLabel} esta solicitud de pago? ${decision === 'approve' ? 'Se registrará una venta pagada en los ingresos del negocio.' : 'No se registrarán ingresos.'}`)) return;
+    try {
+        const result = await api(`/api/v1/dashboard/webchat-payments/${encodeURIComponent(paymentId)}/decision`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decision })
+        });
+        if (decision === 'approve') {
+            alert(`Pago aprobado. Se registró una venta de $${Number(result.amount || 0).toFixed(2)} USD. Ingresos de hoy: $${Number(result.sales_today || 0).toFixed(2)} USD.`);
+        } else {
+            alert('Solicitud de pago rechazada. No se añadieron ingresos.');
+        }
+        await loadDashboard();
+    } catch (error) {
+        alert(`No se pudo ${actionLabel} el pago: ${error.message}`);
+    }
+}
+
+/* ---------------------------------------------------------
+   CARGAR DASHBOARD PRINCIPAL
+--------------------------------------------------------- */
+async function loadDashboard() {
+    try {
+        const me = await api('/api/v1/auth/me');
+        const user = me.user;
+        if (!['OWNER', 'ADMIN'].includes(user.role)) throw new Error('Credencial sin privilegios de acceso ejecutivo.');
+        
+        currentBusinessId = user.business_id;
+        document.getElementById('display-business-id').textContent = currentBusinessId.split('-')[0] + '...';
+
+        const data = await api('/api/v1/dashboard/overview');
+        document.getElementById('businessName').textContent = data.business?.name || 'Panel de Control';
+
+        const a = data.analytics || {};
+        document.getElementById('kpi-sales').textContent = `$${Number(a.orders?.sales_total || 0).toFixed(2)}`;
+        document.getElementById('kpi-sales-today').textContent = `$${Number(a.orders?.sales_today || 0).toFixed(2)}`;
+        document.getElementById('kpi-chats').textContent = Number(a.conversations_total || 0);
+        document.getElementById('kpi-handoffs').textContent = Number(a.handoffs_total || 0);
+        
+        const insights = document.getElementById('insights-container');
+        insights.innerHTML = '';
+        (data.insights || []).forEach(item => {
+            insights.innerHTML += `
+                <div class="list-item">
+                    <div class="list-item-content"><h4 style="font-size: 13px;">${escapeHtml(item.title || item.focus)}</h4></div>
+                    <span class="badge ${item.status === 'open' ? 'danger' : 'success'}">${escapeHtml(item.status)}</span>
+                </div>`;
+        });
+        
+        if (!insights.children.length) insights.innerHTML = '<div class="list-item"><p class="muted">Telemetría normal. Sin alertas operativas.</p></div>';
+
+        await loadAutonomyData();
+        await loadPendingWebchatPayments();
+        showDashboard();
+
+    } catch (err) {
+        if (err.message !== 'unauthorized') alert(err.message);
+    }
+}
+
+/* ---------------------------------------------------------
+   LÓGICA DE LOGIN
+--------------------------------------------------------- */
+document.getElementById('loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const errorEl = document.getElementById('loginError');
+    errorEl.textContent = '';
+    
+    const body = new URLSearchParams();
+    body.set('username', document.getElementById('email').value.trim().toLowerCase());
+    body.set('password', document.getElementById('password').value);
+    
+    const btn = event.target.querySelector('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Conectando...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/api/v1/auth/login', {
+            method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body,
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'Fallo de autenticación.');
+        if (!['OWNER', 'ADMIN'].includes(data.role)) throw new Error('Acceso denegado: Privilegio insuficiente.');
+        
+        localStorage.setItem(tokenKey, data.access_token);
+        localStorage.setItem(roleKey, data.role);
+        
+        await loadDashboard();
+    } catch (err) { errorEl.textContent = err.message; } finally { btn.innerHTML = originalText; btn.disabled = false; }
+});
+
+/* ---------------------------------------------------------
+   LÓGICA DE OWNER COPILOT
+--------------------------------------------------------- */
+async function sendCopilotMessage(forcedMessage = null) {
+    const inputEl = document.getElementById('copilot-input');
+    const message = forcedMessage || inputEl.value.trim();
+    if (!message) return;
+
+    const chatBox = document.getElementById('copilot-chat-box');
+    chatBox.innerHTML += `<div class="chat-msg chat-user">${escapeHtml(message)}</div>`;
+    if (!forcedMessage) inputEl.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const loadingId = 'loading-' + Date.now();
+    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-style: italic;"><i class="ph ph-spinner ph-spin"></i> Pensando...</div>`;
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        const data = await api("/api/v1/owner/copilot", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: message })
+        });
+        
+        document.getElementById(loadingId).remove();
+        let formattedText = escapeHtml(data.response).replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fff;">$1</strong>');
+        chatBox.innerHTML += `<div class="chat-msg chat-bot">${formattedText}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        chatBox.innerHTML += `<div class="chat-msg chat-bot error" style="background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3);">Fallo de conexión: ${error.message}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+}
+
+/* ---------------------------------------------------------
+   INICIALIZACIÓN
+--------------------------------------------------------- */
+if (localStorage.getItem(tokenKey)) { loadDashboard(); } else { showLogin(); }
+// Mantiene las notificaciones de pago actualizadas aunque el dueño esté en otra vista.
+window.setInterval(() => {
+    if (localStorage.getItem(tokenKey) && !document.hidden) loadPendingWebchatPayments();
+}, 10000);
+</script>
+</body>
+</html>
