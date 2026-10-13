@@ -1,0 +1,206 @@
+warning: in the working copy of 'Dockerfile', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/db.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/main.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'requirements.txt', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/Dockerfile b/Dockerfile[m
+[1mindex 6abfb92..e1777f6 100644[m
+[1m--- a/Dockerfile[m
+[1m+++ b/Dockerfile[m
+[36m@@ -1,34 +1,26 @@[m
+ FROM python:3.11-slim[m
+ [m
+[31m-# Evitar que Python escriba archivos .pyc y forzar salida stdout sin buffer[m
+ ENV PYTHONDONTWRITEBYTECODE=1 \[m
+     PYTHONUNBUFFERED=1 \[m
+     DEBIAN_FRONTEND=noninteractive[m
+ [m
+ WORKDIR /app[m
+ [m
+[31m-# Instalar dependencias del sistema operativo requeridas para compilar psycopg y cryptography[m
+ RUN apt-get update && apt-get install -y --no-install-recommends \[m
+[31m-    gcc \[m
+[31m-    libpq-dev \[m
+[31m-    curl \[m
+[31m-    build-essential \[m
+[32m+[m[32m    gcc libpq-dev curl build-essential \[m
+     && rm -rf /var/lib/apt/lists/*[m
+ [m
+[31m-# Copiar manifiesto de dependencias e instalar[m
+ COPY requirements.txt .[m
+ RUN pip install --no-cache-dir --upgrade pip && \[m
+     pip install --no-cache-dir -r requirements.txt[m
+ [m
+[31m-# Copiar el código fuente completo de la aplicación[m
+ COPY . .[m
+ [m
+[31m-# Crear usuario sin privilegios para evitar ejecutar el servidor como root[m
+ RUN addgroup --system appgroup && adduser --system --group appuser && \[m
+     chown -R appuser:appgroup /app[m
+ USER appuser[m
+ [m
+ EXPOSE 8000[m
+ [m
+[31m-# Arranque en modo producción utilizando workers controlados[m
+[31m-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"][m
+\ No newline at end of file[m
+[32m+[m[32m# Render asigna PORT (por defecto 10000). Un solo worker evita duplicar el heartbeat.[m
+[32m+[m[32mCMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"][m
+[1mdiff --git a/app/db.py b/app/db.py[m
+[1mindex cc17d17..f4206b1 100644[m
+[1m--- a/app/db.py[m
+[1m+++ b/app/db.py[m
+[36m@@ -1,31 +1,30 @@[m
+ from contextlib import asynccontextmanager[m
+[32m+[m
+ from psycopg_pool import ConnectionPool[m
+ [m
+ from app.core.config import get_settings[m
+ [m
+[31m-[m
+ settings = get_settings()[m
+[32m+[m
+ pool = ConnectionPool([m
+     conninfo="",[m
+     kwargs=settings.database_kwargs,[m
+[31m-    min_size=0,[m
+[31m-    max_size=10,[m
+[32m+[m[32m    min_size=1,[m
+[32m+[m[32m    max_size=5,[m
+     open=False,[m
+ )[m
+ [m
+ [m
+ def open_pool() -> None:[m
+[31m-    try:[m
+[31m-        pool.open(wait=False)[m
+[31m-    except Exception:[m
+[31m-        pass[m
+[32m+[m[32m    """Open the PostgreSQL pool only once per worker process."""[m
+[32m+[m[32m    if pool.closed:[m
+[32m+[m[32m        pool.open(wait=True)[m
+ [m
+ [m
+ def close_pool() -> None:[m
+[31m-    try:[m
+[32m+[m[32m    """Close the PostgreSQL pool safely, including repeated shutdown calls."""[m
+[32m+[m[32m    if not pool.closed:[m
+         pool.close()[m
+[31m-    except Exception:[m
+[31m-        pass[m
+ [m
+ [m
+ @asynccontextmanager[m
+[1mdiff --git a/app/main.py b/app/main.py[m
+[1mindex e0b34e8..f125b2e 100644[m
+[1m--- a/app/main.py[m
+[1m+++ b/app/main.py[m
+[36m@@ -338,9 +338,6 @@[m [mdef _get_webchat_demo_business(conn, business_id: Any = None) -> dict:[m
+     }[m
+ [m
+ [m
+[31m-import google.generativeai as genai[m
+[31m-genai.configure(api_key=settings.gemini_api_key)[m
+[31m-[m
+ class OwnerRegistrationRequest(BaseModel):[m
+     email: str[m
+     password: str[m
+[36m@@ -422,19 +419,20 @@[m [masync def _ensure_webchat_payment_schema() -> None:[m
+ [m
+ @asynccontextmanager[m
+ async def lifespan(app: FastAPI):[m
+[31m-    try:[m
+[31m-        open_pool()[m
+[31m-    except Exception as exc:[m
+[31m-        print(f"[Startup DB Notice] {exc}")[m
+[32m+[m[32m    open_pool()[m
+[32m+[m[32m    heartbeat_task = None[m
+     try:[m
+         await _ensure_webchat_payment_schema()[m
+[31m-    except Exception as exc:[m
+[31m-        print(f"[Startup Schema Notice] {exc}")[m
+[31m-    heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())[m
+[31m-    yield[m
+[31m-    heartbeat_task.cancel()[m
+[31m-    close_pool()[m
+[31m-[m
+[32m+[m[32m        heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())[m
+[32m+[m[32m        yield[m
+[32m+[m[32m    finally:[m
+[32m+[m[32m        if heartbeat_task is not None:[m
+[32m+[m[32m            heartbeat_task.cancel()[m
+[32m+[m[32m            try:[m
+[32m+[m[32m                await heartbeat_task[m
+[32m+[m[32m            except asyncio.CancelledError:[m
+[32m+[m[32m                pass[m
+[32m+[m[32m        close_pool()[m
+ [m
+ app = FastAPI([m
+     title="CALYRISIA Core",[m
+[36m@@ -2011,15 +2009,24 @@[m [masync def webchat_stream(payload: IncomingMessage):[m
+             [m
+             Tu respuesta:[m
+             """[m
+[31m-            import google.generativeai as genai[m
+[31m-            model = genai.GenerativeModel('gemini-3.5-flash-lite')[m
+[31m-            [m
+[31m-            response = await model.generate_content_async(prompt_maestro, stream=True)[m
+[31m-            [m
+[31m-            async for chunk in response:[m
+[31m-                if chunk.text:[m
+[31m-                    yield chunk.text[m
+[31m-                    await asyncio.sleep(0.01)[m
+[32m+[m[32m            from google import genai[m
+[32m+[m
+[32m+[m[32m            if not settings.gemini_api_key.strip():[m
+[32m+[m[32m                raise RuntimeError("GEMINI_API_KEY no está configurada.")[m
+[32m+[m
+[32m+[m[32m            client = genai.Client(api_key=settings.gemini_api_key)[m
+[32m+[m[32m            try:[m
+[32m+[m[32m                async with client.aio as async_client:[m
+[32m+[m[32m                    stream = await async_client.models.generate_content_stream([m
+[32m+[m[32m                        model=settings.gemini_model,[m
+[32m+[m[32m                        contents=prompt_maestro,[m
+[32m+[m[32m                    )[m
+[32m+[m[32m                    async for chunk in stream:[m
+[32m+[m[32m                        if chunk.text:[m
+[32m+[m[32m                            yield chunk.text[m
+[32m+[m[32m                            await asyncio.sleep(0.01)[m
+[32m+[m[32m            finally:[m
+[32m+[m[32m                client.close()[m
+                     [m
+         except Exception as exc:[m
+             yield f"Ocurrió un error en nuestros sistemas: {str(exc)}"[m
+[36m@@ -3390,7 +3397,8 @@[m [masync def seed_sample_products(business_id: str | None = Query(default=None)) ->[m
+         raise HTTPException(status_code=500, detail=f"Error al cargar productos: {str(exc)}")[m
+ [m
+ [m
+[31m-if __name__ == __main__:[m
+[31m-    import uvicorn, os[m
+[31m-    port = int(os.environ.get(PORT, settings.app_port or 8000))[m
+[31m-    uvicorn.run(app.main:app, host=0.0.0.0, port=port)[m
+[32m+[m[32mif __name__ == "__main__":[m
+[32m+[m[32m    import os[m
+[32m+[m[32m    import uvicorn[m
+[32m+[m[32m    port = int(os.environ.get("PORT", settings.app_port or 8000))[m
+[32m+[m[32m    uvicorn.run("app.main:app", host="0.0.0.0", port=port)[m
+[1mdiff --git a/requirements.txt b/requirements.txt[m
+[1mindex d5648ed..ee39a24 100644[m
+[1m--- a/requirements.txt[m
+[1m+++ b/requirements.txt[m
+[36m@@ -1,12 +1,9 @@[m
+ fastapi==0.117.1[m
+ uvicorn[standard]==0.36.0[m
+ psycopg[binary,pool]==3.2.10[m
+[31m-psycopg2-binary>=2.9.9[m
+[32m+[m[32mpsycopg2-binary>=2.9.10,<3.0[m
+ pydantic-settings==2.10.1[m
+[31m-pydantic>=2.10.0[m
+ google-genai>=2.11,<3.0[m
+[31m-pyjwt>=2.8.0[m
+[31m-passlib[bcrypt]>=1.7.4[m
+[31m-bcrypt>=4.0.0[m
+[31m-python-multipart>=0.0.9[m
+[31m-httpx>=0.27.0[m
+[32m+[m[32mPyJWT>=2.10,<3.0[m
+[32m+[m[32mpython-multipart>=0.0.20,<1.0[m
+[32m+[m[32mhttpx>=0.27,<1.0[m

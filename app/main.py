@@ -338,9 +338,6 @@ def _get_webchat_demo_business(conn, business_id: Any = None) -> dict:
     }
 
 
-import google.generativeai as genai
-genai.configure(api_key=settings.gemini_api_key)
-
 class OwnerRegistrationRequest(BaseModel):
     email: str
     password: str
@@ -420,21 +417,39 @@ async def _ensure_webchat_payment_schema() -> None:
             print(f'[CALYRISIA][WARN] No se pudo preparar la tabla de pagos demo: {exc}')
 
 
+def _setup_payment_schema_in_worker() -> None:
+    """Best-effort schema setup isolated from the ASGI event loop."""
+    try:
+        asyncio.run(_ensure_webchat_payment_schema())
+    except Exception as exc:
+        print(f"[Startup Schema Notice] {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         open_pool()
     except Exception as exc:
         print(f"[Startup DB Notice] {exc}")
-    try:
-        await _ensure_webchat_payment_schema()
-    except Exception as exc:
-        print(f"[Startup Schema Notice] {exc}")
-    heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())
-    yield
-    heartbeat_task.cancel()
-    close_pool()
 
+    # PostgreSQL can be unreachable/misconfigured on first deploy. Keep the
+    # API process responsive and report database status through /health/ready.
+    schema_task = asyncio.create_task(asyncio.to_thread(_setup_payment_schema_in_worker))
+    heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())
+    try:
+        yield
+    finally:
+        heartbeat_task.cancel()
+        try:
+            await heartbeat_task
+        except asyncio.CancelledError:
+            pass
+        if schema_task.done():
+            try:
+                await schema_task
+            except Exception as exc:
+                print(f"[Shutdown Schema Notice] {exc}")
+        close_pool()
 
 app = FastAPI(
     title="CALYRISIA Core",
@@ -2011,15 +2026,24 @@ async def webchat_stream(payload: IncomingMessage):
             
             Tu respuesta:
             """
-            import google.generativeai as genai
-            model = genai.GenerativeModel('gemini-3.5-flash-lite')
-            
-            response = await model.generate_content_async(prompt_maestro, stream=True)
-            
-            async for chunk in response:
-                if chunk.text:
-                    yield chunk.text
-                    await asyncio.sleep(0.01)
+            from google import genai
+
+            if not settings.gemini_api_key.strip():
+                raise RuntimeError("GEMINI_API_KEY no está configurada.")
+
+            client = genai.Client(api_key=settings.gemini_api_key)
+            try:
+                async with client.aio as async_client:
+                    stream = await async_client.models.generate_content_stream(
+                        model=settings.gemini_model,
+                        contents=prompt_maestro,
+                    )
+                    async for chunk in stream:
+                        if chunk.text:
+                            yield chunk.text
+                            await asyncio.sleep(0.01)
+            finally:
+                client.close()
                     
         except Exception as exc:
             yield f"Ocurrió un error en nuestros sistemas: {str(exc)}"
@@ -3388,9 +3412,3 @@ async def seed_sample_products(business_id: str | None = Query(default=None)) ->
             return {"success": True, "message": f"Se han cargado {len(samples)} productos de prueba con stock a {biz['name']}."}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al cargar productos: {str(exc)}")
-
-
-if __name__ == __main__:
-    import uvicorn, os
-    port = int(os.environ.get(PORT, settings.app_port or 8000))
-    uvicorn.run(app.main:app, host=0.0.0.0, port=port)

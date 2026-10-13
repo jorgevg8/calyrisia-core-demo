@@ -12,11 +12,14 @@ ALGORITHM = "HS256"
 
 
 def get_jwt_secret() -> str:
-    """Return the JWT secret from environment or secure production fallback."""
+    """Return the JWT secret from .env; never use a hardcoded fallback."""
     settings = get_settings()
-    secret = (getattr(settings, "galaxy_jwt_secret", "") or "").strip()
+    secret = settings.galaxy_jwt_secret.strip()
     if len(secret) < 32:
-        return "calyrisia_super_secure_demo_secret_key_2026_production_safe_jwt_token"
+        raise RuntimeError(
+            "GALAXY_JWT_SECRET no está configurado o es demasiado corto. "
+            "Ejecuta scripts\\paso39_security_setup.py antes de iniciar Galaxy."
+        )
     return secret
 
 

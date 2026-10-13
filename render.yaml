@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: calyrisia-core
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: CALYRISIA Core
+      - key: APP_ENV
+        value: production
+      - key: APP_HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PGHOST
+        sync: false
+      - key: PGPORT
+        value: "5432"
+      - key: PGDATABASE
+        sync: false
+      - key: PGUSER
+        sync: false
+      - key: PGPASSWORD
+        sync: false
+      - key: PGSSLMODE
+        value: require
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GALAXY_JWT_SECRET
+        generateValue: true
+      - key: GALAXY_JWT_ALGORITHM
+        value: HS256
+      - key: GALAXY_JWT_EXP_MINUTES
+        value: "1440"
+      - key: GALAXY_JWT_ISSUER
+        value: galaxy-core

@@ -1,10 +1,35 @@
+# Secrets and environment files
 .env
-*.env
+.env.*
+!.env.example
+
+# Python
 .venv/
 venv/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local data, backups and generated artifacts
 backups/
-*.sql
+rollback/
+*.dump
+*.backup
+*.sql.bak
+*backup*.sql
+*backup*.dump
+*.pdf
+*.zip
+*.rar
 *.log
-test.py 
+*.tmp
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+test.py
