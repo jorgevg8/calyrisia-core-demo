@@ -528,9 +528,24 @@ const tokenKey = 'galaxy_access_token';
 const roleKey = 'galaxy_role';
 let currentBusinessId = null;
 
-// UUIDs de sesión fijos para simular a un cliente específico en el widget webchat
-const demoCustomerId = "11111111-1111-1111-1111-111111111111"; 
-const demoConversationId = "22222222-2222-2222-2222-222222222222";
+// La sesión de demo es única por negocio y se crea desde la API; nunca se reutilizan IDs globales.
+let demoCustomerId = null;
+let demoConversationId = null;
+let demoSessionBusinessId = null;
+
+async function ensureDashboardWebchatSession() {
+    if (!currentBusinessId) throw new Error('No hay un negocio autenticado.');
+    if (demoCustomerId && demoSessionBusinessId === currentBusinessId) return;
+    const session = await api('/api/v1/webchat/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ business_id: currentBusinessId, customer_id: null, visitor_name: 'Cliente Demo Dashboard' })
+    });
+    if (!session.success || !session.customer?.id) throw new Error('No se pudo crear una sesión aislada para este negocio.');
+    demoCustomerId = session.customer.id;
+    demoConversationId = null;
+    demoSessionBusinessId = currentBusinessId;
+}
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -571,6 +586,10 @@ function switchView(viewId) {
 }
 
 function logout(silent = false) {
+    demoCustomerId = null;
+    demoConversationId = null;
+    demoSessionBusinessId = null;
+    currentBusinessId = null;
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(roleKey);
     if(!silent) showLogin('Sesión cerrada de forma segura.');
@@ -604,6 +623,12 @@ async function sendWebchatMessage() {
     const message = inputEl.value.trim();
     if (!message) return;
 
+    try {
+        await ensureDashboardWebchatSession();
+    } catch (error) {
+        return showToast('No se pudo iniciar la sesión aislada: ' + error.message, true);
+    }
+
     const chatBox = document.getElementById('webchat-box');
     chatBox.innerHTML += `<div class="chat-msg chat-user" style="font-size: 12px; padding: 10px 15px;">${escapeHtml(message)}</div>`;
     inputEl.value = '';
@@ -627,6 +652,7 @@ async function sendWebchatMessage() {
         });
         
         document.getElementById(loadingId).remove();
+        demoConversationId = data.conversation_id || demoConversationId;
         let formattedText = escapeHtml(data.response || data.message || "Recibido.").replace(/\n/g, '<br>');
         chatBox.innerHTML += `<div class="chat-msg chat-bot" style="font-size: 12px; padding: 10px 15px;">${formattedText}</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -795,6 +821,11 @@ async function loadDashboard() {
         const user = me.user;
         if (!['OWNER', 'ADMIN'].includes(user.role)) throw new Error('Credencial sin privilegios de acceso ejecutivo.');
         
+        if (currentBusinessId !== user.business_id) {
+            demoCustomerId = null;
+            demoConversationId = null;
+            demoSessionBusinessId = null;
+        }
         currentBusinessId = user.business_id;
         localStorage.setItem('calyrisia_current_business_id', currentBusinessId);
         document.getElementById('display-business-id').textContent = currentBusinessId.split('-')[0] + '...';
@@ -953,13 +984,9 @@ async function loadStoreProducts() {
 }
 
 async function seedSampleProducts() {
-    const bizId = (typeof currentBusinessId !== 'undefined' && currentBusinessId) ? currentBusinessId : (localStorage.getItem('calyrisia_current_business_id') || '');
-    const url = bizId ? `/api/v1/products/seed-sample?business_id=${encodeURIComponent(bizId)}` : '/api/v1/products/seed-sample';
     try {
-        const res = await fetch(url, { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Error en la petición');
-        showToast(data.message || 'Productos cargados exitosamente.');
+        const data = await api('/api/v1/products/seed-sample', { method: 'POST' });
+        showToast(data.message || 'Productos de muestra cargados en este negocio.');
         await loadStoreProducts();
     } catch(err) {
         showToast('Error: ' + err.message, true);

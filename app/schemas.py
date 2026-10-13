@@ -46,6 +46,7 @@ class WebchatSessionRequest(BaseModel):
 
 
 class WebchatMessageRequest(BaseModel):
+    business_id: UUID
     customer_id: UUID
     conversation_id: UUID | None = None
     message: str = Field(min_length=1, max_length=10000)

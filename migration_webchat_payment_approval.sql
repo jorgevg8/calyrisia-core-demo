@@ -25,3 +25,24 @@ CREATE INDEX IF NOT EXISTS idx_webchat_payments_business_status_created
 CREATE UNIQUE INDEX IF NOT EXISTS uq_webchat_payment_order_id
     ON public.webchat_payment_requests (order_id)
     WHERE order_id IS NOT NULL;
+
+
+-- Enforce that a payment's customer belongs to that same business. NOT VALID
+-- leaves historical rows untouched while checking all new/changed rows.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_customers_id_business_id
+    ON public.customers (id, business_id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'fk_webchat_payment_customer_tenant'
+          AND conrelid = 'public.webchat_payment_requests'::regclass
+    ) THEN
+        ALTER TABLE public.webchat_payment_requests
+            ADD CONSTRAINT fk_webchat_payment_customer_tenant
+            FOREIGN KEY (customer_id, business_id)
+            REFERENCES public.customers (id, business_id)
+            ON DELETE RESTRICT NOT VALID;
+    END IF;
+END $$;

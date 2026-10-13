@@ -284,48 +284,31 @@ def _clean_business_id(val: Any) -> str | None:
         return None
 
 def _get_webchat_demo_business(conn, business_id: Any = None) -> dict:
-    """Resolve the requested business tenant, or automatically pick the most recent business created."""
+    """Resolve only the requested tenant. Omitted IDs use the fixed demo tenant, never the newest tenant."""
     valid_id = _clean_business_id(business_id)
+    if business_id not in (None, "") and str(business_id).strip().lower() not in ("null", "undefined", "none") and valid_id is None:
+        raise HTTPException(status_code=422, detail="business_id inválido.")
+
+    # The unqualified public demo URL is pinned to one explicit demo tenant.
+    # Never resolve a missing/invalid business ID to whichever tenant was created last.
+    target_id = valid_id or str(WEBCHAT_DEMO_BUSINESS_ID)
     with conn.cursor() as cur:
-        row = None
-        if valid_id:
-            cur.execute(
-                """
-                SELECT id, name, business_type, currency, timezone, status, description
-                FROM businesses
-                WHERE id = %s
-                """,
-                (valid_id,),
-            )
-            row = cur.fetchone()
-
-        # Si no se pasó business_id o no se encontró, seleccionar el negocio más recientemente creado (el tuyo)
-        if not row:
-            cur.execute(
-                """
-                SELECT id, name, business_type, currency, timezone, status, description
-                FROM businesses
-                WHERE status = 'active'
-                ORDER BY created_at DESC
-                LIMIT 1
-                """
-            )
-            row = cur.fetchone()
-
-        # Si no hay ninguno, fallback final al tenant demo
-        if not row:
-            cur.execute(
-                """
-                SELECT id, name, business_type, currency, timezone, status, description
-                FROM businesses
-                WHERE id = %s
-                """,
-                (str(WEBCHAT_DEMO_BUSINESS_ID),),
-            )
-            row = cur.fetchone()
+        cur.execute(
+            """
+            SELECT id, name, business_type, currency, timezone, status, description
+            FROM businesses
+            WHERE id = %s AND status = 'active'
+            LIMIT 1
+            """,
+            (target_id,),
+        )
+        row = cur.fetchone()
 
     if not row:
-        raise HTTPException(status_code=503, detail="No se encontraron negocios activos en la base de datos.")
+        raise HTTPException(
+            status_code=404,
+            detail="El negocio solicitado no existe o está inactivo. Verifica el business_id de tu webchat.",
+        )
 
     return {
         "id": row[0],
@@ -409,6 +392,27 @@ async def _ensure_webchat_payment_schema() -> None:
                 cur.execute("""
                     CREATE UNIQUE INDEX IF NOT EXISTS uq_webchat_payment_order_id
                     ON public.webchat_payment_requests (order_id) WHERE order_id IS NOT NULL
+                """)
+                # Enforce the customer and payment request belong to the same tenant.
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_customers_id_business_id
+                    ON public.customers (id, business_id)
+                """)
+                cur.execute("""
+                    DO $$
+                    BEGIN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM pg_constraint
+                            WHERE conname = 'fk_webchat_payment_customer_tenant'
+                              AND conrelid = 'public.webchat_payment_requests'::regclass
+                        ) THEN
+                            ALTER TABLE public.webchat_payment_requests
+                                ADD CONSTRAINT fk_webchat_payment_customer_tenant
+                                FOREIGN KEY (customer_id, business_id)
+                                REFERENCES public.customers (id, business_id)
+                                ON DELETE RESTRICT NOT VALID;
+                        END IF;
+                    END $$;
                 """)
             conn.commit()
             print('[CALYRISIA] Esquema de pagos demo disponible.')
@@ -1476,34 +1480,35 @@ async def webchat_message(payload: WebchatMessageRequest) -> dict:
     """Customer-facing Webchat endpoint. business_id is injected server-side."""
     async with get_connection() as conn:
         try:
-            # Resolver el negocio directamente desde el cliente en la base de datos
+            # Both identifiers must agree. Never move/recreate a customer under another tenant.
             with conn.cursor() as cur:
                 cur.execute(
                     """
                     SELECT c.business_id, b.name
                     FROM customers c
                     JOIN businesses b ON c.business_id = b.id
-                    WHERE c.id = %s
+                    WHERE c.id = %s AND c.business_id = %s AND b.status = 'active'
                     """,
-                    (str(payload.customer_id),),
+                    (str(payload.customer_id), str(payload.business_id)),
                 )
                 row = cur.fetchone()
                 if row is None:
-                    # Si el customer_id viene de una sesión vieja o negocio anterior,
-                    # lo registramos automáticamente para el negocio activo actual
-                    biz = _get_webchat_demo_business(conn)
-                    business_id = biz["id"]
+                    raise HTTPException(
+                        status_code=404,
+                        detail="La sesión no pertenece a este negocio o ya no existe. Inicia una nueva sesión de Webchat.",
+                    )
+                business_id = row[0]
+
+                if payload.conversation_id is not None:
                     cur.execute(
                         """
-                        INSERT INTO customers (id, business_id, full_name, status, source, first_contact_at, last_interaction_at)
-                        VALUES (%s, %s, 'Visitante Webchat', 'active', 'webchat', NOW(), NOW())
-                        ON CONFLICT (id) DO UPDATE SET business_id = EXCLUDED.business_id
+                        SELECT 1 FROM conversations
+                        WHERE id = %s AND business_id = %s AND customer_id = %s
                         """,
-                        (str(payload.customer_id), str(business_id)),
+                        (str(payload.conversation_id), str(business_id), str(payload.customer_id)),
                     )
-                    conn.commit()
-                else:
-                    business_id = row[0]
+                    if cur.fetchone() is None:
+                        raise HTTPException(status_code=404, detail="La conversación no pertenece a esta sesión.")
 
             internal_payload = IncomingMessage(
                 business_id=business_id,
@@ -1535,19 +1540,26 @@ async def webchat_message(payload: WebchatMessageRequest) -> dict:
 
 
 @app.get("/api/v1/webchat/history/{conversation_id}")
-async def webchat_history(conversation_id: UUID) -> dict:
-    """Return conversation history without exposing the tenant ID to the browser."""
+async def webchat_history(conversation_id: UUID, customer_id: UUID = Query(...)) -> dict:
+    """Return history only when the conversation and customer session belong together."""
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
-                cur.execute("SELECT business_id FROM conversations WHERE id = %s", (str(conversation_id),))
+                cur.execute(
+                    "SELECT business_id FROM conversations WHERE id = %s AND customer_id = %s",
+                    (str(conversation_id), str(customer_id)),
+                )
                 c_row = cur.fetchone()
-                target_biz_id = c_row[0] if c_row else _get_webchat_demo_business(conn)["id"]
+                if not c_row:
+                    raise HTTPException(status_code=404, detail="Conversación no encontrada para esta sesión.")
+                target_biz_id = c_row[0]
 
             conversation = ConversationService(conn).get_conversation(
                 business_id=target_biz_id,
                 conversation_id=conversation_id,
             )
+            if str(conversation.get("customer_id")) != str(customer_id):
+                raise HTTPException(status_code=404, detail="Conversación no encontrada para esta sesión.")
             conversation.pop("business_id", None)
             return {"success": True, "conversation": conversation}
         except ConversationServiceError as exc:
@@ -1581,62 +1593,50 @@ async def webchat_request_payment(payload: dict):
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
-                target_biz_id = None
-                # Prioridad 1: Obtener el negocio directamente del cliente en la BD
+                raw_business_id = payload.get("business_id")
+                provided_business_id = _clean_business_id(raw_business_id)
+                if raw_business_id not in (None, "") and provided_business_id is None:
+                    raise HTTPException(status_code=422, detail="business_id inválido.")
+
+                # A customer session is the authoritative tenant binding. If the caller also
+                # sends a business_id, it must match; a stale customer is never re-homed.
                 if supplied_customer_id:
                     cur.execute("SELECT business_id FROM customers WHERE id = %s", (supplied_customer_id,))
                     c_row = cur.fetchone()
-                    if c_row:
-                        target_biz_id = UUID(str(c_row[0]))
-
-                # Prioridad 2: Si vino business_id en el payload
-                if not target_biz_id and payload.get("business_id"):
-                    try:
-                        raw_b = str(payload.get("business_id"))
-                        cur.execute("SELECT id FROM businesses WHERE id = %s", (raw_b,))
-                        b_row = cur.fetchone()
-                        if b_row:
-                            target_biz_id = UUID(str(b_row[0]))
-                    except Exception:
-                        pass
-
-                # Prioridad 3: Fallback a negocio demo activo
-                if not target_biz_id:
-                    biz = _get_webchat_demo_business(conn)
-                    target_biz_id = UUID(str(biz["id"]))
-
-                business_id = target_biz_id
-
-                customer_row = None
-                if supplied_customer_id:
+                    if not c_row:
+                        raise HTTPException(status_code=404, detail="La sesión del cliente no existe. Inicia una sesión nueva.")
+                    business_id = UUID(str(c_row[0]))
+                    if provided_business_id and str(business_id) != str(provided_business_id):
+                        raise HTTPException(status_code=403, detail="La sesión del cliente pertenece a otro negocio.")
                     cur.execute(
                         "SELECT id FROM customers WHERE id = %s AND business_id = %s",
                         (supplied_customer_id, business_id),
                     )
-                    customer_row = cur.fetchone()
-
-                if customer_row:
-                    customer_id = UUID(str(customer_row[0]))
+                    if not cur.fetchone():
+                        raise HTTPException(status_code=404, detail="Cliente no encontrado para este negocio.")
+                    customer_id = supplied_customer_id
                 else:
-                    cur.execute(
-                        """SELECT id FROM customers
-                           WHERE business_id = %s AND source = 'webchat_payment_demo'
-                           ORDER BY created_at ASC LIMIT 1""",
-                        (business_id,),
-                    )
-                    customer_row = cur.fetchone()
-                    if customer_row:
-                        customer_id = UUID(str(customer_row[0]))
-                    else:
-                        customer_id = uuid4()
+                    if provided_business_id:
                         cur.execute(
-                            """INSERT INTO customers
-                               (id, business_id, full_name, status, source, notes)
-                               VALUES (%s, %s, 'Cliente Webchat Demo', 'active',
-                                       'webchat_payment_demo',
-                                       'Cliente creado para la simulación de pago del Webchat.')""",
-                            (customer_id, business_id),
+                            "SELECT id FROM businesses WHERE id = %s AND status = 'active'",
+                            (provided_business_id,),
                         )
+                        b_row = cur.fetchone()
+                        if not b_row:
+                            raise HTTPException(status_code=404, detail="El negocio no existe o está inactivo.")
+                        business_id = UUID(str(b_row[0]))
+                    else:
+                        biz = _get_webchat_demo_business(conn)
+                        business_id = UUID(str(biz["id"]))
+                    customer_id = uuid4()
+                    cur.execute(
+                        """INSERT INTO customers
+                           (id, business_id, full_name, status, source, notes)
+                           VALUES (%s, %s, 'Cliente Webchat', 'active',
+                                   'webchat_payment_demo',
+                                   'Cliente creado para una solicitud de pago Webchat.')""",
+                        (customer_id, business_id),
+                    )
 
                 payment_id = uuid4()
                 raw_items = payload.get("items") or []
@@ -1644,7 +1644,7 @@ async def webchat_request_payment(payload: dict):
                     try:
                         cur.execute(
                             """SELECT content FROM conversation_messages
-                               WHERE (customer_id = %s OR business_id = %s) AND direction = 'outbound'
+                               WHERE customer_id = %s AND business_id = %s AND direction = 'outbound'
                                ORDER BY created_at DESC LIMIT 5""",
                             (customer_id, business_id),
                         )
@@ -1698,15 +1698,15 @@ async def webchat_request_payment(payload: dict):
 
 
 @app.get("/api/v1/webchat/payment/status/{payment_id}")
-async def webchat_payment_status(payment_id: UUID, business_id: UUID | None = Query(default=None)):
-    """Public status poll."""
+async def webchat_payment_status(payment_id: UUID, business_id: UUID = Query(...)):
+    """Public status poll scoped to the business that created the payment."""
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
                 cur.execute(
                     """SELECT status, order_id, amount, payment_method FROM webchat_payment_requests
-                       WHERE id = %s""",
-                    (payment_id,),
+                       WHERE id = %s AND business_id = %s""",
+                    (payment_id, business_id),
                 )
                 row = cur.fetchone()
             if not row:
@@ -1726,17 +1726,18 @@ async def webchat_payment_status(payment_id: UUID, business_id: UUID | None = Qu
 
 @app.post("/api/v1/webchat/payment/confirm")
 async def webchat_confirm_payment(payload: dict):
-    """Backward-compatible read-only confirmation; it never records revenue from the public client."""
+    """Read-only confirmation scoped to the business that owns the payment."""
     try:
         payment_id = UUID(str(payload.get("payment_id", "")))
+        business_id = UUID(str(payload.get("business_id", "")))
     except (ValueError, TypeError):
-        raise HTTPException(status_code=422, detail="Se requiere payment_id para consultar la aprobación.")
+        raise HTTPException(status_code=422, detail="Se requieren payment_id y business_id para consultar la aprobación.")
     async with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT status, order_id FROM webchat_payment_requests
-                   WHERE id = %s""",
-                (payment_id,),
+                   WHERE id = %s AND business_id = %s""",
+                (payment_id, business_id),
             )
             row = cur.fetchone()
         if not row:
@@ -1760,8 +1761,8 @@ async def dashboard_webchat_payments(
                               p.amount, p.currency, p.status, p.payment_method,
                               p.created_at, p.reviewed_at, p.order_id, p.approval_note
                        FROM webchat_payment_requests p
-                       LEFT JOIN customers c ON c.id = p.customer_id
-                       WHERE (p.business_id = %s OR p.source = 'webchat_demo')"""
+                       LEFT JOIN customers c ON c.id = p.customer_id AND c.business_id = p.business_id
+                       WHERE p.business_id = %s"""
             params: list[Any] = [business_id]
             if status != "all":
                 query += " AND p.status = %s"
@@ -1807,9 +1808,9 @@ async def decide_webchat_payment(
                 cur.execute(
                     """SELECT id, customer_id, amount, currency, status, order_id, payment_method, business_id, items, approval_note
                        FROM webchat_payment_requests
-                       WHERE id = %s
+                       WHERE id = %s AND business_id = %s
                        FOR UPDATE""",
-                    (payment_id,),
+                    (payment_id, business_id),
                 )
                 row = cur.fetchone()
                 if not row:
@@ -1841,11 +1842,9 @@ async def decide_webchat_payment(
                         (customer_id, business_id),
                     )
                     if not cur.fetchone():
-                        cur.execute(
-                            """INSERT INTO customers (id, business_id, full_name, status, source)
-                               VALUES (%s, %s, 'Cliente Webchat', 'active', 'webchat_payment_demo')
-                               ON CONFLICT (id) DO UPDATE SET business_id = EXCLUDED.business_id""",
-                            (customer_id, business_id),
+                        raise HTTPException(
+                            status_code=409,
+                            detail="El cliente asociado al pago no pertenece a este negocio. No se modificaron datos.",
                         )
 
                     cur.execute(
@@ -1879,7 +1878,7 @@ async def decide_webchat_payment(
                         try:
                             cur.execute(
                                 """SELECT content FROM conversation_messages
-                                   WHERE (customer_id = %s OR business_id = %s) AND direction = 'outbound'
+                                   WHERE customer_id = %s AND business_id = %s AND direction = 'outbound'
                                    ORDER BY created_at DESC LIMIT 5""",
                                 (customer_id, business_id),
                             )
@@ -1905,6 +1904,7 @@ async def decide_webchat_payment(
                         (str(business_id),),
                     )
                     owner_products = cur.fetchall()
+                    owner_product_names = {str(op_id): str(op_name) for op_id, op_name in owner_products}
 
                     for it in order_items:
                         qty = float(it.get("qty", 1))
@@ -1914,18 +1914,24 @@ async def decide_webchat_payment(
                         matched_pid = None
                         if raw_pid:
                             try:
-                                matched_pid = str(UUID(str(raw_pid)))
+                                candidate_pid = str(UUID(str(raw_pid)))
                             except Exception:
-                                matched_pid = None
+                                # An invalid product ID must not silently fall back to a name match.
+                                continue
+                            # Do not trust a product ID carried inside a checkout payload.
+                            # It is accepted only if the product belongs to this tenant.
+                            if candidate_pid not in owner_product_names:
+                                continue
+                            matched_pid = candidate_pid
 
-                        if not matched_pid and item_name:
+                        if not matched_pid and not raw_pid and item_name:
                             for op_id, op_name in owner_products:
                                 clean_op = op_name.lower().strip()
                                 if item_name in clean_op or clean_op in item_name:
                                     matched_pid = str(op_id)
                                     break
 
-                        if not matched_pid and item_name:
+                        if not matched_pid and not raw_pid and item_name:
                             kw_list = [w for w in item_name.split() if len(w) > 3 and w not in ("premium", "blanco", "litro", "gourmet", "completa")]
                             for op_id, op_name in owner_products:
                                 if any(kw in op_name.lower() for kw in kw_list):
@@ -1936,31 +1942,34 @@ async def decide_webchat_payment(
                             cur.execute(
                                 """UPDATE inventory
                                    SET quantity = GREATEST(0, quantity - %s)
-                                   WHERE product_id = %s::uuid""",
-                                (qty, matched_pid),
+                                   WHERE product_id = %s::uuid AND business_id = %s::uuid""",
+                                (qty, matched_pid, str(business_id)),
                             )
                             cur.execute(
                                 """INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
-                                   SELECT gen_random_uuid(), %s::uuid, %s::uuid, GREATEST(0, 25.0 - %s), 5.0, 'tienda'
-                                   WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE product_id = %s::uuid)""",
-                                (str(business_id), matched_pid, qty, matched_pid),
+                                   SELECT gen_random_uuid(), %s::uuid, %s::uuid, 0, 0, 'tienda'
+                                   WHERE NOT EXISTS (
+                                       SELECT 1 FROM inventory
+                                       WHERE product_id = %s::uuid AND business_id = %s::uuid
+                                   )""",
+                                (str(business_id), matched_pid, matched_pid, str(business_id)),
                             )
                             print(f"[Calyrisia] Stock descontado exitosamente: {qty} de producto {matched_pid}")
 
                     cur.execute(
                         """UPDATE webchat_payment_requests
-                           SET status = 'approved', business_id = %s, reviewed_at = now(), reviewed_by = %s,
+                           SET status = 'approved', reviewed_at = now(), reviewed_by = %s,
                                order_id = %s, approval_note = 'Aprobado manualmente desde el Dashboard'
-                           WHERE id = %s""",
-                        (business_id, reviewer_id, order_id, payment_id),
+                           WHERE id = %s AND business_id = %s""",
+                        (reviewer_id, order_id, payment_id, business_id),
                     )
                 else:
                     cur.execute(
                         """UPDATE webchat_payment_requests
-                           SET status = 'rejected', business_id = %s, reviewed_at = now(), reviewed_by = %s,
+                           SET status = 'rejected', reviewed_at = now(), reviewed_by = %s,
                                approval_note = 'Rechazado manualmente desde el Dashboard'
-                           WHERE id = %s""",
-                        (business_id, reviewer_id, payment_id),
+                           WHERE id = %s AND business_id = %s""",
+                        (reviewer_id, payment_id, business_id),
                     )
             conn.commit()
         except HTTPException:
@@ -2284,12 +2293,10 @@ async def create_business_and_owner(payload: OnboardingRequest):
                 except Exception:
                     pass
 
-                # Cargar automáticamente los 10 productos en el catálogo e inventario
+                # Un negocio nuevo empieza vacío. Solo se agregan productos si el dueño los indicó.
+                # El stock inicial se establece en cero para no inventar existencias.
                 try:
                     raw_items = _parse_custom_products(payload.products_text) if payload.products_text else []
-                    if not raw_items:
-                        raw_items = _get_default_10_products(payload.business_type, payload.currency)
-                    
                     for item in raw_items:
                         p_id = str(uuid4())
                         cur.execute(
@@ -2304,7 +2311,7 @@ async def create_business_and_owner(payload: OnboardingRequest):
                             INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
                             VALUES (gen_random_uuid(), %s, %s, %s, %s, 'tienda')
                             """,
-                            (str(business_id), p_id, 25.0, 5.0)
+                            (str(business_id), p_id, 0.0, 0.0)
                         )
                 except Exception as p_err:
                     pass
@@ -3352,33 +3359,11 @@ async def list_store_products(business_id: str | None = Query(default=None)) -> 
             biz = _get_webchat_demo_business(conn, business_id)
             target_biz_id = str(biz["id"])
             with conn.cursor() as cur:
-                # Si el negocio no tiene productos aún, sembrar automáticamente los 10 productos con inventario
-                cur.execute(
-                    "SELECT COUNT(*) FROM products WHERE business_id = %s::uuid AND status = 'active'",
-                    (target_biz_id,)
-                )
-                cnt = cur.fetchone()[0]
-                if cnt == 0:
-                    samples = _get_default_10_products(biz.get("business_type") or "supermercado", biz.get("currency") or "USD")
-                    for item in samples:
-                        p_id = str(uuid4())
-                        cur.execute(
-                            """INSERT INTO products (id, business_id, name, price, category, status)
-                               VALUES (%s, %s::uuid, %s, %s, %s, 'active')""",
-                            (p_id, target_biz_id, item["name"], item["price"], item.get("category", "General")),
-                        )
-                        cur.execute(
-                            """INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
-                               VALUES (gen_random_uuid(), %s::uuid, %s::uuid, 25.0, 5.0, 'tienda')""",
-                            (target_biz_id, p_id),
-                        )
-                    conn.commit()
-
                 cur.execute(
                     """
                     SELECT p.id, p.name, p.price, p.category, COALESCE(SUM(i.quantity), 0) as stock
                     FROM products p
-                    LEFT JOIN inventory i ON i.product_id = p.id
+                    LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
                     WHERE p.business_id = %s::uuid AND p.status = 'active'
                     GROUP BY p.id, p.name, p.price, p.category
                     ORDER BY p.name
@@ -3388,12 +3373,17 @@ async def list_store_products(business_id: str | None = Query(default=None)) -> 
                 rows = cur.fetchall()
                 items = [{"id": str(r[0]), "name": r[1], "price": float(r[2]), "category": r[3], "stock": float(r[4])} for r in rows]
                 return {"success": True, "business": biz, "products": items}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al consultar productos: {str(exc)}")
 
 @app.post("/api/v1/products/seed-sample")
-async def seed_sample_products(business_id: str | None = Query(default=None)) -> dict:
+async def seed_sample_products(
+    current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
+) -> dict:
     try:
+        business_id = UUID(current_user["business_id"])
         async with get_connection() as conn:
             biz = _get_webchat_demo_business(conn, business_id)
             samples = _get_default_10_products(biz["business_type"], biz["currency"])
@@ -3410,5 +3400,7 @@ async def seed_sample_products(business_id: str | None = Query(default=None)) ->
                     """, (str(biz["id"]), p_id))
                 conn.commit()
             return {"success": True, "message": f"Se han cargado {len(samples)} productos de prueba con stock a {biz['name']}."}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al cargar productos: {str(exc)}")

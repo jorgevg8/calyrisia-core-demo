@@ -41,6 +41,13 @@ if errorlevel 1 (
   exit /b 1
 )
 
+python scripts\validate_tenant_isolation.py
+if errorlevel 1 (
+  echo ERROR: Fallo la validacion de aislamiento entre negocios. No se subio nada.
+  pause
+  exit /b 1
+)
+
 git diff --check
 if errorlevel 1 (
   echo ERROR: git diff --check encontro un problema. No se subio nada.
@@ -53,7 +60,7 @@ rem This keeps the local file but prevents it from being added to the next commi
 git rm --cached --ignore-unmatch .env >nul 2>&1
 
 rem Explicit staging: do not accidentally upload .env, virtual environments, dumps or test scratch files.
-git add -- .dockerignore .gitignore Dockerfile requirements.txt render.yaml app\core\config.py app\db.py app\main.py app\services\heartbeat_service.py APLICAR_RENDER_FIX.md CALYRISIA_RENDER_FINAL.txt tools\patch_main_for_render.py migration_autonomy_tables.sql migration_paso_19.sql migration_paso_42_business_type_profiles.sql migration_paso_43_knowledge_policy.sql migration_paso_44_customer_360_memory_v2.sql migration_paso_45_workflow_engine_v2.sql migration_paso_46_operations_center_v2.sql migration_webchat_payment_approval.sql seed_permissions_demo.sql SUBIR_A_RENDER.bat
+git add -- .gitattributes .dockerignore .gitignore Dockerfile requirements.txt render.yaml app\core\config.py app\db.py app\main.py app\schemas.py app\static\dashboard\index.html app\static\webchat\app.js app\services\heartbeat_service.py APLICAR_RENDER_FIX.md FIX_AISLAMIENTO_MULTINEGOCIO.md CALYRISIA_RENDER_FINAL.txt scripts\validate_tenant_isolation.py tools\patch_main_for_render.py migration_autonomy_tables.sql migration_paso_19.sql migration_paso_42_business_type_profiles.sql migration_paso_43_knowledge_policy.sql migration_paso_44_customer_360_memory_v2.sql migration_paso_45_workflow_engine_v2.sql migration_paso_46_operations_center_v2.sql migration_webchat_payment_approval.sql seed_permissions_demo.sql SUBIR_A_RENDER.bat
 if errorlevel 1 (
   echo ERROR: No pude preparar los archivos de despliegue/migraciones.
   echo No se hizo commit ni push.
@@ -84,7 +91,7 @@ if not errorlevel 1 (
   goto success
 )
 
-git commit -m "fix: prepare CALYRISIA demo deployment on Render"
+git commit -m "fix: enforce CALYRISIA tenant isolation"
 if errorlevel 1 (
   echo ERROR: El commit fallo. No se hizo push.
   pause

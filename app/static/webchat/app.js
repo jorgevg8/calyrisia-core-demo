@@ -1,10 +1,6 @@
 const urlParams = new URLSearchParams(window.location.search);
+// The tenant comes from this storefront URL. Do not inherit another store from localStorage.
 let targetBusinessId = urlParams.get("business_id");
-
-// Si no viene en la URL, leer del almacenamiento local del navegador
-if (!targetBusinessId) {
-  targetBusinessId = localStorage.getItem("calyrisia_current_business_id") || null;
-}
 
 const state = {
   businessId: targetBusinessId,
@@ -29,7 +25,7 @@ function updateHeaderUI() {
       tenantPill.textContent = `ID: ${state.businessId.slice(0, 8)}...`;
       tenantPill.title = `Tenant activo: ${state.businessId}`;
     } else {
-      tenantPill.textContent = "ID: Modo Demo Global";
+      tenantPill.textContent = "Demo fijo";
     }
   }
   document.title = `${state.bizName} - Asesor IA`;
@@ -188,7 +184,7 @@ function pollPaymentStatus(paymentId, cardId, amount) {
   async function check() {
     if (isFinished) return;
     try {
-      const res = await fetch(`/api/v1/webchat/payment/status/${paymentId}`);
+      const res = await fetch(`/api/v1/webchat/payment/status/${paymentId}?business_id=${encodeURIComponent(state.businessId)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.status === "approved" && !isFinished) {
@@ -297,9 +293,8 @@ async function initializeWebchat() {
     setConnected(true, "En línea");
     addMessage("bot", `¡Hola! Soy el asesor de ${state.bizName}. ¿En qué te puedo ayudar hoy?`);
   } catch (error) {
-    setConnected(false, "Desconectado");
-    addMessage("bot", `¡Hola! Bienvenido a ${state.bizName}. ¿En qué te puedo ayudar hoy?`);
-    setConnected(true, "En línea");
+    setConnected(false, "Sin negocio configurado");
+    addMessage("bot", `No se pudo conectar con este negocio: ${error.message}. Abre el webchat desde el enlace correcto del negocio.`);
   }
 }
 
@@ -328,6 +323,7 @@ async function sendMessage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        business_id: state.businessId,
         customer_id: state.customerId,
         conversation_id: state.conversationId,
         message: text,
