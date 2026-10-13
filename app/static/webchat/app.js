@@ -71,7 +71,7 @@ function addMessage(role, text) {
 
   // 2. Limpiar texto de etiquetas y asteriscos
   let cleanText = (text || "")
-    .replace(/\[BOTON_PAGO:[^\]]+\]/gi, "")
+    .replace(/\[BOTON_PAGO:[^\]]*\]\]|\[BOTON_PAGO:[^\]]*\]/gi, "")
     .replace(/\*\*/g, "")
     .replace(/\*/g, "")
     .trim();
@@ -144,6 +144,7 @@ async function submitDemoPayment(amount, cardId) {
         amount: amount,
         business_id: state.businessId,
         customer_id: state.customerId,
+        conversation_id: state.conversationId,
         payment_method: "Pago Móvil (Demo)",
         items: items
       })
@@ -182,41 +183,57 @@ async function submitDemoPayment(amount, cardId) {
 }
 
 function pollPaymentStatus(paymentId, cardId, amount) {
-  const interval = setInterval(async () => {
+  let isFinished = false;
+  let pollTimeout = null;
+
+  async function check() {
+    if (isFinished) return;
     try {
       const res = await fetch(`/api/v1/webchat/payment/status/${paymentId}`);
-      if (!res.ok) return;
-      const data = await res.json();
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "approved" && !isFinished) {
+          isFinished = true;
+          if (pollTimeout) clearTimeout(pollTimeout);
 
-      if (data.status === "approved") {
-        clearInterval(interval);
-        const statusBox = document.getElementById(`status-box-${cardId}`);
-        if (statusBox) {
-          statusBox.className = "pay-status-box approved";
-          statusBox.innerHTML = `
-            <div style="font-weight: 700; color: #166534;">✅ ¡Pago Aprobado con Éxito!</div>
-            <div style="font-size: 0.8rem; color: #14532d;">Venta registrada por el comercio. Pedido confirmado.</div>
-          `;
-        }
+          const statusBox = document.getElementById(`status-box-${cardId}`);
+          if (statusBox) {
+            statusBox.className = "pay-status-box approved";
+            statusBox.innerHTML = `
+              <div style="font-weight: 700; color: #166534;">✅ ¡Pago Aprobado con Éxito!</div>
+              <div style="font-size: 0.8rem; color: #14532d;">Venta registrada por el comercio. Pedido confirmado.</div>
+            `;
+          }
 
-        // Notificar en el chat en tiempo real
-        addMessage("bot", `🎉 ¡Tu pago de USD ${amount.toFixed(2)} ha sido APROBADO por el comercio! Tu pedido ya está confirmado y en preparación para entrega. ¡Muchas gracias por tu compra en ${state.bizName}!`);
-      } else if (data.status === "rejected") {
-        clearInterval(interval);
-        const statusBox = document.getElementById(`status-box-${cardId}`);
-        if (statusBox) {
-          statusBox.className = "pay-status-box error";
-          statusBox.innerHTML = `
-            <div style="font-weight: 700; color: #991b1b;">❌ Solicitud Rechazada</div>
-            <div style="font-size: 0.8rem; color: #7f1d1d;">El comercio no validó este pago demo.</div>
-          `;
+          addMessage("bot", `🎉 ¡Tu pago de USD ${amount.toFixed(2)} ha sido APROBADO por el comercio! Tu pedido ya está confirmado y en preparación para entrega. ¡Muchas gracias por tu compra en ${state.bizName}!`);
+          return;
+        } else if (data.status === "rejected" && !isFinished) {
+          isFinished = true;
+          if (pollTimeout) clearTimeout(pollTimeout);
+
+          const statusBox = document.getElementById(`status-box-${cardId}`);
+          if (statusBox) {
+            statusBox.className = "pay-status-box error";
+            statusBox.innerHTML = `
+              <div style="font-weight: 700; color: #991b1b;">❌ Solicitud Rechazada</div>
+              <div style="font-size: 0.8rem; color: #7f1d1d;">El comercio ha rechazado este pago.</div>
+            `;
+          }
+
+          addMessage("bot", `La solicitud de pago por USD ${amount.toFixed(2)} fue rechazada por el comercio. Por favor comunícate con atención al cliente para coordinar otro método de pago.`);
+          return;
         }
-        addMessage("bot", `La solicitud de pago no fue aprobada por el comercio. Por favor comunícate con atención al cliente.`);
       }
     } catch (e) {
       console.warn("Polling error:", e);
     }
-  }, 1000);
+
+    if (!isFinished) {
+      pollTimeout = setTimeout(check, 1000);
+    }
+  }
+
+  pollTimeout = setTimeout(check, 1000);
 }
 
 function setConnected(connected, label) {

@@ -599,7 +599,7 @@ function toggleWebchat() {
 }
 
 async function sendWebchatMessage() {
-    if(!currentBusinessId) return alert("Sincroniza el dashboard primero.");
+    if(!currentBusinessId) return showToast('Sincroniza el dashboard primero.', true);
     const inputEl = document.getElementById('webchat-input');
     const message = inputEl.value.trim();
     if (!message) return;
@@ -732,24 +732,57 @@ async function loadPendingWebchatPayments() {
     }
 }
 
+function showToast(msg, isError = false) {
+    let toast = document.getElementById('floating-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'floating-toast';
+        toast.style.cssText = 'position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:12px; font-size:0.9rem; font-weight:600; z-index:99999; display:flex; align-items:center; gap:8px; box-shadow:0 10px 30px rgba(0,0,0,0.5); transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform:translateY(100px); opacity:0; pointer-events:none;';
+        document.body.appendChild(toast);
+    }
+    toast.style.background = isError ? 'rgba(239, 68, 68, 0.95)' : 'rgba(16, 185, 129, 0.95)';
+    toast.style.color = '#ffffff';
+    toast.style.border = isError ? '1px solid #f87171' : '1px solid #34d399';
+    toast.textContent = msg;
+    toast.style.transform = 'translateY(0)';
+    toast.style.opacity = '1';
+    
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+        toast.style.transform = 'translateY(100px)';
+        toast.style.opacity = '0';
+    }, 3500);
+}
+
 async function decideWebchatPayment(paymentId, decision) {
-    const actionLabel = decision === 'approve' ? 'aprobar' : 'rechazar';
-    if (!window.confirm(`¿Confirmas ${actionLabel} esta solicitud de pago? ${decision === 'approve' ? 'Se registrará una venta pagada en los ingresos del negocio.' : 'No se registrarán ingresos.'}`)) return;
+    const rowEl = document.querySelector(`[onclick*="${paymentId}"]`)?.closest('.payment-row');
+    if (rowEl) {
+        rowEl.style.opacity = '0.5';
+        rowEl.style.pointerEvents = 'none';
+        const actionBtn = rowEl.querySelector(decision === 'approve' ? '.btn-payment-approve' : '.btn-payment-reject');
+        if (actionBtn) actionBtn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Procesando...';
+    }
+
     try {
         const result = await api(`/api/v1/dashboard/webchat-payments/${encodeURIComponent(paymentId)}/decision`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ decision })
         });
-        if (decision === 'approve') {
-            alert(`¡Pago Aprobado con éxito!\nSe registró una venta de $${Number(result.amount || 0).toFixed(2)} USD.\nIngresos de hoy: $${Number(result.sales_today || 0).toFixed(2)} USD.\nMétricas del Dashboard actualizadas.`);
-        } else {
-            alert('Solicitud de pago rechazada.');
-        }
-        await loadDashboard();
+
+        showToast(decision === 'approve' 
+            ? `✓ Pago de $${Number(result.amount || 0).toFixed(2)} USD Aprobado. Inventario descontado.` 
+            : `✓ Solicitud de pago rechazada.`);
+
         await loadPendingWebchatPayments();
+        await loadDashboard();
+        await loadStoreProducts();
     } catch (error) {
-        alert(`No se pudo ${actionLabel} el pago: ${error.message}`);
+        if (rowEl) {
+            rowEl.style.opacity = '1';
+            rowEl.style.pointerEvents = 'auto';
+        }
+        showToast(`Error al procesar: ${error.message}`, true);
     }
 }
 
@@ -873,6 +906,66 @@ async function sendCopilotMessage(forcedMessage = null) {
 --------------------------------------------------------- */
 if (localStorage.getItem(tokenKey)) { loadDashboard(); } else { showLogin(); }
 // Mantiene las notificaciones de pago actualizadas aunque el dueño esté en otra vista.
+
+/* ---------------------------------------------------------
+   CATÁLOGO RÁPIDO DE PRODUCTOS (MODAL)
+--------------------------------------------------------- */
+function openCatalogModal() {
+    const modal = document.getElementById('catalogModal');
+    if (modal) modal.style.display = 'flex';
+    loadStoreProducts();
+}
+
+function closeCatalogModal() {
+    const modal = document.getElementById('catalogModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function loadStoreProducts() {
+    const list = document.getElementById('catalogList');
+    if (!list) return;
+    list.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;"><i class="ph ph-spinner ph-spin"></i> Consultando inventario en tiempo real...</p>';
+    const bizId = (typeof currentBusinessId !== 'undefined' && currentBusinessId) ? currentBusinessId : (localStorage.getItem('calyrisia_current_business_id') || '');
+    const url = bizId ? `/api/v1/products/list?business_id=${encodeURIComponent(bizId)}` : '/api/v1/products/list';
+    try {
+        const res = await fetch(url, { cache: "no-store" });
+        const data = await res.json();
+        if (data.products && data.products.length > 0) {
+            list.innerHTML = '';
+            data.products.forEach(p => {
+                const stockVal = Math.round(Number(p.stock || 0));
+                const stockColor = stockVal > 10 ? '#10b981' : (stockVal > 0 ? '#f59e0b' : '#ef4444');
+                list.innerHTML += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${escapeHtml(p.name)}</div>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">${escapeHtml(p.category || 'General')} · Stock: <strong style="color: ${stockColor}; font-size: 0.85rem;">${stockVal}</strong> unid.</span>
+                        </div>
+                        <div style="font-size: 1rem; font-weight: 700; color: #00f2fe;">$${Number(p.price || 0).toFixed(2)}</div>
+                    </div>`;
+            });
+        } else {
+            list.innerHTML = '<p class="muted" style="text-align: center; padding: 20px;">No hay productos registrados en este negocio.</p>';
+        }
+    } catch (e) {
+        list.innerHTML = `<p style="color: #fda4af; text-align: center; padding: 20px;">Error al cargar catálogo: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function seedSampleProducts() {
+    const bizId = (typeof currentBusinessId !== 'undefined' && currentBusinessId) ? currentBusinessId : (localStorage.getItem('calyrisia_current_business_id') || '');
+    const url = bizId ? `/api/v1/products/seed-sample?business_id=${encodeURIComponent(bizId)}` : '/api/v1/products/seed-sample';
+    try {
+        const res = await fetch(url, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Error en la petición');
+        showToast(data.message || 'Productos cargados exitosamente.');
+        await loadStoreProducts();
+    } catch(err) {
+        showToast('Error: ' + err.message, true);
+    }
+}
+
 window.setInterval(() => {
     if (localStorage.getItem(tokenKey) && !document.hidden) loadPendingWebchatPayments();
 }, 3500);
@@ -899,72 +992,5 @@ window.setInterval(() => {
         </div>
     </div>
 </div>
-<script>
-async function openCatalogModal() {
-    const modal = document.getElementById('catalogModal');
-    modal.style.display = 'flex';
-    await loadStoreProducts();
-}
-
-function closeCatalogModal() {
-    document.getElementById('catalogModal').style.display = 'none';
-}
-
-function getActiveBusinessId() {
-    if (typeof currentBusinessId !== 'undefined' && currentBusinessId && currentBusinessId !== 'null' && currentBusinessId !== 'undefined') {
-        return currentBusinessId;
-    }
-    const stored = localStorage.getItem('calyrisia_current_business_id');
-    if (stored && stored !== 'null' && stored !== 'undefined') {
-        return stored;
-    }
-    return '';
-}
-
-async function loadStoreProducts() {
-    const list = document.getElementById('catalogList');
-    list.innerHTML = '<p style="color: #94a3b8; text-align: center;">Consultando catálogo...</p>';
-    const bizId = getActiveBusinessId();
-    const url = bizId ? `/api/v1/products/list?business_id=${encodeURIComponent(bizId)}` : '/api/v1/products/list';
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.products && data.products.length > 0) {
-            list.innerHTML = '';
-            data.products.forEach(p => {
-                list.innerHTML += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;">
-                        <div>
-                            <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${escapeHtml(p.name)}</div>
-                            <span style="font-size: 0.75rem; color: #94a3b8;">${escapeHtml(p.category || 'General')} · Stock: ${p.stock}</span>
-                        </div>
-                        <div style="font-size: 1rem; font-weight: 700; color: #34d399;">
-                            $${Number(p.price).toFixed(2)}
-                        </div>
-                    </div>`;
-            });
-        } else {
-            list.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;">No hay productos cargados aún. Pulsa el botón inferior para cargar 10 productos de muestra.</p>';
-        }
-    } catch (err) {
-        list.innerHTML = `<p style="color: #f43f5e; text-align: center;">Error cargando productos: ${err.message}</p>`;
-    }
-}
-
-async function seedSampleProducts() {
-    const bizId = getActiveBusinessId();
-    const url = bizId ? `/api/v1/products/seed-sample?business_id=${encodeURIComponent(bizId)}` : '/api/v1/products/seed-sample';
-    try {
-        const res = await fetch(url, { method: 'POST' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Error en la petición');
-        alert(data.message || 'Productos cargados exitosamente.');
-        await loadStoreProducts();
-    } catch(err) {
-        alert('Error: ' + err.message);
-    }
-}
-</script>
-
 </body>
 </html>

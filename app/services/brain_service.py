@@ -723,10 +723,22 @@ CONTEXTO OPERATIVO:
                 total += st
                 lines.append(f"- {q}x {p['name']}: {currency} {st:.2f} ({currency} {p['price']:.2f} c/u)")
 
+            # Carry exact catalog products and quantities through the payment flow.
+            # The backend revalidates products and stock when the owner approves.
+            cart_items = []
+            for fi in found_items:
+                product = fi["product"]
+                cart_item = {"name": str(product.get("name") or ""), "qty": int(fi["qty"])}
+                product_id = product.get("id") or product.get("product_id")
+                if product_id:
+                    cart_item["id"] = str(product_id)
+                cart_items.append(cart_item)
+            items_json = json.dumps(cart_items, ensure_ascii=False, separators=(",", ":"))
+
             return (
-                "¡Excelente elección! Te anoto el siguiente pedido:\n"
-                + "\n".join(lines)
-                + f"\n\nTotal a pagar: {currency} {total:.2f}. ¿Deseas servicio de delivery o pasarás a retirar por tienda?\n[BOTON_PAGO: {total:.2f}]"
+                "¡Excelente elección! Te anoto el siguiente pedido:\\n"
+                + "\\n".join(lines)
+                + f"\\n\\nTotal a pagar: {currency} {total:.2f}. ¿Deseas servicio de delivery o pasarás a retirar por tienda?\\n[BOTON_PAGO: {total:.2f}|ITEMS:{items_json}]"
             )
         return None
 
