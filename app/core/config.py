@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = Field(default="Galaxy Core", alias="APP_NAME")
     app_env: str = Field(default="development", alias="APP_ENV")
-    app_host: str = Field(default="127.0.0.1", alias="APP_HOST")
+    app_host: str = Field(default="0.0.0.0", alias="APP_HOST")
     app_port: int = Field(default=8000, alias="APP_PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
@@ -14,14 +14,14 @@ class Settings(BaseSettings):
     pg_port: int = Field(default=5432, alias="PGPORT")
     pg_database: str = Field(default="galaxy_db", alias="PGDATABASE")
     pg_user: str = Field(default="postgres", alias="PGUSER")
-    pg_password: str = Field(alias="PGPASSWORD")
+    pg_password: str = Field(default="", alias="PGPASSWORD")
     pg_sslmode: str = Field(default="require", alias="PGSSLMODE")
 
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
     gemini_model: str = Field(default="gemini-1.5-flash", alias="GEMINI_MODEL")
 
     # Paso 38 — secretos de seguridad. Nunca deben quedar hardcodeados.
-    galaxy_jwt_secret: str = Field(default="", alias="GALAXY_JWT_SECRET")
+    galaxy_jwt_secret: str = Field(default="calyrisia_default_secret_key_2026", alias="GALAXY_JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", alias="GALAXY_JWT_ALGORITHM")
     jwt_exp_minutes: int = Field(default=1440, alias="GALAXY_JWT_EXP_MINUTES", ge=5, le=10080)
     jwt_issuer: str = Field(default="galaxy-core", alias="GALAXY_JWT_ISSUER")

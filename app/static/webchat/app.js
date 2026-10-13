@@ -71,7 +71,7 @@ function addMessage(role, text) {
 
   // 2. Limpiar texto de etiquetas y asteriscos
   let cleanText = (text || "")
-    .replace(/\[BOTON_PAGO:[^\]]*\]\]|\[BOTON_PAGO:[^\]]*\]/gi, "")
+    .replace(/\[BOTON_PAGO:[^\]]+\]/gi, "")
     .replace(/\*\*/g, "")
     .replace(/\*/g, "")
     .trim();
@@ -144,7 +144,6 @@ async function submitDemoPayment(amount, cardId) {
         amount: amount,
         business_id: state.businessId,
         customer_id: state.customerId,
-        conversation_id: state.conversationId,
         payment_method: "Pago Móvil (Demo)",
         items: items
       })

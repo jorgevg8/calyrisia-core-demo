@@ -89,9 +89,6 @@ def _parse_custom_products(text: str) -> list[dict]:
     return products
 
 import asyncio
-import json
-import re
-import unicodedata
 from decimal import Decimal, InvalidOperation
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
@@ -101,7 +98,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Any
-from psycopg.types.json import Jsonb
 
 from app.core.config import get_settings
 from app.core.security import get_password_hash, create_access_token
@@ -408,11 +404,6 @@ async def _ensure_webchat_payment_schema() -> None:
                 cur.execute("""
                     ALTER TABLE public.webchat_payment_requests
                     ADD COLUMN IF NOT EXISTS items jsonb;
-                """)
-                cur.execute("""
-                    ALTER TABLE public.webchat_payment_requests
-                    ADD COLUMN IF NOT EXISTS conversation_id uuid
-                        REFERENCES public.conversations(id) ON DELETE SET NULL;
                 """)
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS idx_webchat_payments_business_status_created
@@ -1546,389 +1537,6 @@ async def webchat_history(conversation_id: UUID) -> dict:
             raise HTTPException(status_code=500, detail=f"Webchat history error: {exc}") from exc
 
 
-
-def _normalise_order_text(value: Any) -> str:
-    """Lowercase text and remove accents/punctuation for safe catalog matching."""
-    value = unicodedata.normalize("NFD", str(value or ""))
-    value = "".join(ch for ch in value if unicodedata.category(ch) != "Mn")
-    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
-
-
-def _webchat_active_products(conn, business_id: UUID) -> list[dict[str, Any]]:
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT id, name, price, COALESCE(is_service, FALSE)
-            FROM products
-            WHERE business_id = %s AND status = 'active'
-            ORDER BY name
-            """,
-            (business_id,),
-        )
-        rows = cur.fetchall()
-    return [
-        {"id": str(row[0]), "name": str(row[1]), "price": Decimal(str(row[2] or 0)), "is_service": bool(row[3])}
-        for row in rows
-    ]
-
-
-def _canonicalise_webchat_order_items(
-    raw_items: Any,
-    products: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Resolve item aliases against this business' active catalog and combine duplicate lines."""
-    if isinstance(raw_items, str):
-        try:
-            raw_items = json.loads(raw_items)
-        except (TypeError, ValueError, json.JSONDecodeError):
-            raw_items = []
-    if not raw_items:
-        return []
-    if isinstance(raw_items, dict):
-        raw_items = [raw_items]
-    if not isinstance(raw_items, list):
-        raise ValueError("La lista de productos del pedido tiene un formato inválido.")
-
-    by_id = {str(p["id"]): p for p in products}
-    by_name: dict[str, list[dict[str, Any]]] = {}
-    for product in products:
-        by_name.setdefault(_normalise_order_text(product["name"]), []).append(product)
-
-    combined: dict[str, dict[str, Any]] = {}
-    for item in raw_items:
-        if not isinstance(item, dict):
-            raise ValueError("Cada producto del pedido debe incluir nombre/código y cantidad.")
-
-        raw_id = item.get("id") or item.get("product_id") or item.get("productId")
-        product = by_id.get(str(raw_id)) if raw_id else None
-
-        raw_name = item.get("name") or item.get("product_name") or item.get("productName")
-        if product is None and raw_name:
-            normalized_name = _normalise_order_text(raw_name)
-            exact = by_name.get(normalized_name, [])
-            if len(exact) == 1:
-                product = exact[0]
-            elif len(exact) > 1:
-                raise ValueError(f"El nombre de producto '{raw_name}' no identifica un artículo único.")
-            else:
-                fuzzy = [
-                    p for p in products
-                    if normalized_name and (
-                        normalized_name in _normalise_order_text(p["name"])
-                        or _normalise_order_text(p["name"]) in normalized_name
-                    )
-                ]
-                if len(fuzzy) == 1:
-                    product = fuzzy[0]
-                elif len(fuzzy) > 1:
-                    raise ValueError(f"El nombre de producto '{raw_name}' coincide con varios artículos.")
-
-        if product is None:
-            raise ValueError(f"No se pudo identificar el producto '{raw_name or raw_id or 'desconocido'}' en el catálogo de este negocio.")
-
-        raw_qty = item.get("qty", item.get("quantity", item.get("cantidad", item.get("count", 1))))
-        try:
-            qty = Decimal(str(raw_qty).replace(",", "."))
-        except (InvalidOperation, ValueError, TypeError):
-            raise ValueError(f"La cantidad del producto '{product['name']}' no es válida.")
-        if not qty.is_finite() or qty <= 0 or qty > Decimal("1000000"):
-            raise ValueError(f"La cantidad del producto '{product['name']}' debe ser mayor que cero.")
-
-        pid = str(product["id"])
-        if pid not in combined:
-            combined[pid] = {"id": pid, "product_id": pid, "name": product["name"], "qty": qty}
-        else:
-            combined[pid]["qty"] += qty
-
-    return [
-        {
-            "id": item["id"],
-            "product_id": item["product_id"],
-            "name": item["name"],
-            "qty": float(item["qty"]),
-        }
-        for item in combined.values()
-    ]
-
-
-def _quantity_before_position(text: str, position: int) -> float:
-    prefix = text[max(0, position - 45):position]
-    matches = list(re.finditer(
-        r"\b(\d+(?:[.,]\d+)?)\b|\b(un|uno|una|unos|unas|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\b",
-        prefix,
-    ))
-    if not matches:
-        return 1.0
-    match = matches[-1]
-    if match.group(1):
-        try:
-            return float(match.group(1).replace(",", "."))
-        except ValueError:
-            return 1.0
-    word_values = {
-        "un": 1, "uno": 1, "una": 1, "unos": 1, "unas": 1,
-        "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6,
-        "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11, "doce": 12,
-    }
-    return float(word_values.get(match.group(2), 1))
-
-
-def _items_from_customer_order_message(
-    message: str,
-    products: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Best-effort recovery for multi-turn orders if the payment tag contains only an amount."""
-    text = _normalise_order_text(message)
-    order_terms = ("quiero", "compr", "llevar", "pedido", "anot", "agrega", "necesito", "dame", "prepara", "encarg", "pido", "orden")
-    if not text or not any(term in text for term in order_terms):
-        return []
-
-    # Exact full product names are preferred and can safely identify multiple products in one message.
-    exact_hits: list[tuple[int, dict[str, Any]]] = []
-    for product in products:
-        name = _normalise_order_text(product["name"])
-        if name and re.search(r"\b" + re.escape(name) + r"\b", text):
-            exact_hits.append((text.find(name), product))
-    if exact_hits:
-        found = []
-        seen: set[str] = set()
-        for position, product in sorted(exact_hits, key=lambda x: x[0]):
-            pid = str(product["id"])
-            if pid in seen:
-                continue
-            seen.add(pid)
-            found.append({"id": pid, "name": product["name"], "qty": _quantity_before_position(text, position)})
-        return _canonicalise_webchat_order_items(found, products)
-
-    # Support ordinary plurals / shortened names, but never guess if multiple catalog items are equally likely.
-    stop_words = {"premium", "blanco", "blanca", "litro", "litros", "gourmet", "completa", "completo", "pack", "para", "con", "sin", "los", "las"}
-    candidates: list[tuple[int, int, dict[str, Any]]] = []
-    for product in products:
-        name_tokens = [
-            token for token in _normalise_order_text(product["name"]).split()
-            if len(token) >= 3 and token not in stop_words and not token.isdigit()
-        ]
-        token_positions: list[int] = []
-        for token in name_tokens:
-            stem = token[:-1] if token.endswith("s") and len(token) > 4 else token
-            match = re.search(r"\b" + re.escape(stem) + r"(?:s|es)?\b", text)
-            if match:
-                token_positions.append(match.start())
-        required = 1 if len(name_tokens) <= 1 else 2
-        if len(token_positions) >= required:
-            candidates.append((len(token_positions), min(token_positions), product))
-
-    if not candidates:
-        return []
-    top_score = max(candidate[0] for candidate in candidates)
-    top = [candidate for candidate in candidates if candidate[0] == top_score]
-    if len(top) != 1:
-        return []
-    _, position, product = top[0]
-    return _canonicalise_webchat_order_items(
-        [{"id": product["id"], "name": product["name"], "qty": _quantity_before_position(text, position)}],
-        products,
-    )
-
-
-def _resolve_webchat_order_items_from_history(
-    conn,
-    *,
-    business_id: UUID,
-    conversation_id: UUID | None,
-    customer_id: UUID | None,
-) -> list[dict[str, Any]]:
-    products = _webchat_active_products(conn, business_id)
-    if not products:
-        return []
-
-    with conn.cursor() as cur:
-        if conversation_id:
-            cur.execute(
-                """
-                SELECT direction, sender_type, COALESCE(content, '')
-                FROM conversation_messages
-                WHERE business_id = %s AND conversation_id = %s
-                ORDER BY created_at DESC
-                LIMIT 40
-                """,
-                (business_id, conversation_id),
-            )
-        elif customer_id:
-            cur.execute(
-                """
-                SELECT direction, sender_type, COALESCE(content, '')
-                FROM conversation_messages
-                WHERE business_id = %s AND customer_id = %s
-                ORDER BY created_at DESC
-                LIMIT 40
-                """,
-                (business_id, customer_id),
-            )
-        else:
-            return []
-        messages = cur.fetchall()
-
-    # Locate the latest customer message that names a product and expresses purchase intent.
-    # Older quote/payment tags must not be reused for a later, different purchase.
-    order_marker_index = None
-    inferred_items: list[dict[str, Any]] = []
-    for index, (direction, sender_type, content) in enumerate(messages):
-        if direction != "inbound" or sender_type != "customer":
-            continue
-        candidate_items = _items_from_customer_order_message(str(content), products)
-        if candidate_items:
-            order_marker_index = index
-            inferred_items = candidate_items
-            break
-
-    # Only accept a structured cart from an assistant message newer than the latest order intent.
-    # With no identifiable intent message, inspect only the very latest messages, never the full history.
-    max_search_index = order_marker_index if order_marker_index is not None else min(8, len(messages))
-    eligible_messages = list(enumerate(messages[:max_search_index]))
-
-    for _index, (direction, _sender_type, content) in eligible_messages:
-        if direction != "outbound":
-            continue
-        match = re.search(
-            r"\[BOTON_PAGO:\s*[\d.]+\s*\|ITEMS:\s*(\[.*?\])\s*\]",
-            str(content),
-            flags=re.IGNORECASE | re.DOTALL,
-        )
-        if match:
-            try:
-                items = _canonicalise_webchat_order_items(json.loads(match.group(1)), products)
-                if items:
-                    return items
-            except (ValueError, TypeError, json.JSONDecodeError):
-                pass
-
-    # Next use a quoted cart such as "- 2x Laptop X: $1,700".
-    line_pattern = re.compile(r"(?m)^\s*[-•]\s*(\d+(?:[.,]\d+)?)\s*x\s+([^:\n]+):")
-    for _index, (direction, _sender_type, content) in eligible_messages:
-        if direction != "outbound":
-            continue
-        lines = line_pattern.findall(str(content))
-        if not lines:
-            continue
-        try:
-            items = _canonicalise_webchat_order_items(
-                [{"name": name.strip(), "qty": qty.replace(",", ".")} for qty, name in lines],
-                products,
-            )
-            if items:
-                return items
-        except ValueError:
-            continue
-
-    # The most recent purchase-intent message is the safest fallback for multi-turn checkout.
-    if inferred_items:
-        return inferred_items
-    return []
-
-
-def _apply_webchat_order_items(
-    conn,
-    *,
-    business_id: UUID,
-    order_id: UUID,
-    raw_items: Any,
-) -> list[dict[str, Any]]:
-    """Persist order lines and deduct exact quantities, atomically, from the business inventory."""
-    products = _webchat_active_products(conn, business_id)
-    items = _canonicalise_webchat_order_items(raw_items, products)
-    if not items:
-        raise HTTPException(
-            status_code=409,
-            detail="No se pudieron identificar los productos de esta compra. No se aprobó el pago ni se modificó el inventario. Vuelve al Webchat e inicia el pedido con los productos y cantidades.",
-        )
-
-    saved_items: list[dict[str, Any]] = []
-    with conn.cursor() as cur:
-        for item in items:
-            product_id = UUID(str(item["id"]))
-            quantity = Decimal(str(item["qty"]))
-            cur.execute(
-                """
-                SELECT id, name, price, COALESCE(is_service, FALSE)
-                FROM products
-                WHERE id = %s AND business_id = %s AND status = 'active'
-                FOR UPDATE
-                """,
-                (product_id, business_id),
-            )
-            product_row = cur.fetchone()
-            if not product_row:
-                raise HTTPException(status_code=409, detail=f"El producto '{item['name']}' ya no está disponible en este catálogo.")
-
-            unit_price = Decimal(str(product_row[2] or 0)).quantize(Decimal("0.01"))
-            is_service = bool(product_row[3])
-
-            if not is_service:
-                cur.execute(
-                    """
-                    SELECT id, quantity
-                    FROM inventory
-                    WHERE business_id = %s AND product_id = %s
-                    ORDER BY created_at, id
-                    FOR UPDATE
-                    """,
-                    (business_id, product_id),
-                )
-                stock_rows = cur.fetchall()
-                available = sum((Decimal(str(stock_row[1] or 0)) for stock_row in stock_rows), Decimal("0"))
-                if available < quantity:
-                    raise HTTPException(
-                        status_code=409,
-                        detail=f"Inventario insuficiente para {product_row[1]}. Disponible: {available}; solicitado: {quantity}. No se aprobó el pago.",
-                    )
-
-                remaining = quantity
-                for stock_id, stock_quantity in stock_rows:
-                    current_quantity = Decimal(str(stock_quantity or 0))
-                    if remaining <= 0:
-                        break
-                    take = min(current_quantity, remaining)
-                    if take > 0:
-                        cur.execute(
-                            """
-                            UPDATE inventory
-                            SET quantity = quantity - %s, updated_at = NOW()
-                            WHERE id = %s AND business_id = %s AND product_id = %s
-                            """,
-                            (take, stock_id, business_id, product_id),
-                        )
-                        remaining -= take
-
-                if remaining > 0:
-                    # Defensive guard; the transaction will roll back rather than underflow stock.
-                    raise HTTPException(
-                        status_code=409,
-                        detail=f"No se pudo descontar el inventario completo de {product_row[1]}. No se aprobó el pago.",
-                    )
-
-            line_total = (unit_price * quantity).quantize(Decimal("0.01"))
-            cur.execute(
-                """
-                INSERT INTO order_items
-                    (id, business_id, order_id, product_id, quantity, unit_price,
-                     discount_amount, tax_amount, line_total)
-                VALUES (gen_random_uuid(), %s, %s, %s, %s, %s, 0, 0, %s)
-                """,
-                (business_id, order_id, product_id, quantity, unit_price, line_total),
-            )
-            saved_items.append({
-                "product_id": str(product_id),
-                "name": str(product_row[1]),
-                "quantity": float(quantity),
-                "unit_price": float(unit_price),
-                "line_total": float(line_total),
-                "is_service": is_service,
-            })
-
-    return saved_items
-
-
 @app.post("/api/v1/webchat/payment/request")
 async def webchat_request_payment(payload: dict):
     """Create a pending demo payment. Tenant is resolved server-side, never trusted from the browser."""
@@ -1945,13 +1553,6 @@ async def webchat_request_payment(payload: dict):
                 supplied_customer_id = UUID(str(raw_cust))
             except Exception:
                 supplied_customer_id = None
-        supplied_conversation_id = None
-        raw_conversation_id = payload.get("conversation_id")
-        if raw_conversation_id:
-            try:
-                supplied_conversation_id = UUID(str(raw_conversation_id))
-            except Exception:
-                supplied_conversation_id = None
         payment_method = str(payload.get("payment_method") or "pago_movil_demo")[:50]
     except (InvalidOperation, ValueError, TypeError, ArithmeticError):
         raise HTTPException(status_code=422, detail="Monto o identificador de cliente inválido.")
@@ -2017,45 +1618,38 @@ async def webchat_request_payment(payload: dict):
                         )
 
                 payment_id = uuid4()
-                conversation_id = supplied_conversation_id
-                if conversation_id:
-                    cur.execute(
-                        "SELECT id FROM conversations WHERE id = %s AND business_id = %s",
-                        (conversation_id, business_id),
-                    )
-                    if not cur.fetchone():
-                        conversation_id = None
-
                 raw_items = payload.get("items") or []
-                try:
-                    products = _webchat_active_products(conn, business_id)
-                    if raw_items:
-                        raw_items = _canonicalise_webchat_order_items(raw_items, products)
-                    else:
-                        raw_items = _resolve_webchat_order_items_from_history(
-                            conn,
-                            business_id=business_id,
-                            conversation_id=conversation_id,
-                            customer_id=customer_id,
-                        )
-                except ValueError as exc:
-                    raise HTTPException(status_code=422, detail=str(exc)) from exc
-
                 if not raw_items:
-                    raise HTTPException(
-                        status_code=422,
-                        detail="No pude identificar los productos y cantidades de esta compra. Envía nuevamente el pedido desde el Webchat con los productos concretos.",
-                    )
-
+                    try:
+                        cur.execute(
+                            """SELECT content FROM conversation_messages
+                               WHERE (customer_id = %s OR business_id = %s) AND direction = 'outbound'
+                               ORDER BY created_at DESC LIMIT 5""",
+                            (customer_id, business_id),
+                        )
+                        for msg_r in cur.fetchall():
+                            txt_c = str(msg_r[0])
+                            m_it = re.search(r'\[BOTON_PAGO:[^\]]*\|ITEMS:\s*(\[.*?\])\]', txt_c)
+                            if m_it:
+                                try:
+                                    raw_items = json.loads(m_it.group(1))
+                                    break
+                                except Exception:
+                                    pass
+                            lines = re.findall(r'-\s*(\d+)x\s+([^:]+):', txt_c)
+                            if lines:
+                                raw_items = [{"name": p_n.strip(), "qty": float(q_s)} for q_s, p_n in lines]
+                                break
+                    except Exception as e_res:
+                        print(f"[Calyrisia] Fallback parser items error: {e_res}")
                 cur.execute(
                     """INSERT INTO webchat_payment_requests
-                       (id, business_id, customer_id, conversation_id, amount, currency,
-                        payment_method, status, source, approval_note, items)
-                       VALUES (%s, %s, %s, %s, %s, 'USD', %s, 'pending', 'webchat_demo', %s, %s)""",
+                       (id, business_id, customer_id, amount, currency, payment_method, status, source, approval_note, items)
+                       VALUES (%s, %s, %s, %s, 'USD', %s, 'pending', 'webchat_demo', %s, %s)""",
                     (
-                        payment_id, business_id, customer_id, conversation_id, amount,
-                        payment_method, 'Productos del pedido capturados desde el Webchat.',
-                        Jsonb(raw_items),
+                        payment_id, business_id, customer_id, amount, payment_method,
+                        json.dumps(raw_items) if raw_items else None,
+                        Jsonb(raw_items) if raw_items else None
                     ),
                 )
             conn.commit()
@@ -2190,12 +1784,11 @@ async def decide_webchat_payment(
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    """SELECT id, customer_id, amount, currency, status, order_id, payment_method,
-                              business_id, items, approval_note, conversation_id
+                    """SELECT id, customer_id, amount, currency, status, order_id, payment_method, business_id, items, approval_note
                        FROM webchat_payment_requests
-                       WHERE id = %s AND business_id = %s
+                       WHERE id = %s
                        FOR UPDATE""",
-                    (payment_id, business_id),
+                    (payment_id,),
                 )
                 row = cur.fetchone()
                 if not row:
@@ -2218,7 +1811,8 @@ async def decide_webchat_payment(
                 order_id = None
                 if decision == "approve":
                     order_id = uuid4()
-                    # The approval and stock deduction are committed together below.
+                    # Dedicated demo order: no product lines/inventory are changed because
+                    # this button simulates the payment, not a confirmed product checkout.
                     order_number = f"WC-{payment_id.hex[:24].upper()}"
                     # Asegurar cliente en el negocio del dueño activo
                     cur.execute(
@@ -2246,43 +1840,91 @@ async def decide_webchat_payment(
                             f"Pago de demostración aprobado manualmente en Dashboard. payment_id={payment_id}",
                         ),
                     )
+                    # Descontar del inventario los productos comprados
                     raw_items = row[8]
+                    if not raw_items and len(row) > 9 and row[9]:
+                        try:
+                            raw_items = json.loads(row[9])
+                        except Exception:
+                            raw_items = []
                     if isinstance(raw_items, str):
                         try:
                             raw_items = json.loads(raw_items)
-                        except (TypeError, ValueError, json.JSONDecodeError):
+                        except Exception:
                             raw_items = []
+                    order_items = raw_items or []
 
-                    # Compatibility for payment requests created before items were persisted.
-                    if not raw_items and len(row) > 9 and row[9]:
+                    if not order_items:
                         try:
-                            legacy_items = json.loads(str(row[9]))
-                            if isinstance(legacy_items, (list, dict)):
-                                raw_items = legacy_items
-                        except (TypeError, ValueError, json.JSONDecodeError):
-                            raw_items = []
+                            cur.execute(
+                                """SELECT content FROM conversation_messages
+                                   WHERE (customer_id = %s OR business_id = %s) AND direction = 'outbound'
+                                   ORDER BY created_at DESC LIMIT 5""",
+                                (customer_id, business_id),
+                            )
+                            for msg_r in cur.fetchall():
+                                txt_c = str(msg_r[0])
+                                m_it = re.search(r'\[BOTON_PAGO:[^\]]*\|ITEMS:\s*(\[.*?\])\]', txt_c)
+                                if m_it:
+                                    try:
+                                        order_items = json.loads(m_it.group(1))
+                                        break
+                                    except Exception:
+                                        pass
+                                lines = re.findall(r'-\s*(\d+)x\s+([^:]+):', txt_c)
+                                if lines:
+                                    order_items = [{"name": p_n.strip(), "qty": float(q_s)} for q_s, p_n in lines]
+                                    break
+                        except Exception as e_rec:
+                            print(f"[Calyrisia] Error rescatando items: {e_rec}")
 
-                    conversation_id = None
-                    if len(row) > 10 and row[10]:
-                        try:
-                            conversation_id = UUID(str(row[10]))
-                        except (TypeError, ValueError):
-                            conversation_id = None
-
-                    if not raw_items:
-                        raw_items = _resolve_webchat_order_items_from_history(
-                            conn,
-                            business_id=business_id,
-                            conversation_id=conversation_id,
-                            customer_id=customer_id,
-                        )
-
-                    saved_items = _apply_webchat_order_items(
-                        conn,
-                        business_id=business_id,
-                        order_id=order_id,
-                        raw_items=raw_items,
+                    cur.execute(
+                        """SELECT id, name FROM products
+                           WHERE business_id = %s::uuid""",
+                        (str(business_id),),
                     )
+                    owner_products = cur.fetchall()
+
+                    for it in order_items:
+                        qty = float(it.get("qty", 1))
+                        item_name = (it.get("name") or "").lower().strip()
+                        raw_pid = it.get("id")
+
+                        matched_pid = None
+                        if raw_pid:
+                            try:
+                                matched_pid = str(UUID(str(raw_pid)))
+                            except Exception:
+                                matched_pid = None
+
+                        if not matched_pid and item_name:
+                            for op_id, op_name in owner_products:
+                                clean_op = op_name.lower().strip()
+                                if item_name in clean_op or clean_op in item_name:
+                                    matched_pid = str(op_id)
+                                    break
+
+                        if not matched_pid and item_name:
+                            kw_list = [w for w in item_name.split() if len(w) > 3 and w not in ("premium", "blanco", "litro", "gourmet", "completa")]
+                            for op_id, op_name in owner_products:
+                                if any(kw in op_name.lower() for kw in kw_list):
+                                    matched_pid = str(op_id)
+                                    break
+
+                        if matched_pid:
+                            cur.execute(
+                                """UPDATE inventory
+                                   SET quantity = GREATEST(0, quantity - %s)
+                                   WHERE product_id = %s::uuid""",
+                                (qty, matched_pid),
+                            )
+                            cur.execute(
+                                """INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
+                                   SELECT gen_random_uuid(), %s::uuid, %s::uuid, GREATEST(0, 25.0 - %s), 5.0, 'tienda'
+                                   WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE product_id = %s::uuid)""",
+                                (str(business_id), matched_pid, qty, matched_pid),
+                            )
+                            print(f"[Calyrisia] Stock descontado exitosamente: {qty} de producto {matched_pid}")
 
                     cur.execute(
                         """UPDATE webchat_payment_requests
@@ -3706,7 +3348,7 @@ async def list_store_products(business_id: str | None = Query(default=None)) -> 
                     """
                     SELECT p.id, p.name, p.price, p.category, COALESCE(SUM(i.quantity), 0) as stock
                     FROM products p
-                    LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
+                    LEFT JOIN inventory i ON i.product_id = p.id
                     WHERE p.business_id = %s::uuid AND p.status = 'active'
                     GROUP BY p.id, p.name, p.price, p.category
                     ORDER BY p.name
