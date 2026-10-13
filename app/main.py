@@ -422,8 +422,14 @@ async def _ensure_webchat_payment_schema() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    open_pool()
-    await _ensure_webchat_payment_schema()
+    try:
+        open_pool()
+    except Exception as exc:
+        print(f"[Startup DB Notice] {exc}")
+    try:
+        await _ensure_webchat_payment_schema()
+    except Exception as exc:
+        print(f"[Startup Schema Notice] {exc}")
     heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())
     yield
     heartbeat_task.cancel()
@@ -3382,3 +3388,9 @@ async def seed_sample_products(business_id: str | None = Query(default=None)) ->
             return {"success": True, "message": f"Se han cargado {len(samples)} productos de prueba con stock a {biz['name']}."}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al cargar productos: {str(exc)}")
+
+
+if __name__ == __main__:
+    import uvicorn, os
+    port = int(os.environ.get(PORT, settings.app_port or 8000))
+    uvicorn.run(app.main:app, host=0.0.0.0, port=port)

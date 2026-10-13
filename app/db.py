@@ -8,18 +8,24 @@ settings = get_settings()
 pool = ConnectionPool(
     conninfo="",
     kwargs=settings.database_kwargs,
-    min_size=1,
-    max_size=5,
+    min_size=0,
+    max_size=10,
     open=False,
 )
 
 
 def open_pool() -> None:
-    pool.open(wait=True)
+    try:
+        pool.open(wait=False)
+    except Exception:
+        pass
 
 
 def close_pool() -> None:
-    pool.close()
+    try:
+        pool.close()
+    except Exception:
+        pass
 
 
 @asynccontextmanager
