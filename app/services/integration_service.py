@@ -1,6 +1,15 @@
 import json
 from uuid import UUID, uuid4
-from psycopg2.extras import RealDictCursor
+
+try:
+    from psycopg.rows import dict_row
+except ImportError:
+    dict_row = None
+
+try:
+    from psycopg2.extras import RealDictCursor
+except ImportError:
+    RealDictCursor = None
 
 class IntegrationServiceError(Exception):
     pass
@@ -9,8 +18,15 @@ class IntegrationService:
     def __init__(self, conn):
         self.conn = conn
 
+    def _get_cursor(self):
+        if dict_row:
+            return self.conn.cursor(row_factory=dict_row)
+        if RealDictCursor:
+            return self.conn.cursor(cursor_factory=RealDictCursor)
+        return self.conn.cursor()
+
     def register_integration(self, business_id: UUID, provider: str, credentials: dict) -> dict:
-        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+        with self._get_cursor() as cur:
             integration_id = str(uuid4())
             try:
                 # Verificamos si ya existe para no duplicar (Ej: solo 1 telegram por negocio)
@@ -28,22 +44,22 @@ class IntegrationService:
                 ))
                 result = cur.fetchone()
                 self.conn.commit()
-                return dict(result)
+                return dict(result) if result else {}
             except Exception as e:
                 self.conn.rollback()
                 raise IntegrationServiceError(f"Error registrando canal: {e}")
 
     def list_integrations(self, business_id: UUID) -> list:
-        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+        with self._get_cursor() as cur:
             cur.execute("""
                 SELECT id, provider, status, created_at 
                 FROM business_integrations 
                 WHERE business_id = %s
             """, (str(business_id),))
-            # Convertimos las fechas a string para evitar errores con Pydantic/JSON
             results = []
             for row in cur.fetchall():
                 row_dict = dict(row)
-                row_dict['created_at'] = row_dict['created_at'].isoformat() if row_dict['created_at'] else None
+                if row_dict.get('created_at') and hasattr(row_dict['created_at'], 'isoformat'):
+                    row_dict['created_at'] = row_dict['created_at'].isoformat()
                 results.append(row_dict)
             return results
