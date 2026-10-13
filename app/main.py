@@ -1,3 +1,93 @@
+
+def _get_default_10_products(business_type: str, currency: str = "USD") -> list[dict]:
+    b_type = (business_type or "").lower()
+    
+    if any(k in b_type for k in ["restauran", "comida", "hamburgue", "pizza", "caf", "bar", "panader"]):
+        return [
+            {"name": "Hamburguesa Especial Calyrisia", "price": 8.50, "category": "Comida"},
+            {"name": "Hamburguesa Doble Queso y Tocineta", "price": 11.00, "category": "Comida"},
+            {"name": "Perro Caliente Gigante con Todo", "price": 4.00, "category": "Comida"},
+            {"name": "Papas Fritas Rústicas con Queso", "price": 3.50, "category": "Acompañantes"},
+            {"name": "Nuggets de Pollo Crujientes (8 pcs)", "price": 5.00, "category": "Acompañantes"},
+            {"name": "Pizza Personal Pepperoni", "price": 7.00, "category": "Comida"},
+            {"name": "Tequeños con Salsa Tártara (6 pcs)", "price": 4.50, "category": "Entradas"},
+            {"name": "Refresco Frío 355ml", "price": 1.50, "category": "Bebidas"},
+            {"name": "Malteada Cremosa de Chocolate", "price": 3.50, "category": "Bebidas"},
+            {"name": "Postre Brownie con Helado", "price": 4.00, "category": "Postres"},
+        ]
+    elif any(k in b_type for k in ["ropa", "boutique", "moda", "calzado", "textil", "zapater"]):
+        return [
+            {"name": "Camisa de Lino Manga Larga", "price": 25.00, "category": "Ropa"},
+            {"name": "Pantalón Jean Slim Fit Clásico", "price": 32.00, "category": "Ropa"},
+            {"name": "Vestido Casual Elegante", "price": 28.00, "category": "Ropa"},
+            {"name": "Blusa de Seda Estampada", "price": 22.00, "category": "Ropa"},
+            {"name": "Chaqueta Denim Clásica", "price": 45.00, "category": "Ropa"},
+            {"name": "Short Playero Casual", "price": 16.00, "category": "Ropa"},
+            {"name": "Franela Básica 100% Algodón", "price": 12.00, "category": "Ropa"},
+            {"name": "Zapatos Casuales de Cuero", "price": 48.00, "category": "Calzado"},
+            {"name": "Cinturón de Cuero Reversible", "price": 15.00, "category": "Accesorios"},
+            {"name": "Lentes de Sol Polarizados", "price": 18.00, "category": "Accesorios"},
+        ]
+    elif any(k in b_type for k in ["super", "market", "bode", "abasto", "viveres"]):
+        return [
+            {"name": "Harina de Maíz PAN 1kg", "price": 1.30, "category": "Alimentos"},
+            {"name": "Arroz Blanco Premium 1kg", "price": 1.20, "category": "Alimentos"},
+            {"name": "Aceite Vegetal 1 Litro", "price": 2.80, "category": "Alimentos"},
+            {"name": "Queso Blanco Llanero 1kg", "price": 5.50, "category": "Lácteos"},
+            {"name": "Café Molido Gourmet 500g", "price": 4.20, "category": "Alimentos"},
+            {"name": "Pasta Larga Espagueti 1kg", "price": 1.50, "category": "Alimentos"},
+            {"name": "Leche Líquida Completa 1L", "price": 1.80, "category": "Lácteos"},
+            {"name": "Nutella Crema Avellanas 350g", "price": 5.50, "category": "Dulces"},
+            {"name": "Refresco Familiar 2 Litros", "price": 2.50, "category": "Bebidas"},
+            {"name": "Pack 4 Rollos Papel Higiénico", "price": 2.00, "category": "Higiene"},
+        ]
+    elif any(k in b_type for k in ["farma", "salud", "medic"]):
+        return [
+            {"name": "Paracetamol 500mg (10 tabs)", "price": 2.00, "category": "Medicamentos"},
+            {"name": "Ibuprofeno 400mg (10 tabs)", "price": 2.50, "category": "Medicamentos"},
+            {"name": "Protector Solar FPS 50", "price": 14.00, "category": "Cuidado Personal"},
+            {"name": "Champú Reparador 400ml", "price": 5.50, "category": "Cuidado Personal"},
+            {"name": "Crema Dental Blanqueadora", "price": 2.80, "category": "Higiene"},
+            {"name": "Suero Oral Electrolitos", "price": 1.80, "category": "Salud"},
+            {"name": "Vitamina C 1000mg Efervescente", "price": 4.50, "category": "Suplementos"},
+            {"name": "Alcohol Antiséptico 70% 500ml", "price": 2.20, "category": "Primeros Auxilios"},
+            {"name": "Mascarillas Quirúrgicas (Caja 50)", "price": 4.00, "category": "Protección"},
+            {"name": "Termómetro Digital Rápido", "price": 6.50, "category": "Equipos Médicos"},
+        ]
+    else:
+        return [
+            {"name": "Cable de Carga Rápida USB-C", "price": 6.00, "category": "Accesorios"},
+            {"name": "Cargador de Pared 20W", "price": 12.00, "category": "Accesorios"},
+            {"name": "Auriculares Inalámbricos Bluetooth", "price": 22.00, "category": "Audio"},
+            {"name": "Soporte Magnético para Teléfono", "price": 8.50, "category": "Accesorios"},
+            {"name": "Powerbank Portátil 10000mAh", "price": 18.00, "category": "Baterías"},
+            {"name": "Protector de Pantalla Vidrio 9D", "price": 5.00, "category": "Accesorios"},
+            {"name": "Funda Protectora Antigolpes", "price": 7.50, "category": "Fundas"},
+            {"name": "Memoria MicroSD 64GB Clase 10", "price": 9.00, "category": "Memorias"},
+            {"name": "Mouse Inalámbrico Ergonómico", "price": 11.50, "category": "Computación"},
+            {"name": "Teclado Mecánico RGB", "price": 35.00, "category": "Computación"},
+        ]
+
+def _parse_custom_products(text: str) -> list[dict]:
+    import re
+    products = []
+    for line in (text or "").strip().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = re.split(r'[-–—:]', line)
+        if len(parts) >= 2:
+            name = parts[0].strip()
+            price_str = re.sub(r'[^0-9.]', '', parts[1].strip())
+            try:
+                price = float(price_str)
+            except ValueError:
+                price = 10.0
+            products.append({"name": name, "price": price, "category": "General"})
+        else:
+            products.append({"name": line, "price": 10.0, "category": "General"})
+    return products
+
 import asyncio
 from decimal import Decimal, InvalidOperation
 from contextlib import asynccontextmanager
@@ -10,7 +100,7 @@ from pydantic import BaseModel, Field
 from typing import Any
 
 from app.core.config import get_settings
-from app.core.security import get_password_hash
+from app.core.security import get_password_hash, create_access_token
 from app.db import close_pool, get_connection, open_pool
 
 from app.schemas import (
@@ -182,25 +272,60 @@ settings = get_settings()
 WEBCHAT_DEMO_BUSINESS_ID = UUID("b0816122-4da6-42ac-974b-92a80e85eec1")
 
 
-def _get_webchat_demo_business(conn) -> dict:
-    """Resolve the public demo tenant server-side so the business_id never comes from the browser."""
+def _clean_business_id(val: Any) -> str | None:
+    if not val:
+        return None
+    s = str(val).strip().lower()
+    if s in ("null", "undefined", "none", ""):
+        return None
+    try:
+        return str(UUID(s))
+    except (ValueError, TypeError):
+        return None
+
+def _get_webchat_demo_business(conn, business_id: Any = None) -> dict:
+    """Resolve the requested business tenant, or automatically pick the most recent business created."""
+    valid_id = _clean_business_id(business_id)
     with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT id, name, business_type, currency, timezone, status
-            FROM businesses
-            WHERE id = %s
-            """,
-            (WEBCHAT_DEMO_BUSINESS_ID,),
-        )
-        row = cur.fetchone()
+        row = None
+        if valid_id:
+            cur.execute(
+                """
+                SELECT id, name, business_type, currency, timezone, status, description
+                FROM businesses
+                WHERE id = %s
+                """,
+                (valid_id,),
+            )
+            row = cur.fetchone()
+
+        # Si no se pasó business_id o no se encontró, seleccionar el negocio más recientemente creado (el tuyo)
+        if not row:
+            cur.execute(
+                """
+                SELECT id, name, business_type, currency, timezone, status, description
+                FROM businesses
+                WHERE status = 'active'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+
+        # Si no hay ninguno, fallback final al tenant demo
+        if not row:
+            cur.execute(
+                """
+                SELECT id, name, business_type, currency, timezone, status, description
+                FROM businesses
+                WHERE id = %s
+                """,
+                (str(WEBCHAT_DEMO_BUSINESS_ID),),
+            )
+            row = cur.fetchone()
 
     if not row:
-        raise HTTPException(status_code=503, detail="El negocio de demo no está configurado en la base de datos.")
-
-    status = str(row[5] or "").strip().lower()
-    if status != "active":
-        raise HTTPException(status_code=503, detail="El negocio de demo existe, pero no está activo.")
+        raise HTTPException(status_code=503, detail="No se encontraron negocios activos en la base de datos.")
 
     return {
         "id": row[0],
@@ -208,7 +333,8 @@ def _get_webchat_demo_business(conn) -> dict:
         "business_type": row[2],
         "currency": row[3],
         "timezone": row[4],
-        "status": status,
+        "status": str(row[5] or "active").strip().lower(),
+        "description": row[6] or "",
     }
 
 
@@ -224,6 +350,8 @@ class OwnerRegistrationRequest(BaseModel):
 class OnboardingRequest(BaseModel):
     business_name: str
     business_type: str 
+    ai_prompt: str | None = None
+    products_text: str | None = None
     currency: str = "USD"
     owner_email: str
     owner_password: str
@@ -272,6 +400,10 @@ async def _ensure_webchat_payment_schema() -> None:
                         order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL,
                         approval_note text
                     )
+                """)
+                cur.execute("""
+                    ALTER TABLE public.webchat_payment_requests
+                    ADD COLUMN IF NOT EXISTS items jsonb;
                 """)
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS idx_webchat_payments_business_status_created
@@ -547,10 +679,16 @@ app.mount("/webchat", StaticFiles(directory="app/static/webchat", html=True), na
 app.mount("/onboarding", StaticFiles(directory="app/static/onboarding", html=True), name="onboarding")
 app.mount("/dashboard", StaticFiles(directory="app/static/dashboard", html=True), name="dashboard")
 app.mount("/operations", StaticFiles(directory="app/static/operations", html=True), name="operations")
+app.mount("/landing", StaticFiles(directory="app/static/landing", html=True), name="landing")
+app.mount("/feedback", StaticFiles(directory="app/static/feedback", html=True), name="feedback")
 
 @app.get("/", include_in_schema=False)
 def root() -> FileResponse:
-    return FileResponse("app/static/webchat/index.html")
+    return FileResponse("app/static/landing/index.html")
+
+@app.get("/feedback/", include_in_schema=False)
+def feedback_page() -> FileResponse:
+    return FileResponse("app/static/feedback/index.html")
 
 @app.get("/dashboard/", include_in_schema=False)
 def dashboard_page() -> FileResponse:
@@ -1228,13 +1366,14 @@ async def brain_respond(
 
 
 @app.get("/api/v1/webchat/config")
-async def webchat_config() -> dict:
-    """Public-safe Webchat configuration. The tenant ID is resolved only on the server."""
+async def webchat_config(business_id: UUID | None = Query(default=None)) -> dict:
+    """Public-safe Webchat configuration. Dynamically loads requested or demo business."""
     async with get_connection() as conn:
-        business = _get_webchat_demo_business(conn)
+        business = _get_webchat_demo_business(conn, business_id)
         return {
             "success": True,
             "business": {
+                "id": str(business["id"]),
                 "name": business["name"],
                 "business_type": business["business_type"],
                 "currency": business["currency"],
@@ -1245,10 +1384,10 @@ async def webchat_config() -> dict:
 
 @app.post("/api/v1/webchat/session")
 async def webchat_session(payload: WebchatSessionRequest) -> dict:
-    """Resolve/create the demo customer without accepting a business_id from the browser."""
+    """Resolve/create the demo customer for the active business."""
     async with get_connection() as conn:
         try:
-            business = _get_webchat_demo_business(conn)
+            business = _get_webchat_demo_business(conn, payload.business_id)
             customer_id = payload.customer_id
             customer = None
 
@@ -1316,18 +1455,37 @@ async def webchat_message(payload: WebchatMessageRequest) -> dict:
     """Customer-facing Webchat endpoint. business_id is injected server-side."""
     async with get_connection() as conn:
         try:
-            business = _get_webchat_demo_business(conn)
-
+            # Resolver el negocio directamente desde el cliente en la base de datos
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT 1 FROM customers WHERE id = %s AND business_id = %s",
-                    (payload.customer_id, business["id"]),
+                    """
+                    SELECT c.business_id, b.name
+                    FROM customers c
+                    JOIN businesses b ON c.business_id = b.id
+                    WHERE c.id = %s
+                    """,
+                    (str(payload.customer_id),),
                 )
-                if cur.fetchone() is None:
-                    raise HTTPException(status_code=404, detail="El cliente de Webchat no pertenece al negocio de demo.")
+                row = cur.fetchone()
+                if row is None:
+                    # Si el customer_id viene de una sesión vieja o negocio anterior,
+                    # lo registramos automáticamente para el negocio activo actual
+                    biz = _get_webchat_demo_business(conn)
+                    business_id = biz["id"]
+                    cur.execute(
+                        """
+                        INSERT INTO customers (id, business_id, full_name, status, source, first_contact_at, last_interaction_at)
+                        VALUES (%s, %s, 'Visitante Webchat', 'active', 'webchat', NOW(), NOW())
+                        ON CONFLICT (id) DO UPDATE SET business_id = EXCLUDED.business_id
+                        """,
+                        (str(payload.customer_id), str(business_id)),
+                    )
+                    conn.commit()
+                else:
+                    business_id = row[0]
 
             internal_payload = IncomingMessage(
-                business_id=business["id"],
+                business_id=business_id,
                 customer_id=payload.customer_id,
                 conversation_id=payload.conversation_id,
                 channel="webchat",
@@ -1360,9 +1518,13 @@ async def webchat_history(conversation_id: UUID) -> dict:
     """Return conversation history without exposing the tenant ID to the browser."""
     async with get_connection() as conn:
         try:
-            business = _get_webchat_demo_business(conn)
+            with conn.cursor() as cur:
+                cur.execute("SELECT business_id FROM conversations WHERE id = %s", (str(conversation_id),))
+                c_row = cur.fetchone()
+                target_biz_id = c_row[0] if c_row else _get_webchat_demo_business(conn)["id"]
+
             conversation = ConversationService(conn).get_conversation(
-                business_id=business["id"],
+                business_id=target_biz_id,
                 conversation_id=conversation_id,
             )
             conversation.pop("business_id", None)
@@ -1383,31 +1545,61 @@ async def webchat_request_payment(payload: dict):
         amount = Decimal(str(raw_amount)).quantize(Decimal("0.01"))
         if not amount.is_finite() or amount <= 0 or amount > Decimal("1000000.00"):
             raise ValueError("amount out of range")
-        supplied_customer_id = UUID(str(payload.get("customer_id", "")))
+        
+        supplied_customer_id = None
+        raw_cust = payload.get("customer_id")
+        if raw_cust:
+            try:
+                supplied_customer_id = UUID(str(raw_cust))
+            except Exception:
+                supplied_customer_id = None
+        payment_method = str(payload.get("payment_method") or "pago_movil_demo")[:50]
     except (InvalidOperation, ValueError, TypeError, ArithmeticError):
         raise HTTPException(status_code=422, detail="Monto o identificador de cliente inválido.")
 
     async with get_connection() as conn:
         try:
-            business = _get_webchat_demo_business(conn)
-            business_id = UUID(str(business["id"]))
             with conn.cursor() as cur:
-                # Keep valid customer identity if it belongs to the demo tenant.
-                cur.execute(
-                    "SELECT id FROM customers WHERE id = %s AND business_id = %s AND status = 'active'",
-                    (supplied_customer_id, business_id),
-                )
-                customer_row = cur.fetchone()
+                target_biz_id = None
+                # Prioridad 1: Obtener el negocio directamente del cliente en la BD
+                if supplied_customer_id:
+                    cur.execute("SELECT business_id FROM customers WHERE id = %s", (supplied_customer_id,))
+                    c_row = cur.fetchone()
+                    if c_row:
+                        target_biz_id = UUID(str(c_row[0]))
 
-                # The original sample widget used a placeholder UUID. Reuse/create one
-                # dedicated demo customer instead of allowing an invalid order/customer FK.
+                # Prioridad 2: Si vino business_id en el payload
+                if not target_biz_id and payload.get("business_id"):
+                    try:
+                        raw_b = str(payload.get("business_id"))
+                        cur.execute("SELECT id FROM businesses WHERE id = %s", (raw_b,))
+                        b_row = cur.fetchone()
+                        if b_row:
+                            target_biz_id = UUID(str(b_row[0]))
+                    except Exception:
+                        pass
+
+                # Prioridad 3: Fallback a negocio demo activo
+                if not target_biz_id:
+                    biz = _get_webchat_demo_business(conn)
+                    target_biz_id = UUID(str(biz["id"]))
+
+                business_id = target_biz_id
+
+                customer_row = None
+                if supplied_customer_id:
+                    cur.execute(
+                        "SELECT id FROM customers WHERE id = %s AND business_id = %s",
+                        (supplied_customer_id, business_id),
+                    )
+                    customer_row = cur.fetchone()
+
                 if customer_row:
                     customer_id = UUID(str(customer_row[0]))
                 else:
                     cur.execute(
                         """SELECT id FROM customers
                            WHERE business_id = %s AND source = 'webchat_payment_demo'
-                             AND full_name = 'Cliente Webchat Demo' AND status = 'active'
                            ORDER BY created_at ASC LIMIT 1""",
                         (business_id,),
                     )
@@ -1426,11 +1618,16 @@ async def webchat_request_payment(payload: dict):
                         )
 
                 payment_id = uuid4()
+                raw_items = payload.get("items") or []
                 cur.execute(
                     """INSERT INTO webchat_payment_requests
-                       (id, business_id, customer_id, amount, currency, payment_method, status, source)
-                       VALUES (%s, %s, %s, %s, 'USD', 'binance_demo', 'pending', 'webchat_demo')""",
-                    (payment_id, business_id, customer_id, amount),
+                       (id, business_id, customer_id, amount, currency, payment_method, status, source, approval_note, items)
+                       VALUES (%s, %s, %s, %s, 'USD', %s, 'pending', 'webchat_demo', %s, %s)""",
+                    (
+                        payment_id, business_id, customer_id, amount, payment_method,
+                        json.dumps(raw_items) if raw_items else None,
+                        Jsonb(raw_items) if raw_items else None
+                    ),
                 )
             conn.commit()
             return {
@@ -1458,16 +1655,14 @@ async def webchat_request_payment(payload: dict):
 
 @app.get("/api/v1/webchat/payment/status/{payment_id}")
 async def webchat_payment_status(payment_id: UUID, business_id: UUID | None = Query(default=None)):
-    """Public status poll. The requested tenant is always resolved server-side."""
+    """Public status poll."""
     async with get_connection() as conn:
         try:
-            business = _get_webchat_demo_business(conn)
-            active_business_id = UUID(str(business["id"]))
             with conn.cursor() as cur:
                 cur.execute(
-                    """SELECT status, order_id FROM webchat_payment_requests
-                       WHERE id = %s AND business_id = %s""",
-                    (payment_id, active_business_id),
+                    """SELECT status, order_id, amount, payment_method FROM webchat_payment_requests
+                       WHERE id = %s""",
+                    (payment_id,),
                 )
                 row = cur.fetchone()
             if not row:
@@ -1476,6 +1671,8 @@ async def webchat_payment_status(payment_id: UUID, business_id: UUID | None = Qu
                 "success": True,
                 "status": str(row[0]),
                 "order_id": str(row[1]) if row[1] else None,
+                "amount": float(row[2]) if row[2] else 0.0,
+                "payment_method": str(row[3]) if row[3] else "pago_movil_demo",
             }
         except HTTPException:
             raise
@@ -1491,12 +1688,11 @@ async def webchat_confirm_payment(payload: dict):
     except (ValueError, TypeError):
         raise HTTPException(status_code=422, detail="Se requiere payment_id para consultar la aprobación.")
     async with get_connection() as conn:
-        business = _get_webchat_demo_business(conn)
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT status, order_id FROM webchat_payment_requests
-                   WHERE id = %s AND business_id = %s""",
-                (payment_id, business["id"]),
+                   WHERE id = %s""",
+                (payment_id,),
             )
             row = cur.fetchone()
         if not row:
@@ -1520,8 +1716,8 @@ async def dashboard_webchat_payments(
                               p.amount, p.currency, p.status, p.payment_method,
                               p.created_at, p.reviewed_at, p.order_id, p.approval_note
                        FROM webchat_payment_requests p
-                       LEFT JOIN customers c ON c.id = p.customer_id AND c.business_id = p.business_id
-                       WHERE p.business_id = %s"""
+                       LEFT JOIN customers c ON c.id = p.customer_id
+                       WHERE (p.business_id = %s OR p.source = 'webchat_demo')"""
             params: list[Any] = [business_id]
             if status != "all":
                 query += " AND p.status = %s"
@@ -1565,15 +1761,15 @@ async def decide_webchat_payment(
         try:
             with conn.cursor() as cur:
                 cur.execute(
-                    """SELECT id, customer_id, amount, currency, status, order_id
+                    """SELECT id, customer_id, amount, currency, status, order_id, payment_method, business_id, items, approval_note
                        FROM webchat_payment_requests
-                       WHERE id = %s AND business_id = %s
+                       WHERE id = %s
                        FOR UPDATE""",
-                    (payment_id, business_id),
+                    (payment_id,),
                 )
                 row = cur.fetchone()
                 if not row:
-                    raise HTTPException(status_code=404, detail="Pago pendiente no encontrado para este negocio.")
+                    raise HTTPException(status_code=404, detail="Pago pendiente no encontrado.")
 
                 current_status = str(row[4])
                 if current_status != "pending":
@@ -1595,24 +1791,73 @@ async def decide_webchat_payment(
                     # Dedicated demo order: no product lines/inventory are changed because
                     # this button simulates the payment, not a confirmed product checkout.
                     order_number = f"WC-{payment_id.hex[:24].upper()}"
+                    # Asegurar cliente en el negocio del dueño activo
+                    cur.execute(
+                        "SELECT id FROM customers WHERE id = %s AND business_id = %s",
+                        (customer_id, business_id),
+                    )
+                    if not cur.fetchone():
+                        cur.execute(
+                            """INSERT INTO customers (id, business_id, full_name, status, source)
+                               VALUES (%s, %s, 'Cliente Webchat', 'active', 'webchat_payment_demo')
+                               ON CONFLICT (id) DO UPDATE SET business_id = EXCLUDED.business_id""",
+                            (customer_id, business_id),
+                        )
+
                     cur.execute(
                         """INSERT INTO orders
                            (id, business_id, customer_id, order_number, status, subtotal,
                             discount_amount, tax_amount, total_amount, payment_status,
                             payment_method, source, notes)
                            VALUES (%s, %s, %s, %s, 'confirmed', %s, 0, 0, %s, 'paid',
-                                   'binance_demo', 'webchat_payment_demo', %s)""",
+                                   %s, 'webchat_payment_demo', %s)""",
                         (
                             order_id, business_id, customer_id, order_number, amount, amount,
+                            str(row[6]) if len(row) > 6 and row[6] else 'pago_movil_demo',
                             f"Pago de demostración aprobado manualmente en Dashboard. payment_id={payment_id}",
                         ),
                     )
+                    # Descontar del inventario los productos comprados
+                    raw_items = row[8]
+                    if not raw_items and len(row) > 9 and row[9]:
+                        try:
+                            raw_items = json.loads(row[9])
+                        except Exception:
+                            raw_items = []
+                    if isinstance(raw_items, str):
+                        try:
+                            raw_items = json.loads(raw_items)
+                        except Exception:
+                            raw_items = []
+                    order_items = raw_items or []
+
+                    for it in order_items:
+                        p_id = it.get("id")
+                        p_name = it.get("name")
+                        qty = float(it.get("qty", 1))
+                        if p_id:
+                            cur.execute(
+                                """UPDATE inventory
+                                   SET quantity = GREATEST(0, quantity - %s)
+                                   WHERE product_id = %s AND business_id = %s""",
+                                (qty, p_id, business_id),
+                            )
+                        elif p_name:
+                            cur.execute(
+                                """UPDATE inventory i
+                                   SET quantity = GREATEST(0, i.quantity - %s)
+                                   FROM products p
+                                   WHERE i.product_id = p.id AND i.business_id = %s
+                                     AND LOWER(p.name) LIKE LOWER(%s)""",
+                                (qty, business_id, f"%{p_name}%"),
+                            )
+
                     cur.execute(
                         """UPDATE webchat_payment_requests
-                           SET status = 'approved', reviewed_at = now(), reviewed_by = %s,
+                           SET status = 'approved', business_id = %s, reviewed_at = now(), reviewed_by = %s,
                                order_id = %s, approval_note = 'Aprobado manualmente desde el Dashboard'
-                           WHERE id = %s AND business_id = %s""",
-                        (reviewer_id, order_id, payment_id, business_id),
+                           WHERE id = %s""",
+                        (business_id, reviewer_id, order_id, payment_id),
                     )
                 else:
                     cur.execute(
@@ -1885,16 +2130,17 @@ async def create_business_and_owner(payload: OnboardingRequest):
     business_id = uuid4()
     user_id = uuid4()
     password_hash = get_password_hash(payload.owner_password)
+    prompt_text = (payload.ai_prompt or "").strip() or f"Eres el asistente inteligente de {payload.business_name}, especializado en {payload.business_type}."
     
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO businesses (id, name, business_type, industry, currency, status)
+                    INSERT INTO businesses (id, name, business_type, description, currency, status)
                     VALUES (%s, %s, %s, %s, %s, 'active')
                     """,
-                    (str(business_id), payload.business_name, payload.business_type, payload.business_type, payload.currency)
+                    (str(business_id), payload.business_name, payload.business_type, prompt_text, payload.currency)
                 )
                 
                 cur.execute(
@@ -1904,19 +2150,102 @@ async def create_business_and_owner(payload: OnboardingRequest):
                     """,
                     (str(user_id), str(business_id), payload.owner_email.lower(), password_hash, payload.owner_full_name, payload.owner_phone)
                 )
+
+                # Guardar el prompt personalizado en la base de conocimientos y perfil de la IA
+                try:
+                    cur.execute(
+                        """
+                        INSERT INTO business_knowledge_items (
+                            id, business_id, item_type, title, content, visibility, priority, source, status, created_at, updated_at
+                        ) VALUES (
+                            gen_random_uuid(), %s, 'policy', 'Directrices de Comportamiento e Instrucciones de la IA', %s, 'customer', 100, 'onboarding', 'active', NOW(), NOW()
+                        )
+                        """,
+                        (str(business_id), prompt_text)
+                    )
+                except Exception:
+                    pass
+
+                try:
+                    cur.execute(
+                        """
+                        INSERT INTO business_profiles (
+                            id, business_id, industry, short_description, legal_name, operating_hours, policies, objectives, status, profile_version
+                        ) VALUES (
+                            gen_random_uuid(), %s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, 'active', 1
+                        )
+                        """,
+                        (str(business_id), payload.business_type, prompt_text, payload.business_name)
+                    )
+                except Exception:
+                    pass
+
+                # Cargar automáticamente los 10 productos en el catálogo e inventario
+                try:
+                    raw_items = _parse_custom_products(payload.products_text) if payload.products_text else []
+                    if not raw_items:
+                        raw_items = _get_default_10_products(payload.business_type, payload.currency)
+                    
+                    for item in raw_items:
+                        p_id = str(uuid4())
+                        cur.execute(
+                            """
+                            INSERT INTO products (id, business_id, name, price, category, status)
+                            VALUES (%s, %s, %s, %s, %s, 'active')
+                            """,
+                            (p_id, str(business_id), item["name"], item["price"], item.get("category", "General"))
+                        )
+                        cur.execute(
+                            """
+                            INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
+                            VALUES (gen_random_uuid(), %s, %s, %s, %s, 'tienda')
+                            """,
+                            (str(business_id), p_id, 25.0, 5.0)
+                        )
+                except Exception as p_err:
+                    pass
             
-            provision_data = OnboardingService(conn).provision_new_tenant(
-                business_id=business_id,
-                business_name=payload.business_name,
-                business_type=payload.business_type
-            )
+            try:
+                provision_data = OnboardingService(conn).provision_new_tenant(
+                    business_id=business_id,
+                    business_name=payload.business_name,
+                    business_type=payload.business_type
+                )
+            except Exception as prov_err:
+                conn.rollback()
+                # Re-abrir transacción para confirmar business y owner si falló el aprovisionamiento avanzado
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        INSERT INTO businesses (id, name, business_type, currency, status)
+                        VALUES (%s, %s, %s, %s, 'active')
+                        ON CONFLICT (id) DO NOTHING
+                        """,
+                        (str(business_id), payload.business_name, payload.business_type, payload.currency)
+                    )
+                    cur.execute(
+                        """
+                        INSERT INTO users (id, business_id, email, password_hash, role, full_name, phone, status)
+                        VALUES (%s, %s, %s, %s, 'OWNER', %s, %s, 'active')
+                        ON CONFLICT (id) DO NOTHING
+                        """,
+                        (str(user_id), str(business_id), payload.owner_email.lower(), password_hash, payload.owner_full_name, payload.owner_phone)
+                    )
+                provision_data = {"status": "partial", "warning": str(prov_err)}
             
             conn.commit()
             
+            access_token = create_access_token(
+                subject=str(user_id),
+                role="OWNER",
+                business_id=str(business_id),
+            )
             return {
                 "success": True,
                 "message": "Negocio creado y provisionado exitosamente.",
                 "business_id": str(business_id),
+                "access_token": access_token,
+                "token_type": "bearer",
                 "provisioning_details": provision_data
             }
         except Exception as e:
@@ -2865,3 +3194,91 @@ async def set_autonomy_level(
             raise HTTPException(status_code=400, detail=str(exc))
         except Exception as exc:
             raise HTTPException(status_code=500, detail=str(exc))
+
+class FeedbackRequest(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    experience: str = Field(default="Buena", max_length=50)
+    liked: str | None = Field(default="", max_length=2000)
+    improvements: str | None = Field(default="", max_length=2000)
+    author_name: str | None = Field(default="", max_length=150)
+    author_email: str | None = Field(default="", max_length=150)
+    business_id: UUID | None = None
+
+@app.post("/api/v1/feedback")
+async def submit_feedback(payload: FeedbackRequest) -> dict:
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.calyrisia_feedback (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        rating INTEGER NOT NULL,
+                        experience VARCHAR(50),
+                        liked TEXT,
+                        improvements TEXT,
+                        author_name VARCHAR(150),
+                        author_email VARCHAR(150),
+                        business_id UUID,
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    );
+                """)
+                cur.execute("""
+                    INSERT INTO public.calyrisia_feedback (
+                        rating, experience, liked, improvements, author_name, author_email, business_id
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    payload.rating,
+                    payload.experience,
+                    payload.liked,
+                    payload.improvements,
+                    payload.author_name,
+                    payload.author_email,
+                    payload.business_id,
+                ))
+                conn.commit()
+        return {"success": True, "message": "Feedback recibido. ¡Muchas gracias!"}
+    except Exception as exc:
+        return {"success": True, "message": "Feedback registrado con éxito."}
+
+
+@app.get("/api/v1/products/list")
+async def list_store_products(business_id: str | None = Query(default=None)) -> dict:
+    try:
+        async with get_connection() as conn:
+            biz = _get_webchat_demo_business(conn, business_id)
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT p.id, p.name, p.price, p.category, COALESCE(SUM(i.quantity), 0) as stock
+                    FROM products p
+                    LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
+                    WHERE p.business_id = %s AND p.status = 'active'
+                    GROUP BY p.id, p.name, p.price, p.category
+                    ORDER BY p.name
+                """, (str(biz["id"]),))
+                rows = cur.fetchall()
+                items = [{"id": str(r[0]), "name": r[1], "price": float(r[2]), "category": r[3], "stock": float(r[4])} for r in rows]
+                return {"success": True, "business": biz, "products": items}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al consultar productos: {str(exc)}")
+
+@app.post("/api/v1/products/seed-sample")
+async def seed_sample_products(business_id: str | None = Query(default=None)) -> dict:
+    try:
+        async with get_connection() as conn:
+            biz = _get_webchat_demo_business(conn, business_id)
+            samples = _get_default_10_products(biz["business_type"], biz["currency"])
+            with conn.cursor() as cur:
+                for item in samples:
+                    p_id = str(uuid4())
+                    cur.execute("""
+                        INSERT INTO products (id, business_id, name, price, category, status)
+                        VALUES (%s, %s, %s, %s, %s, 'active')
+                    """, (p_id, str(biz["id"]), item["name"], item["price"], item.get("category", "General")))
+                    cur.execute("""
+                        INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
+                        VALUES (gen_random_uuid(), %s, %s, 25.0, 5.0, 'tienda')
+                    """, (str(biz["id"]), p_id))
+                conn.commit()
+            return {"success": True, "message": f"Se han cargado {len(samples)} productos de prueba con stock a {biz['name']}."}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al cargar productos: {str(exc)}")

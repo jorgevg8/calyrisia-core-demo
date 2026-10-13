@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     pg_sslmode: str = Field(default="require", alias="PGSSLMODE")
 
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-3.8-flash", alias="GEMINI_MODEL")
+    gemini_model: str = Field(default="gemini-1.5-flash", alias="GEMINI_MODEL")
 
     # Paso 38 — secretos de seguridad. Nunca deben quedar hardcodeados.
     galaxy_jwt_secret: str = Field(default="", alias="GALAXY_JWT_SECRET")

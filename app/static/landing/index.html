@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calyrisia OS | Inteligencia Artificial para Comercios</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg-deep: #030712;
+            --primary: #00f2fe;
+            --primary-grad: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            --accent-grad: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
+            --glass-bg: rgba(17, 24, 39, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            background-image: 
+                radial-gradient(ellipse at 20% 20%, rgba(0, 242, 254, 0.12), transparent 45%),
+                radial-gradient(ellipse at 80% 30%, rgba(168, 85, 247, 0.12), transparent 45%),
+                radial-gradient(ellipse at 50% 80%, rgba(56, 189, 248, 0.08), transparent 50%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
+        .nav {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 24px 8%; max-width: 1300px; margin: 0 auto;
+        }
+        .logo-wrap { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+        .logo-svg { width: 38px; height: 38px; filter: drop-shadow(0 0 12px rgba(0, 242, 254, 0.4)); }
+        .logo-text { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-links { display: flex; gap: 24px; align-items: center; }
+        .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+        .nav-link:hover { color: #fff; }
+        .btn-nav {
+            padding: 8px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--glass-border); color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: all 0.2s;
+        }
+        .btn-nav:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.2); }
+        .hero {
+            text-align: center; padding: 70px 20px 40px; max-width: 900px; margin: 0 auto;
+        }
+        .badge {
+            display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 30px;
+            background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.25);
+            font-size: 0.85rem; color: #38bdf8; font-weight: 500; margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: 3.5rem; font-weight: 800; line-height: 1.15; letter-spacing: -1.5px; margin-bottom: 20px;
+        }
+        .hero-grad { background: linear-gradient(135deg, #ffffff 30%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p {
+            font-size: 1.15rem; color: var(--text-muted); line-height: 1.6; max-width: 680px; margin: 0 auto 36px;
+        }
+        .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 50px; }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 14px;
+            background: var(--primary-grad); color: #020617; font-weight: 600; text-decoration: none;
+            box-shadow: 0 0 25px rgba(0, 242, 254, 0.35); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 35px rgba(0, 242, 254, 0.55); }
+        .btn-secondary {
+            display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 14px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border); color: #fff; text-decoration: none;
+            font-weight: 500; backdrop-filter: blur(10px); transition: all 0.2s;
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+        .grid-features {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;
+            max-width: 1200px; margin: 40px auto 80px; padding: 0 20px;
+        }
+        .card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px;
+            padding: 30px; backdrop-filter: blur(12px); transition: transform 0.2s, border-color 0.2s;
+        }
+        .card:hover { transform: translateY(-4px); border-color: rgba(0, 242, 254, 0.3); }
+        .card-icon {
+            width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; margin-bottom: 20px;
+        }
+        .icon-blue { background: rgba(0, 242, 254, 0.1); color: #00f2fe; }
+        .icon-purple { background: rgba(168, 85, 247, 0.1); color: #c084fc; }
+        .icon-emerald { background: rgba(52, 211, 153, 0.1); color: #34d399; }
+        .card h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 600; }
+        .card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; }
+        .banner-feedback {
+            max-width: 1000px; margin: 0 auto 90px; padding: 40px; border-radius: 24px;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(30, 41, 59, 0.5));
+            border: 1px solid rgba(0, 242, 254, 0.2); text-align: center;
+        }
+        .banner-feedback h2 { font-size: 2rem; margin-bottom: 12px; }
+        .banner-feedback p { color: var(--text-muted); max-width: 580px; margin: 0 auto 24px; }
+        footer { text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--glass-border); }
+        @media(max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .nav { flex-direction: column; gap: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/" class="logo-wrap">
+            <svg class="logo-svg" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="4" fill="url(#cg)"/>
+                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(30 16 16)" stroke="url(#cg)" stroke-width="1.8"/>
+                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(-30 16 16)" stroke="url(#cg)" stroke-width="1.8"/>
+                <defs>
+                    <linearGradient id="cg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#00f2fe" />
+                        <stop offset="1" stop-color="#9333ea" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <span class="logo-text">Calyrisia</span>
+        </a>
+        <div class="nav-links">
+            <a href="/webchat" class="nav-link">Webchat Demo</a>
+            <a href="/dashboard/" class="btn-nav">Dashboard</a>
+            <a href="/feedback" class="btn-nav"><i class="ph ph-chat-circle-dots"></i> Feedback</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="badge">
+            <i class="ph-fill ph-sparkle"></i> Calyrisia Core v1.0 — Demo en Vivo
+        </div>
+        <h1>Inteligencia Artificial Autónoma <br><span class="hero-grad">para hacer crecer tu Comercio</span></h1>
+        <p>Tu asesor comercial 24/7 que atiende a tus clientes, entiende tu rubro, recomienda productos de tu catálogo y automatiza tus ventas con supervisión del dueño.</p>
+        <div class="hero-actions">
+            <a href="/onboarding" class="btn-primary"><i class="ph-bold ph-rocket-launch"></i> Probar Demo (Crear Negocio)</a>
+            <a href="/webchat" class="btn-secondary"><i class="ph-bold ph-chat-teardrop-dots"></i> Abrir Webchat IA</a>
+            <a href="/dashboard/" class="btn-secondary"><i class="ph-bold ph-gauge"></i> Centro de Mando</a>
+        </div>
+    </section>
+
+    <section class="grid-features">
+        <div class="card">
+            <div class="card-icon icon-blue"><i class="ph ph-brain"></i></div>
+            <h3>Asesor IA Especializado</h3>
+            <p>Se adapta al instante a lo que vendas: ropa, salud, comida, repuestos o servicios. Responde dudas con lenguaje natural y cierra ventas.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon icon-purple"><i class="ph ph-chart-line-up"></i></div>
+            <h3>Centro de Mando Propietario</h3>
+            <p>Visualiza en tiempo real las conversaciones, citas agendadas, pedidos generados y métricas clave de salud del cliente.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon icon-emerald"><i class="ph ph-shield-check"></i></div>
+            <h3>Autonomía con Control Humano</h3>
+            <p>Niveles de gobernanza inteligentes: el asistente resuelve lo cotidiano y solicita tu aprobación inmediata para operaciones sensibles.</p>
+        </div>
+    </section>
+
+    <div class="banner-feedback">
+        <h2>¿Probaste la demo? Déjanos tu opinión</h2>
+        <p>Tu retroalimentación nos ayuda a perfeccionar la plataforma antes del lanzamiento comercial.</p>
+        <a href="/feedback" class="btn-primary"><i class="ph-bold ph-star"></i> Dejar mi Feedback</a>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Calyrisia Technologies. Demo de Software Operativo con IA Autónoma.</p>
+    </footer>
+</body>
+</html>

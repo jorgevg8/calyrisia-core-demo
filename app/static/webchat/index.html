@@ -3,216 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovaTelas Boutique - Asesor IA</title>
+    <title>Asesor de Ventas IA - Calyrisia</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-        body { background: #f4f4f5; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        #chat-wrapper { width: 100%; max-width: 420px; height: 85vh; background: #ffffff; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e4e4e7; }
-        .chat-header { background: #ffffff; padding: 20px; text-align: center; border-bottom: 1px solid #f4f4f5; display: flex; flex-direction: column; align-items: center; }
-        .chat-header h1 { font-size: 1.1rem; color: #18181b; font-weight: 600; letter-spacing: -0.5px; }
-        .chat-header span { font-size: 0.75rem; color: #71717a; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        body { background: #030712; height: 100vh; display: flex; justify-content: center; align-items: center; background-image: radial-gradient(ellipse at 50% 20%, rgba(0, 242, 254, 0.08), transparent 50%); }
+        #chat-wrapper { width: 100%; max-width: 440px; height: 90vh; background: #ffffff; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e4e4e7; }
+        .top-nav { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: #fafafa; border-bottom: 1px solid #f0f0f0; }
+        .top-nav a { text-decoration: none; font-size: 0.82rem; font-weight: 500; }
+        .chat-header { background: #ffffff; padding: 16px 20px; text-align: center; border-bottom: 1px solid #f4f4f5; display: flex; flex-direction: column; align-items: center; }
+        .chat-header h1 { font-size: 1.15rem; color: #18181b; font-weight: 600; letter-spacing: -0.5px; }
+        .status-dot { display: inline-block; width: 6px; height: 6px; background: #10b981; border-radius: 50%; margin-right: 4px; }
         #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
-        .msg { padding: 12px 16px; border-radius: 16px; max-width: 85%; font-size: 0.95rem; line-height: 1.4; animation: fadeIn 0.3s ease-out forwards; }
-        .user { background: #18181b; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .bot { background: #ffffff; color: #27272a; border: 1px solid #e4e4e7; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
-        #input-area { padding: 15px; background: #ffffff; border-top: 1px solid #f4f4f5; display: flex; gap: 10px; align-items: center; }
-        input { flex: 1; padding: 12px 16px; border: 1px solid #e4e4e7; border-radius: 20px; outline: none; font-size: 0.95rem; background: #f4f4f5; transition: all 0.2s; }
-        input:focus { background: #ffffff; border-color: #a1a1aa; }
-        button.send-btn { background: #18181b; color: white; border: none; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s; }
-        button.send-btn:hover { background: #3f3f46; }
-        button.send-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        .msg { padding: 12px 16px; border-radius: 16px; max-width: 88%; font-size: 0.95rem; line-height: 1.45; animation: fadeIn 0.3s ease-out forwards; white-space: pre-line; }
+        .user { background: #0f172a; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bot { background: #ffffff; color: #18181b; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #f4f4f5; }
+        #typing { display: none; align-self: flex-start; background: #ffffff; padding: 10px 16px; border-radius: 16px; border: 1px solid #f4f4f5; gap: 4px; align-items: center; }
+        .dot { width: 6px; height: 6px; background: #a1a1aa; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+        .chat-input-area { padding: 16px 20px; background: #ffffff; border-top: 1px solid #f4f4f5; display: flex; gap: 10px; align-items: center; }
+        input[type="text"] { flex: 1; padding: 12px 16px; border: 1px solid #e4e4e7; border-radius: 25px; outline: none; font-size: 0.95rem; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: #0284c7; }
+        button.btn-send { width: 44px; height: 44px; border-radius: 50%; background: #0f172a; color: #ffffff; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s, transform 0.1s; }
+        button.btn-send:hover { background: #1e293b; transform: scale(1.05); }
+        button.btn-send:disabled { background: #e4e4e7; cursor: not-allowed; transform: none; }
         
-        .binance-btn { background: #fcd535; color: #18181b; font-weight: 600; width: 100%; border-radius: 12px; padding: 12px; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 0.95rem; box-shadow: 0 4px 10px rgba(252, 213, 53, 0.2); border: none; cursor: pointer; transition: all 0.2s; }
-        .binance-btn:hover { background: #eab308; transform: translateY(-1px); }
-        .binance-btn:disabled { background: #e4e4e7; color: #a1a1aa; cursor: not-allowed; transform: none; box-shadow: none; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .typing { display: none; align-self: flex-start; gap: 4px; padding: 12px 16px; background: transparent; }
-        .typing .dot { width: 6px; height: 6px; background: #a1a1aa; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; }
-        .typing .dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing .dot:nth-child(2) { animation-delay: -0.16s; }
+        /* TARJETA DE PAGO INTERACTIVA DEMO */
+        .payment-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 4px 0 8px 0;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-self: flex-start;
+            width: 100%;
+            max-width: 95%;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        .pay-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pay-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #0284c7;
+            background: #e0f2fe;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+        .pay-amount {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .pay-title {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .pay-info {
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 0.82rem;
+            color: #475569;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border: 1px solid #f1f5f9;
+        }
+        .pay-info-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        .pay-status-box {
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .pay-status-box.pending {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .pay-status-box.approved {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .pay-status-box.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .hidden { display: none !important; }
+        .btn-pay-demo {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+        }
+        .btn-pay-demo:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+        }
+        .btn-pay-demo:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .spin { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-<div id="chat-wrapper">
-    <div class="chat-header">
-        <h1>NovaTelas Boutique</h1>
-        <span>Asesor de Ventas IA</span>
+    <div id="chat-wrapper">
+        <div class="top-nav">
+            <a href="/" style="color: #64748b;">← Inicio</a>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 0.72rem; color: #10b981; display: inline-flex; align-items: center;"><span class="status-dot"></span><span id="status">En línea</span></span>
+                <button type="button" onclick="switchTenant()" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 3px 8px; font-size: 0.72rem; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Cambiar negocio activo">
+                    🏢 Cambiar ID
+                </button>
+                <button type="button" onclick="resetChatSession()" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 3px 8px; font-size: 0.72rem; color: #475569; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    🔄 Reiniciar
+                </button>
+            </div>
+            <a href="/feedback" style="color: #0284c7; font-weight: 600;">⭐ Feedback</a>
+        </div>
+        <div class="chat-header">
+            <h1 id="business-name">Calyrisia Asesor IA</h1>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+                <span id="business-type-badge" style="font-size: 0.72rem; color: #0284c7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">ASESOR DE VENTAS IA</span>
+                <span style="font-size: 0.72rem; color: #cbd5e1;">•</span>
+                <span id="tenant-pill" style="font-size: 0.7rem; color: #475569; font-family: monospace; background: #f1f5f9; padding: 2px 8px; border-radius: 6px; border: 1px solid #e2e8f0;" title="ID del Negocio">ID: Detectando...</span>
+            </div>
+        </div>
+        <div id="messages">
+            <!-- Los mensajes se cargan dinámicamente -->
+        </div>
+        <div id="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+        <div class="chat-input-area">
+            <input type="text" id="user-input" placeholder="Escribe un mensaje..." autocomplete="off">
+            <button class="btn-send" id="send-button">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
     </div>
-    <div id="messages">
-        <div class="msg bot">¡Hola! Bienvenido a NovaTelas Boutique. ¿En qué te puedo asesorar hoy?</div>
-    </div>
-    <div class="typing" id="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-    <div id="input-area">
-        <input type="text" id="user-input" placeholder="Escribe un mensaje..." onkeypress="if(event.key === 'Enter') sendMessage()">
-        <button class="send-btn" onclick="sendMessage()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path></svg></button>
-    </div>
-</div>
-
-<script>
-    const BUSINESS_ID = "b0816122-4da6-42ac-974b-92a80e85eec1"; 
-    const CUSTOMER_ID = "12345678-1234-5678-1234-567812345678";
-    let activeCustomerId = CUSTOMER_ID;
-    let conversationHistory = [];
-
-    // DEMO DE PAGO: se registra como pendiente y el negocio lo aprueba/rechaza en el Dashboard.
-    // No se conecta a Binance ni verifica una transferencia real.
-    async function procesarPago(btn, monto) {
-        if (btn.dataset.paymentStarted === "true") return;
-        btn.dataset.paymentStarted = "true";
-        btn.disabled = true;
-        btn.innerHTML = `⏳ Creando solicitud de pago...`;
-
-        let paymentId = null;
-        try {
-            const res = await fetch("/api/v1/webchat/payment/request", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ customer_id: activeCustomerId, monto: parseFloat(monto) })
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data.success || !data.payment_id) {
-                throw new Error(data.detail || "No se pudo crear la solicitud de pago.");
-            }
-            paymentId = data.payment_id;
-            activeCustomerId = data.customer_id || activeCustomerId;
-            btn.innerHTML = `⏳ Pago pendiente de aprobación del vendedor...`;
-            btn.style.background = "#fef08a";
-            btn.style.color = "#854d0e";
-
-            const messagesDiv = document.getElementById("messages");
-            messagesDiv.innerHTML += `<div class="msg bot" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;">
-                Solicitud registrada para la simulación de pago de $${Number(monto).toFixed(2)} USD. El vendedor debe aprobarla desde el Dashboard. Esta demo no verifica una transferencia real de Binance.
-            </div>`;
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        } catch (e) {
-            console.error("No se pudo registrar la solicitud de pago:", e);
-            btn.disabled = false;
-            delete btn.dataset.paymentStarted;
-            btn.innerHTML = `⚠️ Error: intentar pago de nuevo`;
-            btn.style.background = "#fee2e2";
-            btn.style.color = "#991b1b";
-            return;
-        }
-
-        let pollInFlight = false;
-        let pollAttempts = 0;
-        const pollInterval = setInterval(async () => {
-            if (pollInFlight) return;
-            pollInFlight = true;
-            pollAttempts += 1;
-            try {
-                const res = await fetch(`/api/v1/webchat/payment/status/${paymentId}`);
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.detail || "No se pudo consultar el estado del pago.");
-
-                if (data.status === "approved") {
-                    clearInterval(pollInterval);
-                    btn.innerHTML = `✅ Pago aprobado por la tienda · $${Number(monto).toFixed(2)} USD`;
-                    btn.style.background = "#10b981";
-                    btn.style.color = "white";
-                    const messagesDiv = document.getElementById("messages");
-                    messagesDiv.innerHTML += `<div class="msg bot" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;">
-                        <strong>¡Pago de demostración aprobado!</strong> El vendedor aprobó la solicitud de $${Number(monto).toFixed(2)} USD desde el Dashboard y el registro de venta fue actualizado. 🎉
-                    </div>`;
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    conversationHistory.push("Sistema interno: El vendedor aprobó el pago de demostración desde el Dashboard y el registro de venta quedó actualizado.");
-                } else if (data.status === "rejected") {
-                    clearInterval(pollInterval);
-                    btn.innerHTML = `❌ Pago rechazado por la tienda`;
-                    btn.style.background = "#ef4444";
-                    btn.style.color = "white";
-                    btn.title = "La tienda rechazó la solicitud de pago.";
-                } else if (data.status === "not_found") {
-                    clearInterval(pollInterval);
-                    btn.disabled = false;
-                    delete btn.dataset.paymentStarted;
-                    btn.innerHTML = `⚠️ Solicitud no encontrada · reintentar`;
-                } else if (pollAttempts >= 600) {
-                    clearInterval(pollInterval);
-                    btn.disabled = false;
-                    delete btn.dataset.paymentStarted;
-                    btn.innerHTML = `↻ Seguir consultando en Dashboard`;
-                }
-            } catch (e) {
-                console.warn("No se pudo consultar todavía el estado del pago:", e);
-                if (pollAttempts >= 600) {
-                    clearInterval(pollInterval);
-                    btn.disabled = false;
-                    delete btn.dataset.paymentStarted;
-                    btn.innerHTML = `↻ Reintentar consulta del pago`;
-                }
-            } finally {
-                pollInFlight = false;
-            }
-        }, 3000);
-    }
-
-    // EL CEREBRO DEL CHAT
-    async function sendMessage() {
-        const input = document.getElementById("user-input");
-        const msgText = input.value.trim();
-        if (!msgText) return;
-
-        const messagesDiv = document.getElementById("messages");
-        const typingIndicator = document.getElementById("typing");
-
-        conversationHistory.push("Cliente: " + msgText);
-        messagesDiv.innerHTML += `<div class="msg user">${msgText}</div>`;
-        input.value = "";
-        
-        typingIndicator.style.display = "flex";
-        messagesDiv.appendChild(typingIndicator); 
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-        const uniqueId = "bot-msg-" + Date.now();
-        const emptyBotBubble = `<div class="msg bot" id="${uniqueId}"></div>`;
-        const historyText = conversationHistory.slice(-8).join("\n");
-
-        try {
-            const response = await fetch("/api/v1/webchat/stream", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ business_id: BUSINESS_ID, customer_id: CUSTOMER_ID, message: historyText, source: "webchat" })
-            });
-            
-            typingIndicator.style.display = "none";
-            messagesDiv.innerHTML += emptyBotBubble;
-            const targetDiv = document.getElementById(uniqueId);
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let fullBotResponse = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break; 
-                const chunk = decoder.decode(value, { stream: true });
-                fullBotResponse += chunk;
-                targetDiv.innerHTML += chunk.replace(/\n/g, "<br>"); 
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-
-            let rawHtml = targetDiv.innerHTML;
-            const regex = /\[BOTON_PAGO:\s*([\d.]+)\s*\]/gi;
-            
-            if (rawHtml.match(regex)) {
-                targetDiv.innerHTML = rawHtml.replace(regex, 
-                    `<button class="binance-btn" onclick="procesarPago(this, '$1')">
-                        <img src="https://cryptologos.cc/logos/bnb-bnb-logo.svg?v=025" alt="BNB" width="18" style="vertical-align: middle; margin-right: 5px;"> Pagar $$1 USD con Binance
-                    </button>`
-                );
-            }
-
-            let cleanResponse = fullBotResponse.replace(regex, "");
-            conversationHistory.push("Asesor: " + cleanResponse.trim());
-        } catch (error) {
-            typingIndicator.style.display = "none";
-            messagesDiv.innerHTML += `<div class="msg bot" style="color:#ef4444;">Error de red.</div>`;
-        }
-    }
-</script>
+    <script src="app.js"></script>
 </body>
 </html>

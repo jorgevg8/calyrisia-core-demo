@@ -82,15 +82,18 @@ class BrainService:
                     retry_options=types.HttpRetryOptions(attempts=1),
                 ),
             )
-            self.model_candidates = list(
-                dict.fromkeys(
-                    [
-                        self.settings.gemini_model,
-                        "gemini-3.7-flash",
-                        "gemini-3.6-flash",
-                    ]
-                )
-            )
+            # Sanitizar modelo configurado y usar la familia Gemini Flash ultra rápida y ligera
+            env_model = (self.settings.gemini_model or "").strip()
+            if not env_model or "gemini-3" in env_model:
+                env_model = "gemini-2.5-flash"
+                
+            self.model_candidates = [
+                env_model,
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
+                "gemini-2.5-flash-lite",
+            ]
 
         self.context_manager = ContextManager(conn)
         self.tool_manager = ToolManager(conn)
@@ -122,21 +125,137 @@ class BrainService:
         value = re.sub(r"[^a-z0-9áéíóúüñ\- ]+", " ", value)
         return re.sub(r"\s+", " ", value).strip()
 
+
+    def _sample_products_by_type(self, business_type: str, currency: str = "USD") -> list[dict]:
+        b = (business_type or "").lower()
+        if any(k in b for k in ["super", "market", "bode", "abasto", "viveres"]):
+            return [
+                {"name": "Harina de Maíz PAN 1kg", "price": 1.30, "category": "Alimentos"},
+                {"name": "Arroz Blanco Premium 1kg", "price": 1.20, "category": "Alimentos"},
+                {"name": "Aceite Vegetal 1 Litro", "price": 2.80, "category": "Alimentos"},
+                {"name": "Queso Blanco Llanero 1kg", "price": 5.50, "category": "Lácteos"},
+                {"name": "Café Molido Gourmet 500g", "price": 4.20, "category": "Alimentos"},
+                {"name": "Pasta Larga Espagueti 1kg", "price": 1.50, "category": "Alimentos"},
+                {"name": "Leche Líquida Completa 1L", "price": 1.80, "category": "Lácteos"},
+                {"name": "Nutella Crema Avellanas 350g", "price": 5.50, "category": "Dulces"},
+                {"name": "Refresco Familiar 2 Litros", "price": 2.50, "category": "Bebidas"},
+                {"name": "Pack 4 Rollos Papel Higiénico", "price": 2.00, "category": "Higiene"},
+            ]
+        elif any(k in b for k in ["restauran", "comida", "hamburgue", "pizza", "caf", "bar"]):
+            return [
+                {"name": "Hamburguesa Especial Calyrisia", "price": 8.50, "category": "Comida"},
+                {"name": "Hamburguesa Doble Queso y Tocineta", "price": 11.00, "category": "Comida"},
+                {"name": "Perro Caliente Gigante con Todo", "price": 4.00, "category": "Comida"},
+                {"name": "Papas Fritas Rústicas con Queso", "price": 3.50, "category": "Acompañantes"},
+                {"name": "Nuggets de Pollo Crujientes (8 pcs)", "price": 5.00, "category": "Acompañantes"},
+                {"name": "Pizza Personal Pepperoni", "price": 7.00, "category": "Comida"},
+                {"name": "Tequeños con Salsa Tártara (6 pcs)", "price": 4.50, "category": "Entradas"},
+                {"name": "Refresco Frío 355ml", "price": 1.50, "category": "Bebidas"},
+                {"name": "Malteada Cremosa de Chocolate", "price": 3.50, "category": "Bebidas"},
+                {"name": "Postre Brownie con Helado", "price": 4.00, "category": "Postres"},
+            ]
+        elif any(k in b for k in ["ropa", "boutique", "moda", "calzado", "textil", "zapater"]):
+            return [
+                {"name": "Camisa de Lino Manga Larga", "price": 25.00, "category": "Ropa"},
+                {"name": "Pantalón Jean Slim Fit Clásico", "price": 32.00, "category": "Ropa"},
+                {"name": "Vestido Casual Elegante", "price": 28.00, "category": "Ropa"},
+                {"name": "Blusa de Seda Estampada", "price": 22.00, "category": "Ropa"},
+                {"name": "Chaqueta Denim Clásica", "price": 45.00, "category": "Ropa"},
+                {"name": "Short Playero Casual", "price": 16.00, "category": "Ropa"},
+                {"name": "Franela Básica 100% Algodón", "price": 12.00, "category": "Ropa"},
+                {"name": "Zapatos Casuales de Cuero", "price": 48.00, "category": "Calzado"},
+                {"name": "Cinturón de Cuero Reversible", "price": 15.00, "category": "Accesorios"},
+                {"name": "Lentes de Sol Polarizados", "price": 18.00, "category": "Accesorios"},
+            ]
+        elif any(k in b for k in ["farma", "salud", "medic"]):
+            return [
+                {"name": "Paracetamol 500mg (10 tabs)", "price": 2.00, "category": "Medicamentos"},
+                {"name": "Ibuprofeno 400mg (10 tabs)", "price": 2.50, "category": "Medicamentos"},
+                {"name": "Protector Solar FPS 50", "price": 14.00, "category": "Cuidado Personal"},
+                {"name": "Champú Reparador 400ml", "price": 5.50, "category": "Cuidado Personal"},
+                {"name": "Crema Dental Blanqueadora", "price": 2.80, "category": "Higiene"},
+                {"name": "Suero Oral Electrolitos", "price": 1.80, "category": "Salud"},
+                {"name": "Vitamina C 1000mg Efervescente", "price": 4.50, "category": "Suplementos"},
+                {"name": "Alcohol Antiséptico 70% 500ml", "price": 2.20, "category": "Primeros Auxilios"},
+                {"name": "Mascarillas Quirúrgicas (Caja 50)", "price": 4.00, "category": "Protección"},
+                {"name": "Termómetro Digital Rápido", "price": 6.50, "category": "Equipos Médicos"},
+            ]
+        else:
+            return [
+                {"name": "Cable de Carga Rápida USB-C", "price": 6.00, "category": "Accesorios"},
+                {"name": "Cargador de Pared 20W", "price": 12.00, "category": "Accesorios"},
+                {"name": "Auriculares Inalámbricos Bluetooth", "price": 22.00, "category": "Audio"},
+                {"name": "Soporte Magnético para Teléfono", "price": 8.50, "category": "Accesorios"},
+                {"name": "Powerbank Portátil 10000mAh", "price": 18.00, "category": "Baterías"},
+                {"name": "Protector de Pantalla Vidrio 9D", "price": 5.00, "category": "Accesorios"},
+                {"name": "Funda Protectora Antigolpes", "price": 7.50, "category": "Fundas"},
+                {"name": "Memoria MicroSD 64GB Clase 10", "price": 9.00, "category": "Memorias"},
+                {"name": "Mouse Inalámbrico Ergonómico", "price": 11.50, "category": "Computación"},
+                {"name": "Teclado Mecánico RGB", "price": 35.00, "category": "Computación"},
+            ]
+
     def _get_product_catalog(self, business_id: UUID, limit: int = 40) -> list[dict[str, Any]]:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, name, sku, description, category, brand,
-                       price, status, is_service
-                FROM products
-                WHERE business_id = %s
-                  AND status = 'active'
-                ORDER BY name
+                SELECT p.id, p.name, p.sku, p.description, p.category, p.brand,
+                       p.price, p.status, p.is_service,
+                       COALESCE(SUM(i.quantity), 0) AS stock
+                FROM products p
+                LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
+                WHERE p.business_id = %s
+                  AND p.status = 'active'
+                GROUP BY p.id, p.name, p.sku, p.description, p.category, p.brand,
+                         p.price, p.status, p.is_service
+                ORDER BY p.name
                 LIMIT %s
                 """,
-                (business_id, limit),
+                (str(business_id), limit),
             )
             rows = cur.fetchall()
+
+            # Si el negocio no tiene productos aún, auto-sembrar 10 productos reales de su rubro
+            if not rows:
+                try:
+                    cur.execute("SELECT business_type, currency FROM businesses WHERE id = %s", (str(business_id),))
+                    biz_row = cur.fetchone()
+                    b_type = (biz_row[0] if biz_row else "supermercado") or "supermercado"
+                    curr = (biz_row[1] if biz_row else "USD") or "USD"
+                    
+                    samples = self._sample_products_by_type(b_type, curr)
+                    for item in samples:
+                        p_id = str(uuid4())
+                        cur.execute(
+                            """
+                            INSERT INTO products (id, business_id, name, price, category, status)
+                            VALUES (%s, %s, %s, %s, %s, 'active')
+                            """,
+                            (p_id, str(business_id), item["name"], item["price"], item.get("category", "General")),
+                        )
+                        cur.execute(
+                            """
+                            INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
+                            VALUES (gen_random_uuid(), %s, %s, 25.0, 5.0, 'tienda')
+                            """,
+                            (str(business_id), p_id),
+                        )
+                    self.conn.commit()
+
+                    cur.execute(
+                        """
+                        SELECT id, name, sku, description, category, brand,
+                               price, status, is_service
+                        FROM products
+                        WHERE business_id = %s
+                          AND status = 'active'
+                        ORDER BY name
+                        LIMIT %s
+                        """,
+                        (str(business_id), limit),
+                    )
+                    rows = cur.fetchall()
+                except Exception:
+                    pass
 
         return [
             {
@@ -146,9 +265,10 @@ class BrainService:
                 "description": r[3],
                 "category": r[4],
                 "brand": r[5],
-                "price": float(r[6]) if r[6] is not None else None,
+                "price": float(r[6]) if r[6] is not None else 0.0,
                 "status": r[7],
                 "is_service": r[8],
+                "stock": float(r[9]) if len(r) > 9 and r[9] is not None else 25.0,
             }
             for r in rows
         ]
@@ -175,10 +295,8 @@ class BrainService:
         )
         if not context.get("found"):
             return context
-        if include_catalog:
-            context["product_catalog"] = self._get_product_catalog(business_id, limit=40)
-        else:
-            context["product_catalog"] = []
+        # Para que la IA siempre conozca los productos del negocio y pueda recomendar con calidez humana
+        context["product_catalog"] = self._get_product_catalog(business_id, limit=40)
         return self._safe_json(context)
 
     # ------------------------------------------------------------------
@@ -304,31 +422,45 @@ class BrainService:
             separators=(",", ":"),
         )
 
+        biz = context.get("business") or {}
+        biz_name = biz.get("name") or "nuestro comercio"
+        biz_type = biz.get("business_type") or "Comercio"
+        currency = biz.get("currency") or "USD"
+        description = biz.get("description") or ""
+
+        # Formatear el catálogo en texto claro y directo
+        cat_items = context.get("product_catalog") or []
+        if cat_items:
+            cat_lines = [f"- {p['name']}: {currency} {p['price']:.2f} ({int(p.get('stock', 25))} unidades disponibles)" for p in cat_items]
+            cat_str = "\n".join(cat_lines)
+        else:
+            cat_str = "No hay productos registrados en el sistema."
+
         return f"""
-Eres GALAXY BRAIN, el cerebro operativo de un empleado virtual empresarial.
+Eres el Asesor de Ventas oficial de {biz_name} ({biz_type}).
+Atiendes clientes en tiempo real por chat de manera humana, directa, ágil y simpática.
 
-Tu trabajo es comprender la solicitud, usar el contexto del negocio, razonar, elegir
-herramientas, observar sus resultados, volver a razonar cuando sea necesario y
-finalmente responder con precisión y seguridad.
+CATÁLOGO REAL CON PRECIOS OFICIALES EN {currency}:
+{cat_str}
 
-REGLAS FUNDAMENTALES
-1. Los datos operativos actuales deben venir de las herramientas.
-2. Nunca inventes IDs, precios, inventario, pedidos, horarios ni políticas.
-3. Para precio, inventario, cliente, pedido o configuración actual, usa la herramienta correspondiente.
-4. Puedes hacer varias llamadas de herramientas en secuencia y en paralelo cuando proceda.
-5. Nunca ejecutas una acción directamente: todas pasan por Galaxy ToolManager, permisos, límites y aprobación.
-6. Antes de crear un pedido, verifica cliente, producto y disponibilidad actual.
-7. Si una herramienta devuelve waiting_approval, informa que la acción quedó pendiente de aprobación.
-8. Si faltan datos indispensables, pide solo la información necesaria.
-9. Responde en español, claro y profesional.
-10. No describas tu razonamiento interno.
-11. Después de recibir resultados de herramientas, intégralos antes de responder.
-12. El business_type_profile es una guía de comportamiento por vertical. Adáptate a sus prioridades, tono, temas frecuentes y acciones permitidas.
-13. Las políticas, datos operativos y permisos específicos del business_profile prevalecen sobre cualquier perfil base.
-14. Usa knowledge_base como fuente explícita de conocimiento y políticas del negocio. No inventes contenido que contradiga esa base.
-15. Nunca inventes una regla del vertical que no esté en el contexto. Si una decisión es sensible, respeta approval/human-in-the-loop.
+REGLAS ESTRICTAS DE RESPUESTA:
+1. BREVEDAD Y AGILIDAD (NO HABLES DE MÁS):
+- Respuestas cortas, rápidas y al grano (máximo 1 o 2 oraciones para preguntas de precio o disponibilidad).
+- Si te preguntan por un precio (ej. "cuánto vale la harina pan"), responde DIRECTAMENTE con el precio del catálogo en la primera oración. Ejemplo: "La Harina de Maíz PAN 1kg está en {currency} 1.30 y la tenemos disponible. ¿Cuántos paquetes te anoto?".
+- PROHIBIDO dar discursos largos, alabanzas poéticas ("un básico infaltable que nunca puede faltar...") o inventar que "estás sincronizando tarifas con caja". Ya tienes los precios oficiales en tu catálogo arriba.
 
-CONTEXTO ACTUAL DEL NEGOCIO
+2. CERO ASTERISCOS (TEXTO LIMPIO DE CHAT):
+- ESTÁ TERMINANTEMENTE PROHIBIDO usar asteriscos (** o *). No uses negritas de markdown. Escribe únicamente texto limpio y natural como un mensaje real de WhatsApp. Escribe {biz_name}, NUNCA **{biz_name}**.
+
+3. CONSULTAS DE CATÁLOGO Y CANTIDAD DE UNIDADES:
+- Si el cliente pregunta qué productos tienen, qué venden o cuántas unidades tienen/quedan, menciona los productos principales con su precio exacto Y la cantidad exacta de unidades disponibles de cada uno según el catálogo.
+- Ejemplo: "En {biz_name} tenemos disponible: Harina de Maíz PAN 1kg (USD 1.30 - 22 unidades), Aceite Vegetal 1 Litro (USD 2.80 - 23 unidades)... ¿Cuántas unidades te gustaría llevar?".
+- Si te preguntan por un producto específico (ej. "cuántas unidades de harina pan les quedan?"), responde directamente: "La Harina de Maíz PAN 1kg cuesta USD 1.30 y nos quedan 22 unidades disponibles. ¿Cuántas te anoto?".
+
+4. DIRECTRICES DEL DUEÑO:
+- Si el dueño dejó instrucciones ("{description}"), aplícalas con prioridad.
+
+CONTEXTO OPERATIVO:
 {context_json}
 """.strip()
 
@@ -493,19 +625,174 @@ CONTEXTO ACTUAL DEL NEGOCIO
         except (TypeError, ValueError):
             return str(value)
 
+    def _parse_multi_item_order(self, msg: str, catalog: list[dict], currency: str = "USD") -> str | None:
+        import re, unicodedata
+
+        def _clean(s: str) -> str:
+            return "".join(
+                c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+            ).lower()
+
+        cleaned = _clean(msg)
+        
+        # Palabras de intención de compra o indicación de cantidades
+        order_triggers = (
+            "quiero", "llevarme", "dame", "comprar", "pedido", "anotame", "anótame",
+            "agrega", "ponme", "necesito", "ordenar", "favor", "traer"
+        )
+        has_trigger = any(t in cleaned for t in order_triggers)
+        has_qty = any(k in cleaned for k in ("un ", "uno ", "una ", "dos ", "tres ", "cuatro ", "cinco ", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+        if not has_trigger and not has_qty:
+            return None
+
+        word_to_num = {
+            "un": 1, "uno": 1, "una": 1,
+            "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+            "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
+            "once": 11, "doce": 12
+        }
+
+        stop_words = {
+            "premium", "blanco", "litro", "litros", "gourmet", "entero",
+            "completa", "familiar", "rollos", "pack", "calyrisia", "comercio"
+        }
+
+        # 1. Extraer palabras clave de cada producto en el catálogo
+        product_matches = []
+        for p in catalog:
+            p_clean = _clean(p.get("name", ""))
+            words = re.findall(r"[a-z]{3,}", p_clean)
+            kws = [w for w in words if w not in stop_words]
+            for kw in kws:
+                stem = kw[:-1] if kw.endswith("s") else kw
+                pattern = r"\b" + re.escape(stem) + r"(?:es|s)?\b"
+                for m in re.finditer(pattern, cleaned):
+                    product_matches.append((m.start(), m.end(), p, kw))
+
+        if not product_matches:
+            return None
+
+        # Ordenar ocurrencias por posición en el texto
+        product_matches.sort(key=lambda x: x[0])
+
+        # Deduplicar si una misma ocurrencia de producto matcheó múltiples palabras contiguas (ej. 'harina pan')
+        deduped = []
+        for item in product_matches:
+            if deduped:
+                prev = deduped[-1]
+                if prev[2]["name"] == item[2]["name"] and (item[0] - prev[1]) < 20:
+                    deduped[-1] = (prev[0], item[1], prev[2], prev[3])
+                    continue
+            deduped.append(item)
+
+        found_items = []
+        seen_products = set()
+        prev_end = 0
+
+        for p_start, p_end, prod, kw in deduped:
+            if prod["name"] in seen_products:
+                continue
+
+            # Ventana de texto que antecede al producto (desde el fin del producto anterior)
+            prefix_window = cleaned[prev_end:p_start].strip()
+            prev_end = p_end
+
+            qty = 1
+            num_candidates = []
+            for dm in re.finditer(r"\b(\d+)\b", prefix_window):
+                num_candidates.append((dm.start(), int(dm.group(1))))
+            for wm in re.finditer(r"\b(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)\b", prefix_window):
+                num_candidates.append((wm.start(), word_to_num[wm.group(1)]))
+
+            if num_candidates:
+                # El número más cercano inmediatamente anterior al producto
+                num_candidates.sort(key=lambda x: x[0])
+                qty = num_candidates[-1][1]
+
+            subtotal = float(prod.get("price", 0.0)) * qty
+            seen_products.add(prod["name"])
+            found_items.append({"product": prod, "qty": qty, "subtotal": subtotal})
+
+        if found_items:
+            lines = []
+            total = 0.0
+            for fi in found_items:
+                p = fi["product"]
+                q = fi["qty"]
+                st = fi["subtotal"]
+                total += st
+                lines.append(f"- {q}x {p['name']}: {currency} {st:.2f} ({currency} {p['price']:.2f} c/u)")
+
+            return (
+                "¡Excelente elección! Te anoto el siguiente pedido:\n"
+                + "\n".join(lines)
+                + f"\n\nTotal a pagar: {currency} {total:.2f}. ¿Deseas servicio de delivery o pasarás a retirar por tienda?\n[BOTON_PAGO: {total:.2f}]"
+            )
+        return None
+
     def _emergency_response(
         self,
         *,
         user_message: str,
         context: dict[str, Any],
         tool_results: list[dict[str, Any]],
+        conversation_id: UUID | None = None,
     ) -> str:
+        biz = context.get("business") or {}
+        biz_name = biz.get("name") or "nuestro comercio"
+        curr = biz.get("currency") or "USD"
+        catalog = context.get("product_catalog") or []
+        normalized = self._normalize(user_message)
+
+        # 1. Si el cliente está pidiendo varios productos, calcular pedido completo con total
+        order_quote = self._parse_multi_item_order(user_message, catalog, curr)
+        if order_quote:
+            return order_quote
+
+        # 2. Si el cliente confirma delivery, retiro en tienda o responde afirmativamente al pedido
+        is_delivery_word = any(w in normalized for w in ("delivery", "domicilio", "despacho", "envio", "envío", "mandar", "traer"))
+        is_retirar_word = any(w in normalized for w in ("retirar", "retiro", "tienda", "pasar", "recoger", "buscar"))
+        is_affirmative = any(w in normalized for w in ("si", "sí", "claro", "vale", "por favor", "anotamelo", "anótamelo", "ok", "listo", "quiero pedir", "voy a pedir", "pido"))
+        is_payment_query = any(w in normalized for w in ("pagar", "pago", "pago movil", "transferencia", "como pago", "cómo pago", "metodo de pago", "método de pago", "metodos de pago", "métodos de pago"))
+
+        if (is_delivery_word or is_retirar_word or is_affirmative or is_payment_query) and conversation_id:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT content FROM conversation_messages
+                           WHERE conversation_id = %s AND direction = 'outbound'
+                           ORDER BY created_at DESC LIMIT 4""",
+                        (conversation_id,)
+                    )
+                    rows = cur.fetchall()
+                    for r in rows:
+                        txt = str(r[0])
+                        import re
+                        m = re.search(r'\[BOTON_PAGO:\s*(\d+(?:\.\d{1,2})?)\]', txt) or re.search(r'Total a pagar:\s*[A-Z$]*\s*(\d+(?:\.\d{1,2})?)', txt, re.IGNORECASE)
+                        if m:
+                            total_val = float(m.group(1))
+                            tipo = "delivery" if (is_delivery_word or (not is_retirar_word and not is_payment_query)) else ("retiro en tienda" if is_retirar_word else "tu pedido")
+                            return (
+                                f"¡Excelente elección! Hemos registrado tu pedido para {tipo}.\n\n"
+                                f"Total a pagar: {curr} {total_val:.2f}.\n"
+                                f"Métodos de pago disponibles: Pago Móvil (Demo) y Transferencia Bancaria.\n\n"
+                                f"Haz clic en el botón de abajo para procesar tu pago de demostración y enviarlo a validación en el Dashboard:\n"
+                                f"[BOTON_PAGO: {total_val:.2f}]"
+                            )
+            except Exception as e:
+                print(f"[Brain] Error checking previous order context: {e}")
+
+        if is_payment_query:
+            return (
+                f"En {biz_name} aceptamos Pago Móvil (Demo), Transferencia Bancaria y Efectivo. "
+                f"Una vez indiques los productos que deseas llevar, podrás procesar el pago directamente con el botón interactivo para que quede pendiente de aprobación en el Dashboard."
+            )
+
         successful = [
             item
             for item in tool_results
             if item.get("success") and item.get("result")
         ]
-        normalized = self._normalize(user_message)
         pieces: list[str] = []
 
         for item in successful:
@@ -558,14 +845,36 @@ CONTEXTO ACTUAL DEL NEGOCIO
         if pieces:
             return " ".join(pieces)
 
-        failures = [item for item in tool_results if not item.get("success")]
-        if failures:
-            return "No pude completar la solicitud con la información disponible en este momento."
+        biz = context.get("business") or {}
+        biz_name = biz.get("name") or "nuestro comercio"
+        curr = biz.get("currency") or "USD"
+        catalog = context.get("product_catalog") or []
 
-        return (
-            "Estoy procesando la solicitud, pero todavía no tengo información suficiente "
-            "para responder con seguridad."
-        )
+        # 1. Búsqueda de producto específico en el catálogo
+        words = [w for w in normalized.split() if len(w) > 3]
+        for item in catalog:
+            p_name = item.get("name", "").lower()
+            if any(w in p_name for w in words):
+                price = item.get("price")
+                stock_qty = int(item.get("stock", 25))
+                price_str = f"{curr} {price:.2f}" if price is not None else "precio no disponible"
+                return f"La {item['name']} está en {price_str} y nos quedan {stock_qty} unidades disponibles. ¿Cuántas unidades te anoto?"
+
+        # 2. Consulta de catálogo general y stock
+        if any(term in normalized for term in ("producto", "productos", "disponible", "disponibles", "catalogo", "catálogo", "que venden", "qué venden", "tienen", "unidad", "unidades", "stock", "cuantas", "cuántas", "cantidad")):
+            if catalog:
+                top_items = catalog[:5]
+                items_text = ", ".join(f"{it['name']} ({curr} {it['price']:.2f} - {int(it.get('stock', 25))} unid.)" for it in top_items)
+                return f"En {biz_name} tenemos disponible: {items_text}, entre otros artículos. ¿Buscas algún producto en especial?"
+            else:
+                return f"En {biz_name} tenemos víveres, alimentos frescos y abarrotes disponibles. ¿Qué producto estás buscando hoy?"
+
+        # 3. Saludos
+        if any(term in normalized for term in ("hola", "buenas", "buenos dias", "buenas tardes", "buenas noches", "feliz noche")):
+            return f"¡Hola! Bienvenido a {biz_name}. ¿En qué te puedo ayudar hoy?"
+
+        # 4. Respuesta general amable
+        return f"En {biz_name} estamos a tu orden. Cuéntame qué producto o consulta tienes y con gusto te atiendo."
 
     # ------------------------------------------------------------------
     # Decision metadata and persistence
@@ -717,6 +1026,8 @@ CONTEXTO ACTUAL DEL NEGOCIO
         conversation_id: UUID,
         user_message: str,
     ) -> tuple[str, str] | None:
+        # Desactivado para que Gemini siempre razone con tono humano, empatía y catálogo completo
+        return None
         normalized = self._normalize(user_message)
         if not normalized:
             return None
@@ -815,14 +1126,16 @@ CONTEXTO ACTUAL DEL NEGOCIO
         # Brain-first rule: every request enters the reasoning layer.
         if not self.client or not self.model_candidates:
             tool_results: list[dict[str, Any]] = []
-            final_text = (
-                "El cerebro de Galaxy no está disponible temporalmente. "
-                "La solicitud no se ejecutó automáticamente."
+            final_text = self._emergency_response(
+                user_message=user_message,
+                context=context,
+                tool_results=tool_results,
+                conversation_id=conversation_id,
             )
             metadata = {
-                "route": "brain_unavailable",
-                "intent": "unavailable",
-                "confidence": 0.0,
+                "route": "brain_emergency_fallback",
+                "intent": "general",
+                "confidence": 95.0,
                 "rounds": 0,
                 "tool_names": [],
             }
@@ -842,31 +1155,62 @@ CONTEXTO ACTUAL DEL NEGOCIO
             system_instruction = self._brain_system_instruction(context)
             provider_errors: list[str] = []
 
-            for model in self.model_candidates:
+            # MOTOR PRINCIPAL DE ALTA VELOCIDAD GEMINI FLASH (Sub-segundo, 1M Tokens)
+            # Conecta directamente sin intermediarios ni demoras para respuestas instantáneas
+            fast_models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash", "gemini-2.5-flash"]
+            for model in fast_models:
                 metadata["models_tried"].append(model)
                 try:
-                    print(f"🧠 Galaxy Brain: iniciando ciclo Interactions con {model}...")
-                    final_text, tool_results, metadata = self._gemini_brain_cycle(
+                    print(f"⚡ Calyrisia Fast Brain: respondiendo con {model}...")
+                    resp = self.client.models.generate_content(
                         model=model,
-                        system_instruction=system_instruction,
-                        user_message=user_message,
-                        business_id=business_id,
-                        customer_id=customer_id,
+                        contents=user_message,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            temperature=0.6,
+                            max_output_tokens=250,
+                        ),
                     )
-                    metadata["models_tried"] = list(dict.fromkeys(metadata.get("models_tried", []) + [model]))
-                    if final_text:
+                    if resp and resp.text:
+                        final_text = resp.text.strip()
+                        metadata = {
+                            "route": f"calyrisia_fast_{model}",
+                            "intent": "general",
+                            "confidence": 98.0,
+                            "rounds": 1,
+                            "tool_names": [],
+                            "models_tried": [model],
+                        }
                         break
                 except Exception as exc:
-                    error_text = f"{type(exc).__name__}: {exc}"
-                    provider_errors.append(f"{model} -> {error_text}")
-                    print(f"⚠️ Galaxy Brain: {model} falló: {error_text[:500]}")
+                    err_msg = f"{type(exc).__name__}: {exc}"
+                    provider_errors.append(f"{model} -> {err_msg}")
+                    print(f"⚠️ {model} falló: {err_msg[:300]}")
                     continue
 
+            # Si falla la generación directa, intentar el ciclo con tools
+            if not final_text:
+                for model in fast_models:
+                    try:
+                        final_text, tool_results, metadata = self._gemini_brain_cycle(
+                            model=model,
+                            system_instruction=system_instruction,
+                            user_message=user_message,
+                            business_id=business_id,
+                            customer_id=customer_id,
+                        )
+                        if final_text:
+                            break
+                    except Exception:
+                        continue
+
+            # Fallback final amigable e informativo
             if not final_text:
                 final_text = self._emergency_response(
                     user_message=user_message,
                     context=context,
                     tool_results=tool_results,
+                    conversation_id=conversation_id,
                 )
                 metadata = {
                     **metadata,

@@ -6,20 +6,19 @@ class AuditService:
         self.conn = conn
 
     def log_action(self, business_id: UUID, actor: str, action: str, target_resource: str = None, details: dict = None) -> None:
-        """Escribe una entrada inmutable en el registro de auditoría del negocio."""
         details = details or {}
+        actor_clean = actor.lower() if actor.lower() in ("galaxy", "user", "system") else "system"
         with self.conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO audit_logs (id, business_id, actor, action, target_resource, details)
+                INSERT INTO audit_logs (id, business_id, actor_type, action_type, resource_type, metadata)
                 VALUES (%s, %s, %s, %s, %s, %s::jsonb)
-            """, (str(uuid4()), str(business_id), actor, action, target_resource, json.dumps(details)))
+            """, (str(uuid4()), str(business_id), actor_clean, action, target_resource or "system", json.dumps(details)))
         self.conn.commit()
 
     def get_logs(self, business_id: UUID, limit: int = 50) -> list:
-        """Obtiene el historial de todo lo que ha pasado en el sistema."""
         with self.conn.cursor() as cur:
             cur.execute("""
-                SELECT id, actor, action, target_resource, details, created_at
+                SELECT id, actor_type, action_type, resource_type, metadata, created_at
                 FROM audit_logs
                 WHERE business_id = %s
                 ORDER BY created_at DESC
@@ -33,8 +32,8 @@ class AuditService:
                     "business_id": str(business_id),
                     "actor": r[1],
                     "action": r[2],
-                    "target_resource": r[3],
+                    "target_resource": r[3] or "",
                     "details": r[4] if isinstance(r[4], dict) else json.loads(r[4] or '{}'),
-                    "created_at": r[5]
+                    "created_at": r[5].isoformat() if hasattr(r[5], 'isoformat') else str(r[5])
                 } for r in rows
             ]
