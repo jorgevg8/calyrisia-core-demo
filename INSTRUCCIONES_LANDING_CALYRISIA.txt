@@ -1,0 +1,21 @@
+CALYRISIA — LANDING PAGE INTEGRADA
+
+Qué se actualizó
+- Se reemplazó app/static/landing/index.html por la nueva landing de CALYRISIA.
+- Se mantuvieron las rutas actuales del proyecto: /, /onboarding, /dashboard/, /feedback.
+- No se modificó el backend ni la lógica del negocio.
+- La página funciona sin librerías de interfaz externas; el logo que se usa es el símbolo SVG existente en la landing, refinado y acompañado del nombre CALYRISIA.
+
+Para probar localmente
+1. Descomprime el proyecto.
+2. Conserva o copia tus archivos locales .env y .env.telegram.local desde tu proyecto anterior. Por seguridad, estos archivos no están dentro de este ZIP.
+3. Activa el entorno virtual e instala las dependencias indicadas en requirements.txt si hace falta.
+4. Inicia FastAPI como lo haces normalmente y abre la ruta raíz /.
+
+Antes de publicarla
+- Reemplaza “Consultar precio” por los importes reales cuando se definan.
+- Confirma las funciones y canales disponibles en la versión comercial para que cada promesa de la web corresponda al producto.
+- Añade el correo empresarial oficial, política de privacidad y términos del servicio antes de captar clientes de forma comercial.
+
+Importante
+Se excluyeron .venv, .git y archivos de entorno con credenciales del ZIP. No borres los archivos de configuración existentes en tu copia local.

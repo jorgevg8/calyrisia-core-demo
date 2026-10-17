@@ -89,6 +89,8 @@ def _parse_custom_products(text: str) -> list[dict]:
     return products
 
 import asyncio
+import hmac
+import os
 from decimal import Decimal, InvalidOperation
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
@@ -98,6 +100,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Any
+from psycopg.types.json import Jsonb
 
 from app.core.config import get_settings
 from app.core.security import get_password_hash, create_access_token
@@ -257,6 +260,8 @@ from app.services.governance_service import GovernanceService
 
 # IMPORTACIONES PASOS 94 Y 95
 from app.services.commercial_engine import CommercialPlanEngine
+from app.services.commercial_limits import PLAN_LIMITS, AIQuotaExceeded, get_business_plan, plan_limits, consume_ai_response
+from app.services.business_catalog import plan_catalog, validate_plan_business_type, can_use_booking
 from app.services.connector_gateway import ConnectorGateway
 
 # IMPORTACIONES PASOS 96 Y 97
@@ -266,10 +271,14 @@ from app.services.business_control_service import BusinessControlService
 # Importamos los módulos de rutas
 from app.api import auth
 # [PASO 36] Importar el router de Telegram
-from app.api.telegram import router as telegram_router
+from app.api.telegram import (
+    router as telegram_router,
+    start_telegram_polling,
+    stop_telegram_polling,
+    notify_payment_decision,
+)
 
 settings = get_settings()
-WEBCHAT_DEMO_BUSINESS_ID = UUID("b0816122-4da6-42ac-974b-92a80e85eec1")
 
 
 def _clean_business_id(val: Any) -> str | None:
@@ -283,41 +292,31 @@ def _clean_business_id(val: Any) -> str | None:
     except (ValueError, TypeError):
         return None
 
-def _get_webchat_demo_business(conn, business_id: Any = None) -> dict:
-    """Resolve only the requested tenant. Omitted IDs use the fixed demo tenant, never the newest tenant."""
+def _get_active_webchat_business(conn, business_id: Any) -> dict:
+    """Resolve an explicitly configured tenant; never fall back to a shared demo business."""
     valid_id = _clean_business_id(business_id)
-    if business_id not in (None, "") and str(business_id).strip().lower() not in ("null", "undefined", "none") and valid_id is None:
-        raise HTTPException(status_code=422, detail="business_id inválido.")
-
-    # The unqualified public demo URL is pinned to one explicit demo tenant.
-    # Never resolve a missing/invalid business ID to whichever tenant was created last.
-    target_id = valid_id or str(WEBCHAT_DEMO_BUSINESS_ID)
+    if valid_id is None:
+        raise HTTPException(status_code=422, detail="Falta un business_id válido para este canal Webchat.")
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT id, name, business_type, currency, timezone, status, description
-            FROM businesses
+            SELECT id, name, business_type, currency, timezone, status, description,
+                   COALESCE(to_jsonb(b)->>'webchat_enabled', 'false') <> 'false' AS webchat_enabled
+            FROM businesses b
             WHERE id = %s AND status = 'active'
             LIMIT 1
             """,
-            (target_id,),
+            (valid_id,),
         )
         row = cur.fetchone()
-
     if not row:
-        raise HTTPException(
-            status_code=404,
-            detail="El negocio solicitado no existe o está inactivo. Verifica el business_id de tu webchat.",
-        )
-
+        raise HTTPException(status_code=404, detail="El negocio solicitado no existe o está inactivo.")
+    if not bool(row[7]):
+        raise HTTPException(status_code=403, detail="El canal Webchat está desactivado para este negocio. Actívalo desde Dashboard → Canales.")
     return {
-        "id": row[0],
-        "name": row[1],
-        "business_type": row[2],
-        "currency": row[3],
-        "timezone": row[4],
-        "status": str(row[5] or "active").strip().lower(),
-        "description": row[6] or "",
+        "id": row[0], "name": row[1], "business_type": row[2], "currency": row[3],
+        "timezone": row[4], "status": str(row[5] or "active").strip().lower(),
+        "description": row[6] or "", "webchat_enabled": bool(row[7]),
     }
 
 
@@ -329,7 +328,8 @@ class OwnerRegistrationRequest(BaseModel):
 
 class OnboardingRequest(BaseModel):
     business_name: str
-    business_type: str 
+    business_type: str
+    plan_code: str | None = None
     ai_prompt: str | None = None
     products_text: str | None = None
     currency: str = "USD"
@@ -354,9 +354,9 @@ def _require_business_access(current_user: dict, business_id: UUID) -> None:
 
 
 async def _ensure_webchat_payment_schema() -> None:
-    """Additive, idempotent schema for the demo payment-approval flow.
+    """Additive, idempotent schema for payment approval, payment instructions and Telegram channels.
 
-    This creates only a new table and indexes. It does not alter existing Galaxy tables.
+    Adds tenant-specific payment settings, the payment request table and the per-business Telegram channel registry.
     Startup intentionally continues if DDL is unavailable so unrelated Core routes remain up;
     the payment endpoints then return a clear error until the migration is applied.
     """
@@ -370,20 +370,57 @@ async def _ensure_webchat_payment_schema() -> None:
                         customer_id uuid NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
                         amount numeric(12,2) NOT NULL CHECK (amount > 0),
                         currency varchar(10) NOT NULL DEFAULT 'USD',
-                        payment_method varchar(50) NOT NULL DEFAULT 'binance_demo',
+                        payment_method varchar(50) NOT NULL DEFAULT 'manual',
                         status varchar(20) NOT NULL DEFAULT 'pending'
                             CHECK (status IN ('pending', 'approved', 'rejected')),
-                        source varchar(50) NOT NULL DEFAULT 'webchat_demo',
+                        source varchar(50) NOT NULL DEFAULT 'webchat',
                         created_at timestamptz NOT NULL DEFAULT now(),
                         reviewed_at timestamptz,
                         reviewed_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
                         order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL,
-                        approval_note text
+                        approval_note text,
+                        customer_payment_details text
                     )
                 """)
                 cur.execute("""
                     ALTER TABLE public.webchat_payment_requests
                     ADD COLUMN IF NOT EXISTS items jsonb;
+                """)
+                cur.execute("""
+                    ALTER TABLE public.webchat_payment_requests
+                    ADD COLUMN IF NOT EXISTS customer_payment_details text;
+                """)
+                cur.execute("ALTER TABLE public.webchat_payment_requests ALTER COLUMN payment_method SET DEFAULT 'manual'")
+                cur.execute("ALTER TABLE public.webchat_payment_requests ALTER COLUMN source SET DEFAULT 'webchat'")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.business_payment_instructions (
+                        business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+                        method_code varchar(30) NOT NULL CHECK (method_code IN ('pago_movil','binance')),
+                        enabled boolean NOT NULL DEFAULT false,
+                        instructions text NOT NULL DEFAULT '',
+                        updated_at timestamptz NOT NULL DEFAULT now(),
+                        PRIMARY KEY (business_id, method_code),
+                        CHECK (length(instructions) <= 3000)
+                    )
+                """)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.business_telegram_channels (
+                        business_id uuid PRIMARY KEY REFERENCES public.businesses(id) ON DELETE CASCADE,
+                        bot_token text NOT NULL,
+                        bot_username varchar(80),
+                        owner_chat_id varchar(80),
+                        enabled boolean NOT NULL DEFAULT false,
+                        channel_status varchar(20) NOT NULL DEFAULT 'inactive',
+                        polling_offset bigint NOT NULL DEFAULT 0,
+                        last_error text,
+                        last_poll_at timestamptz,
+                        created_at timestamptz NOT NULL DEFAULT now(),
+                        updated_at timestamptz NOT NULL DEFAULT now()
+                    )
+                """)
+                cur.execute("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_business_telegram_bot_token
+                    ON public.business_telegram_channels (bot_token)
                 """)
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS idx_webchat_payments_business_status_created
@@ -415,10 +452,58 @@ async def _ensure_webchat_payment_schema() -> None:
                     END $$;
                 """)
             conn.commit()
-            print('[CALYRISIA] Esquema de pagos demo disponible.')
+            print('[CALYRISIA] Esquema de solicitudes de pago disponible.')
         except Exception as exc:
             conn.rollback()
-            print(f'[CALYRISIA][WARN] No se pudo preparar la tabla de pagos demo: {exc}')
+            print(f'[CALYRISIA][WARN] No se pudo preparar la tabla de solicitudes de pago: {exc}')
+
+
+async def _ensure_commercial_dashboard_schema() -> None:
+    """Idempotent schema for subscription plans, monthly AI limits, images and business-specific appointments/reservations."""
+    statements = [
+        "ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS plan_code varchar(30) NOT NULL DEFAULT 'emprendedor'",
+        "ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS webchat_enabled boolean NOT NULL DEFAULT false",
+        "UPDATE public.businesses SET plan_code = 'emprendedor' WHERE plan_code IS NULL OR plan_code NOT IN ('emprendedor','smart_business','enterprise')",
+        """CREATE TABLE IF NOT EXISTS public.business_ai_usage_monthly (
+            business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+            month_start date NOT NULL, response_count integer NOT NULL DEFAULT 0 CHECK (response_count >= 0),
+            updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (business_id, month_start))""",
+        """CREATE TABLE IF NOT EXISTS public.product_images (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(), business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+            product_id uuid NOT NULL REFERENCES public.products(id) ON DELETE CASCADE, image_url text NOT NULL,
+            position integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), CHECK (length(image_url) <= 2048))""",
+        "CREATE INDEX IF NOT EXISTS idx_product_images_tenant_product ON public.product_images (business_id, product_id, position)",
+        """CREATE TABLE IF NOT EXISTS public.business_bookings (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(), business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+            booking_type varchar(20) NOT NULL CHECK (booking_type IN ('appointment','reservation')),
+            customer_name varchar(200) NOT NULL, customer_phone varchar(80),
+            party_size integer NOT NULL DEFAULT 1 CHECK (party_size >= 1 AND party_size <= 200), starts_at timestamptz NOT NULL,
+            service_name varchar(200) NOT NULL, table_number varchar(30),
+            status varchar(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','completed','cancelled')),
+            notes text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now())""",
+        "CREATE INDEX IF NOT EXISTS idx_business_bookings_tenant_start ON public.business_bookings (business_id, booking_type, starts_at)",
+        """CREATE TABLE IF NOT EXISTS public.business_dashboard_settings (
+            business_id uuid PRIMARY KEY REFERENCES public.businesses(id) ON DELETE CASCADE,
+            restaurant_table_count integer NOT NULL DEFAULT 12 CHECK (restaurant_table_count BETWEEN 1 AND 100),
+            updated_at timestamptz NOT NULL DEFAULT now()
+        )""",
+    ]
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                for statement in statements:
+                    cur.execute(statement)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+
+def _setup_commercial_dashboard_schema_in_worker() -> None:
+    try:
+        asyncio.run(_ensure_commercial_dashboard_schema())
+    except Exception as exc:
+        print(f"[Commercial Schema Notice] {exc}")
 
 
 def _setup_payment_schema_in_worker() -> None:
@@ -439,10 +524,15 @@ async def lifespan(app: FastAPI):
     # PostgreSQL can be unreachable/misconfigured on first deploy. Keep the
     # API process responsive and report database status through /health/ready.
     schema_task = asyncio.create_task(asyncio.to_thread(_setup_payment_schema_in_worker))
+    commercial_schema_task = asyncio.create_task(asyncio.to_thread(_setup_commercial_dashboard_schema_in_worker))
+    # Wait for additive schemas before accepting tenant-aware features; failures are logged, not fatal.
+    await asyncio.gather(schema_task, commercial_schema_task, return_exceptions=True)
     heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())
+    await start_telegram_polling()
     try:
         yield
     finally:
+        await stop_telegram_polling()
         heartbeat_task.cancel()
         try:
             await heartbeat_task
@@ -453,6 +543,11 @@ async def lifespan(app: FastAPI):
                 await schema_task
             except Exception as exc:
                 print(f"[Shutdown Schema Notice] {exc}")
+        if commercial_schema_task.done():
+            try:
+                await commercial_schema_task
+            except Exception as exc:
+                print(f"[Shutdown Commercial Schema Notice] {exc}")
         close_pool()
 
 app = FastAPI(
@@ -698,6 +793,343 @@ async def dashboard_overview(
             raise HTTPException(status_code=500, detail=f"Dashboard error: {exc}") from exc
 
 
+@app.get("/api/v1/dashboard/payment-instructions")
+async def dashboard_payment_instructions(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT method_code, enabled, instructions FROM public.business_payment_instructions WHERE business_id = %s", (str(business_id),))
+            rows = {str(r[0]): {"enabled": bool(r[1]), "instructions": str(r[2] or "")} for r in cur.fetchall()}
+    return {"success": True, "methods": {
+        "pago_movil": rows.get("pago_movil", {"enabled": False, "instructions": ""}),
+        "binance": rows.get("binance", {"enabled": False, "instructions": ""}),
+    }}
+
+
+@app.put("/api/v1/dashboard/payment-instructions")
+async def save_dashboard_payment_instructions(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    methods = payload.get("methods")
+    if not isinstance(methods, dict):
+        raise HTTPException(status_code=422, detail="Se requiere un objeto methods con pago_movil y/o binance.")
+    normalized = []
+    for method in ("pago_movil", "binance"):
+        item = methods.get(method, {})
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=422, detail=f"Configuración inválida para {method}.")
+        enabled = item.get("enabled", False)
+        if not isinstance(enabled, bool):
+            raise HTTPException(status_code=422, detail=f"El estado de {method} debe ser booleano.")
+        instructions = str(item.get("instructions") or "").strip()
+        if len(instructions) > 3000:
+            raise HTTPException(status_code=422, detail=f"Las instrucciones de {method} no pueden superar 3.000 caracteres.")
+        if enabled and not instructions:
+            raise HTTPException(status_code=422, detail=f"Escribe las instrucciones reales de {method} antes de activarlo.")
+        normalized.append((method, enabled, instructions))
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            for method, enabled, instructions in normalized:
+                cur.execute("""INSERT INTO public.business_payment_instructions (business_id, method_code, enabled, instructions, updated_at)
+                               VALUES (%s, %s, %s, %s, now())
+                               ON CONFLICT (business_id, method_code) DO UPDATE
+                               SET enabled = EXCLUDED.enabled, instructions = EXCLUDED.instructions, updated_at = now()""",
+                            (str(business_id), method, enabled, instructions))
+        conn.commit()
+    return {"success": True, "message": "Los métodos de cobro del negocio fueron actualizados."}
+
+
+@app.get("/api/v1/webchat/payment-instructions")
+async def public_webchat_payment_instructions(business_id: UUID = Query(...)) -> dict:
+    async with get_connection() as conn:
+        _get_active_webchat_business(conn, business_id)
+        with conn.cursor() as cur:
+            cur.execute("SELECT method_code, instructions FROM public.business_payment_instructions WHERE business_id = %s AND enabled = true ORDER BY method_code", (str(business_id),))
+            methods = [{"code": str(r[0]), "label": "Pago Móvil" if r[0] == "pago_movil" else "Binance Pay", "instructions": str(r[1] or "")} for r in cur.fetchall()]
+    return {"success": True, "methods": methods}
+
+
+@app.get("/api/v1/dashboard/plan-usage")
+async def dashboard_plan_usage(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        plan_code = get_business_plan(conn, business_id)
+        limits = plan_limits(plan_code)
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*)::int FROM products WHERE business_id = %s", (str(business_id),))
+            product_count = int(cur.fetchone()[0] or 0)
+            cur.execute("SELECT COUNT(*)::int FROM product_images WHERE business_id = %s", (str(business_id),))
+            image_count = int(cur.fetchone()[0] or 0)
+            cur.execute("SELECT response_count FROM business_ai_usage_monthly WHERE business_id = %s AND month_start = date_trunc('month', CURRENT_DATE)::date", (str(business_id),))
+            usage_row = cur.fetchone()
+        ai_used = int(usage_row[0]) if usage_row else 0
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(webchat_enabled, FALSE) FROM businesses WHERE id = %s", (str(business_id),))
+            webchat_row = cur.fetchone()
+            webchat_enabled = bool(webchat_row[0]) if webchat_row else False
+            try:
+                cur.execute("SELECT COALESCE(enabled, FALSE) FROM public.business_telegram_channels WHERE business_id = %s::uuid", (str(business_id),))
+                telegram_row = cur.fetchone()
+                telegram_enabled = bool(telegram_row[0]) if telegram_row else False
+            except Exception:
+                conn.rollback()
+                telegram_enabled = False
+        return {"success": True, "plan_code": plan_code, "plan": limits,
+                "usage": {"products": product_count, "images": image_count, "ai_responses": ai_used,
+                          "ai_remaining": max(0, limits["ai_responses_month"] - ai_used),
+                          "channels": int(webchat_enabled) + int(telegram_enabled)}}
+
+
+@app.get("/api/v1/dashboard/channels")
+async def dashboard_channels(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        plan_code = get_business_plan(conn, business_id)
+        limits = plan_limits(plan_code)
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(webchat_enabled, FALSE) FROM businesses WHERE id = %s", (str(business_id),))
+            row = cur.fetchone()
+            webchat_enabled = bool(row[0]) if row else False
+            telegram_enabled = False
+            try:
+                cur.execute("SELECT COALESCE(enabled, FALSE) FROM public.business_telegram_channels WHERE business_id = %s::uuid", (str(business_id),))
+                telegram_row = cur.fetchone()
+                telegram_enabled = bool(telegram_row[0]) if telegram_row else False
+            except Exception:
+                conn.rollback()
+        active = int(webchat_enabled) + int(telegram_enabled)
+        return {"success": True, "plan_code": plan_code, "max_channels": limits["channels"],
+                "active_channels": active, "webchat_enabled": webchat_enabled, "telegram_enabled": telegram_enabled,
+                "channels": {"webchat": {"enabled": webchat_enabled, "available": True},
+                             "telegram": {"enabled": telegram_enabled, "available": True},
+                             "whatsapp": {"enabled": False, "available": False, "message": "Requiere activación comercial e integración del proveedor."}}}
+
+
+@app.post("/api/v1/dashboard/channels/webchat/toggle")
+async def toggle_dashboard_webchat(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    enabled = payload.get("enabled")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=422, detail="El campo enabled debe ser booleano.")
+    async with get_connection() as conn:
+        plan_code = get_business_plan(conn, business_id)
+        limits = plan_limits(plan_code)
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(webchat_enabled, FALSE) FROM businesses WHERE id = %s", (str(business_id),))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Negocio no encontrado.")
+            current_enabled = bool(row[0])
+            cur.execute("SELECT COALESCE(enabled, FALSE) FROM public.business_telegram_channels WHERE business_id = %s::uuid", (str(business_id),))
+            telegram_row = cur.fetchone()
+            telegram_enabled = bool(telegram_row[0]) if telegram_row else False
+            projected = int(enabled) + int(telegram_enabled)
+            if enabled and not current_enabled and projected > limits["channels"]:
+                raise HTTPException(status_code=409, detail=f"El plan {limits['label']} permite {limits['channels']} canal(es) activo(s). Desactiva otro canal o cambia de plan.")
+            cur.execute("UPDATE businesses SET webchat_enabled = %s WHERE id = %s", (enabled, str(business_id)))
+        conn.commit()
+        active = int(enabled) + int(telegram_enabled)
+        return {"success": True, "enabled": enabled, "active_channels": active, "max_channels": limits["channels"],
+                "message": "Webchat activado." if enabled else "Webchat desactivado."}
+
+
+@app.get("/api/v1/dashboard/catalog")
+async def dashboard_catalog(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT p.id::text, p.name, p.price, COALESCE(p.category, 'General'),
+                       COALESCE((SELECT SUM(i.quantity) FROM inventory i WHERE i.product_id = p.id AND i.business_id = p.business_id), 0),
+                       COALESCE((SELECT json_agg(pi.image_url ORDER BY pi.position) FROM product_images pi WHERE pi.product_id = p.id AND pi.business_id = p.business_id), '[]'::json)
+                FROM products p WHERE p.business_id = %s AND p.status = 'active'
+                ORDER BY p.name LIMIT 10000
+            """, (str(business_id),))
+            products = [{"id": r[0], "name": r[1], "price": float(r[2] or 0), "category": r[3],
+                         "stock": float(r[4] or 0), "images": r[5] or []} for r in cur.fetchall()]
+        return {"success": True, "products": products}
+
+
+@app.post("/api/v1/dashboard/catalog/import")
+async def dashboard_catalog_import(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    rows = payload.get("rows", [])
+    if not isinstance(rows, list) or not rows:
+        raise HTTPException(status_code=422, detail="El archivo no contiene filas de productos válidas.")
+    if len(rows) > 2000:
+        raise HTTPException(status_code=413, detail="Importa hasta 2.000 productos por archivo. Divide el CSV en varios archivos.")
+    async with get_connection() as conn:
+        plan_code = get_business_plan(conn, business_id)
+        limits = plan_limits(plan_code)
+        normalized = []
+        for index, row in enumerate(rows, start=2):
+            if not isinstance(row, dict):
+                raise HTTPException(status_code=422, detail=f"Fila {index}: formato inválido.")
+            name = str(row.get("name") or "").strip()[:200]
+            if not name:
+                raise HTTPException(status_code=422, detail=f"Fila {index}: falta el nombre del producto.")
+            try:
+                price = float(row.get("price", 0))
+                stock = float(row.get("stock", 0) or 0)
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=422, detail=f"Fila {index}: precio o stock inválido.")
+            if price < 0 or stock < 0:
+                raise HTTPException(status_code=422, detail=f"Fila {index}: precio y stock no pueden ser negativos.")
+            imgs = row.get("image_urls", [])
+            if isinstance(imgs, str):
+                imgs = [x.strip() for x in imgs.split("|") if x.strip()]
+            if not isinstance(imgs, list):
+                imgs = []
+            imgs = [str(url).strip() for url in imgs if str(url).strip()]
+            if len(imgs) > limits["images_per_product"]:
+                raise HTTPException(status_code=422, detail=f"Fila {index}: el plan permite hasta {limits['images_per_product']} imagen(es) por producto.")
+            for url in imgs:
+                if not (url.startswith("https://") or url.startswith("http://")) or len(url) > 2048:
+                    raise HTTPException(status_code=422, detail=f"Fila {index}: las imágenes deben tener URLs http(s) válidas.")
+            normalized.append({"name": name, "price": price, "stock": stock,
+                               "category": str(row.get("category") or "General").strip()[:100], "images": imgs})
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*)::int FROM products WHERE business_id = %s", (str(business_id),))
+            current_products = int(cur.fetchone()[0] or 0)
+            cur.execute("SELECT COUNT(*)::int FROM product_images WHERE business_id = %s", (str(business_id),))
+            current_images = int(cur.fetchone()[0] or 0)
+        if current_products + len(normalized) > limits["products"]:
+            raise HTTPException(status_code=409, detail=f"El plan {limits['label']} permite {limits['products']} productos; el catálogo quedaría en {current_products + len(normalized)}.")
+        requested_images = sum(len(item["images"]) for item in normalized)
+        if current_images + requested_images > limits["images"]:
+            raise HTTPException(status_code=409, detail=f"El plan {limits['label']} permite {limits['images']} imágenes en total.")
+        created = 0
+        try:
+            with conn.cursor() as cur:
+                for item in normalized:
+                    product_id = uuid4()
+                    cur.execute("INSERT INTO products (id, business_id, name, price, category, status) VALUES (%s,%s,%s,%s,%s,'active')", (str(product_id), str(business_id), item["name"], item["price"], item["category"]))
+                    cur.execute("INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location) VALUES (gen_random_uuid(),%s,%s,%s,0,'tienda')", (str(business_id), str(product_id), item["stock"]))
+                    for pos, url in enumerate(item["images"]):
+                        cur.execute("INSERT INTO product_images (business_id, product_id, image_url, position) VALUES (%s,%s,%s,%s)", (str(business_id), str(product_id), url, pos))
+                    created += 1
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"No se pudo completar la importación: {exc}") from exc
+        return {"success": True, "created_products": created, "created_images": requested_images,
+                "plan_code": plan_code, "limits": limits,
+                "message": f"Se importaron {created} productos y {requested_images} imágenes al catálogo de este negocio."}
+
+
+@app.get("/api/v1/dashboard/business-settings")
+async def dashboard_business_settings(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        if get_business_plan(conn, business_id) == "emprendedor":
+            raise HTTPException(status_code=403, detail="La configuración de mesas está incluida desde Smart Business.")
+        with conn.cursor() as cur:
+            cur.execute("SELECT restaurant_table_count FROM public.business_dashboard_settings WHERE business_id = %s", (str(business_id),))
+            row = cur.fetchone()
+            table_count = int(row[0]) if row else 12
+    return {"success": True, "restaurant_table_count": table_count}
+
+
+@app.put("/api/v1/dashboard/business-settings")
+async def save_dashboard_business_settings(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    try:
+        table_count = int(payload.get("restaurant_table_count", 12))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="La cantidad de mesas debe ser un número entero.")
+    if table_count < 1 or table_count > 100:
+        raise HTTPException(status_code=422, detail="Configura entre 1 y 100 mesas.")
+    async with get_connection() as conn:
+        if get_business_plan(conn, business_id) == "emprendedor":
+            raise HTTPException(status_code=403, detail="La configuración de mesas está incluida desde Smart Business.")
+        with conn.cursor() as cur:
+            cur.execute("""INSERT INTO public.business_dashboard_settings (business_id, restaurant_table_count, updated_at)
+                           VALUES (%s, %s, now())
+                           ON CONFLICT (business_id) DO UPDATE SET restaurant_table_count = EXCLUDED.restaurant_table_count, updated_at = now()""",
+                        (str(business_id), table_count))
+        conn.commit()
+    return {"success": True, "restaurant_table_count": table_count, "message": "La configuración de mesas fue guardada."}
+
+
+@app.get("/api/v1/dashboard/bookings")
+async def dashboard_bookings(booking_type: str = Query(default="appointment", pattern="^(appointment|reservation)$"), limit: int = Query(default=100, ge=1, le=200), current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        plan_code = get_business_plan(conn, business_id)
+        with conn.cursor() as cur:
+            cur.execute("SELECT business_type FROM public.businesses WHERE id = %s", (str(business_id),))
+            identity = cur.fetchone()
+        business_type = str(identity[0] or "") if identity else ""
+        if not can_use_booking(business_type, plan_code, booking_type):
+            raise HTTPException(status_code=403, detail="Este módulo de agenda o reservas no corresponde al perfil de negocio o al plan contratado.")
+        with conn.cursor() as cur:
+            cur.execute("""SELECT id::text, booking_type, customer_name, customer_phone, party_size, starts_at,
+                              service_name, table_number, status, notes, created_at
+                       FROM business_bookings WHERE business_id = %s AND booking_type = %s
+                       ORDER BY starts_at DESC LIMIT %s""", (str(business_id), booking_type, limit))
+            rows = cur.fetchall()
+        bookings = []
+        for r in rows:
+            bookings.append({"id": r[0], "booking_type": r[1], "customer_name": r[2], "customer_phone": r[3],
+                             "party_size": int(r[4] or 1), "starts_at": r[5].isoformat() if r[5] else None,
+                             "service_name": r[6], "table_number": r[7], "status": r[8], "notes": r[9],
+                             "created_at": r[10].isoformat() if r[10] else None})
+        return {"success": True, "bookings": bookings, "plan_code": plan_code}
+
+
+@app.post("/api/v1/dashboard/bookings")
+async def create_dashboard_booking(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    booking_type = str(payload.get("booking_type") or "appointment").strip().lower()
+    if booking_type not in {"appointment", "reservation"}:
+        raise HTTPException(status_code=422, detail="Tipo de reserva no válido.")
+    customer_name = str(payload.get("customer_name") or "").strip()[:200]
+    phone = str(payload.get("customer_phone") or "").strip()[:80]
+    service_name = str(payload.get("service_name") or ("Mesa" if booking_type == "reservation" else "Consulta")).strip()[:200]
+    if not customer_name or not service_name:
+        raise HTTPException(status_code=422, detail="Indica el nombre del cliente y el servicio o motivo.")
+    try:
+        from datetime import datetime
+        starts_at = datetime.fromisoformat(str(payload.get("starts_at") or "").replace("Z", "+00:00"))
+        party_size = int(payload.get("party_size", 1) or 1)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="La fecha/hora o el número de personas no es válido.")
+    if party_size < 1 or party_size > 200:
+        raise HTTPException(status_code=422, detail="El número de personas debe estar entre 1 y 200.")
+    async with get_connection() as conn:
+        plan_code = get_business_plan(conn, business_id)
+        with conn.cursor() as cur:
+            cur.execute("SELECT business_type FROM public.businesses WHERE id = %s", (str(business_id),))
+            identity = cur.fetchone()
+        business_type = str(identity[0] or "") if identity else ""
+        if not can_use_booking(business_type, plan_code, booking_type):
+            raise HTTPException(status_code=403, detail="Este módulo de agenda o reservas no corresponde al perfil de negocio o al plan contratado.")
+        with conn.cursor() as cur:
+            cur.execute("""INSERT INTO business_bookings (business_id, booking_type, customer_name, customer_phone, party_size, starts_at, service_name, table_number, status, notes)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s) RETURNING id::text""",
+                        (str(business_id), booking_type, customer_name, phone or None, party_size, starts_at, service_name,
+                         str(payload.get("table_number") or "").strip()[:30] or None, str(payload.get("notes") or "").strip()[:2000] or None))
+            booking_id = cur.fetchone()[0]
+        conn.commit()
+    return {"success": True, "id": booking_id, "message": "Registro creado y pendiente de confirmación."}
+
+
+@app.patch("/api/v1/dashboard/bookings/{booking_id}")
+async def update_dashboard_booking(booking_id: UUID, payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    status_value = str(payload.get("status") or "").strip().lower()
+    if status_value not in {"pending", "confirmed", "completed", "cancelled"}:
+        raise HTTPException(status_code=422, detail="Estado no válido.")
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE business_bookings SET status = %s, updated_at = NOW() WHERE id = %s AND business_id = %s RETURNING id::text", (status_value, str(booking_id), str(business_id)))
+            row = cur.fetchone()
+        if not row:
+            conn.rollback()
+            raise HTTPException(status_code=404, detail="La cita o reserva no existe en este negocio.")
+        conn.commit()
+    return {"success": True, "id": row[0], "status": status_value}
+
+
 app.include_router(telegram_router, prefix="/api/v1")
 
 app.mount("/webchat", StaticFiles(directory="app/static/webchat", html=True), name="webchat")
@@ -705,6 +1137,7 @@ app.mount("/onboarding", StaticFiles(directory="app/static/onboarding", html=Tru
 app.mount("/dashboard", StaticFiles(directory="app/static/dashboard", html=True), name="dashboard")
 app.mount("/operations", StaticFiles(directory="app/static/operations", html=True), name="operations")
 app.mount("/landing", StaticFiles(directory="app/static/landing", html=True), name="landing")
+app.mount("/contacto", StaticFiles(directory="app/static/contacto", html=True), name="contacto")
 app.mount("/feedback", StaticFiles(directory="app/static/feedback", html=True), name="feedback")
 
 @app.get("/", include_in_schema=False)
@@ -1392,9 +1825,9 @@ async def brain_respond(
 
 @app.get("/api/v1/webchat/config")
 async def webchat_config(business_id: UUID | None = Query(default=None)) -> dict:
-    """Public-safe Webchat configuration. Dynamically loads requested or demo business."""
+    """Public Webchat configuration for an explicitly identified active tenant."""
     async with get_connection() as conn:
-        business = _get_webchat_demo_business(conn, business_id)
+        business = _get_active_webchat_business(conn, business_id)
         return {
             "success": True,
             "business": {
@@ -1409,10 +1842,10 @@ async def webchat_config(business_id: UUID | None = Query(default=None)) -> dict
 
 @app.post("/api/v1/webchat/session")
 async def webchat_session(payload: WebchatSessionRequest) -> dict:
-    """Resolve/create the demo customer for the active business."""
+    """Resolve/create a customer session for the explicitly identified active business."""
     async with get_connection() as conn:
         try:
-            business = _get_webchat_demo_business(conn, payload.business_id)
+            business = _get_active_webchat_business(conn, payload.business_id)
             customer_id = payload.customer_id
             customer = None
 
@@ -1428,7 +1861,7 @@ async def webchat_session(payload: WebchatSessionRequest) -> dict:
                     )
                     customer = cur.fetchone()
                     if customer is None:
-                        raise HTTPException(status_code=404, detail="El cliente no pertenece al negocio de demo.")
+                        raise HTTPException(status_code=404, detail="El cliente no pertenece a este negocio.")
 
                 if customer_id is None:
                     customer_id = uuid4()
@@ -1484,7 +1917,7 @@ async def webchat_message(payload: WebchatMessageRequest) -> dict:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT c.business_id, b.name
+                    SELECT c.business_id, b.name, COALESCE(to_jsonb(b)->>'webchat_enabled', 'true') <> 'false'
                     FROM customers c
                     JOIN businesses b ON c.business_id = b.id
                     WHERE c.id = %s AND c.business_id = %s AND b.status = 'active'
@@ -1497,6 +1930,8 @@ async def webchat_message(payload: WebchatMessageRequest) -> dict:
                         status_code=404,
                         detail="La sesión no pertenece a este negocio o ya no existe. Inicia una nueva sesión de Webchat.",
                     )
+                if not bool(row[2]):
+                    raise HTTPException(status_code=403, detail="El canal Webchat está desactivado para este negocio.")
                 business_id = row[0]
 
                 if payload.conversation_id is not None:
@@ -1510,13 +1945,19 @@ async def webchat_message(payload: WebchatMessageRequest) -> dict:
                     if cur.fetchone() is None:
                         raise HTTPException(status_code=404, detail="La conversación no pertenece a esta sesión.")
 
+            try:
+                consume_ai_response(conn, business_id)
+                conn.commit()
+            except AIQuotaExceeded as quota_exc:
+                raise HTTPException(status_code=429, detail=f"Has usado las {quota_exc.limit} respuestas de IA incluidas este mes. Contacta con CALYRISIA para ampliar la cuota o cambiar de plan.") from quota_exc
+
             internal_payload = IncomingMessage(
                 business_id=business_id,
                 customer_id=payload.customer_id,
                 conversation_id=payload.conversation_id,
                 channel="webchat",
                 message=payload.message,
-                metadata={"source": "calyrisia_webchat_demo", "tenant_resolved_server_side": True},
+                metadata={"source": "calyrisia_webchat", "tenant_resolved_server_side": True},
             )
             result = GalaxyAutopilotService(conn).respond(internal_payload)
             return {
@@ -1572,7 +2013,7 @@ async def webchat_history(conversation_id: UUID, customer_id: UUID = Query(...))
 
 @app.post("/api/v1/webchat/payment/request")
 async def webchat_request_payment(payload: dict):
-    """Create a pending demo payment. Tenant is resolved server-side, never trusted from the browser."""
+    """Create a pending payment request. Tenant is resolved server-side, never trusted from the browser."""
     try:
         raw_amount = payload.get("monto", payload.get("amount"))
         amount = Decimal(str(raw_amount)).quantize(Decimal("0.01"))
@@ -1586,7 +2027,12 @@ async def webchat_request_payment(payload: dict):
                 supplied_customer_id = UUID(str(raw_cust))
             except Exception:
                 supplied_customer_id = None
-        payment_method = str(payload.get("payment_method") or "pago_movil_demo")[:50]
+        payment_method = str(payload.get("payment_method") or "pago_movil").strip().lower()[:50]
+        if payment_method not in {"pago_movil", "binance"}:
+            raise ValueError("unsupported payment method")
+        customer_payment_details = str(payload.get("customer_payment_details") or "").strip()[:4000]
+        if not customer_payment_details:
+            raise ValueError("payment reference required")
     except (InvalidOperation, ValueError, TypeError, ArithmeticError):
         raise HTTPException(status_code=422, detail="Monto o identificador de cliente inválido.")
 
@@ -1626,17 +2072,24 @@ async def webchat_request_payment(payload: dict):
                             raise HTTPException(status_code=404, detail="El negocio no existe o está inactivo.")
                         business_id = UUID(str(b_row[0]))
                     else:
-                        biz = _get_webchat_demo_business(conn)
-                        business_id = UUID(str(biz["id"]))
+                        raise HTTPException(status_code=422, detail="Se requiere business_id o una sesión de cliente válida para registrar el pago.")
+                    _get_active_webchat_business(conn, business_id)
                     customer_id = uuid4()
                     cur.execute(
                         """INSERT INTO customers
                            (id, business_id, full_name, status, source, notes)
                            VALUES (%s, %s, 'Cliente Webchat', 'active',
-                                   'webchat_payment_demo',
+                                   'webchat_payment',
                                    'Cliente creado para una solicitud de pago Webchat.')""",
                         (customer_id, business_id),
                     )
+
+                # This check applies to both existing customer sessions and new sessions.
+                _get_active_webchat_business(conn, business_id)
+                cur.execute("SELECT enabled FROM public.business_payment_instructions WHERE business_id = %s AND method_code = %s", (str(business_id), payment_method))
+                configured_method = cur.fetchone()
+                if not configured_method or not bool(configured_method[0]):
+                    raise HTTPException(status_code=409, detail="Ese método de cobro no está habilitado por el comercio.")
 
                 payment_id = uuid4()
                 raw_items = payload.get("items") or []
@@ -1665,12 +2118,12 @@ async def webchat_request_payment(payload: dict):
                         print(f"[Calyrisia] Fallback parser items error: {e_res}")
                 cur.execute(
                     """INSERT INTO webchat_payment_requests
-                       (id, business_id, customer_id, amount, currency, payment_method, status, source, approval_note, items)
-                       VALUES (%s, %s, %s, %s, 'USD', %s, 'pending', 'webchat_demo', %s, %s)""",
+                       (id, business_id, customer_id, amount, currency, payment_method, status, source, approval_note, items, customer_payment_details)
+                       VALUES (%s, %s, %s, %s, 'USD', %s, 'pending', 'webchat', %s, %s, %s)""",
                     (
                         payment_id, business_id, customer_id, amount, payment_method,
-                        json.dumps(raw_items) if raw_items else None,
-                        Jsonb(raw_items) if raw_items else None
+                        "Solicitud recibida por Webchat; pendiente de validación del comercio.",
+                        Jsonb(raw_items) if raw_items else None, customer_payment_details or None
                     ),
                 )
             conn.commit()
@@ -1689,10 +2142,10 @@ async def webchat_request_payment(payload: dict):
         except Exception as exc:
             conn.rollback()
             message = str(exc)
-            if "webchat_payment_requests" in message or "does not exist" in message.lower():
+            if "webchat_payment_requests" in message or "business_payment_instructions" in message or "does not exist" in message.lower():
                 raise HTTPException(
                     status_code=503,
-                    detail="La tabla de pagos demo no está disponible. Reinicia Galaxy Core y revisa la consola de arranque.",
+                    detail="El módulo de solicitudes de pago no está disponible. Contacta al administrador de CALYRISIA.",
                 ) from exc
             raise HTTPException(status_code=500, detail=f"No se pudo registrar el pago pendiente: {exc}") from exc
 
@@ -1716,7 +2169,7 @@ async def webchat_payment_status(payment_id: UUID, business_id: UUID = Query(...
                 "status": str(row[0]),
                 "order_id": str(row[1]) if row[1] else None,
                 "amount": float(row[2]) if row[2] else 0.0,
-                "payment_method": str(row[3]) if row[3] else "pago_movil_demo",
+                "payment_method": str(row[3]) if row[3] else "pago_movil",
             }
         except HTTPException:
             raise
@@ -1753,13 +2206,14 @@ async def dashboard_webchat_payments(
     limit: int = Query(default=50, ge=1, le=200),
     current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
 ) -> dict:
-    """Owner/Admin inbox for manual Webchat demo payment validation."""
+    """Owner/Admin inbox for manual payment validation requests."""
     business_id = UUID(current_user["business_id"])
     async with get_connection() as conn:
         with conn.cursor() as cur:
             query = """SELECT p.id, p.customer_id, COALESCE(c.full_name, 'Cliente Webchat'),
                               p.amount, p.currency, p.status, p.payment_method,
-                              p.created_at, p.reviewed_at, p.order_id, p.approval_note
+                              p.created_at, p.reviewed_at, p.order_id, p.approval_note,
+                              p.customer_payment_details, p.source
                        FROM webchat_payment_requests p
                        LEFT JOIN customers c ON c.id = p.customer_id AND c.business_id = p.business_id
                        WHERE p.business_id = %s"""
@@ -1785,6 +2239,8 @@ async def dashboard_webchat_payments(
             "reviewed_at": row[8].isoformat() if row[8] else None,
             "order_id": str(row[9]) if row[9] else None,
             "approval_note": row[10],
+            "customer_payment_details": row[11],
+            "source": row[12],
         })
     return {"success": True, "payments": payments}
 
@@ -1833,8 +2289,8 @@ async def decide_webchat_payment(
                 order_id = None
                 if decision == "approve":
                     order_id = uuid4()
-                    # Dedicated demo order: no product lines/inventory are changed because
-                    # this button simulates the payment, not a confirmed product checkout.
+                    # Create the confirmed order in the same transaction. Below, recover the
+                    # purchased items and apply the existing inventory decrement logic.
                     order_number = f"WC-{payment_id.hex[:24].upper()}"
                     # Asegurar cliente en el negocio del dueño activo
                     cur.execute(
@@ -1853,11 +2309,11 @@ async def decide_webchat_payment(
                             discount_amount, tax_amount, total_amount, payment_status,
                             payment_method, source, notes)
                            VALUES (%s, %s, %s, %s, 'confirmed', %s, 0, 0, %s, 'paid',
-                                   %s, 'webchat_payment_demo', %s)""",
+                                   %s, 'webchat_payment', %s)""",
                         (
                             order_id, business_id, customer_id, order_number, amount, amount,
-                            str(row[6]) if len(row) > 6 and row[6] else 'pago_movil_demo',
-                            f"Pago de demostración aprobado manualmente en Dashboard. payment_id={payment_id}",
+                            str(row[6]) if len(row) > 6 and row[6] else 'pago_movil',
+                            f"Pago revisado manualmente en Dashboard. payment_id={payment_id}",
                         ),
                     )
                     # Descontar del inventario los productos comprados
@@ -1989,6 +2445,15 @@ async def decide_webchat_payment(
                 )
                 sales_today = float(cur.fetchone()[0] or 0)
 
+        # Notify the Telegram customer after the dashboard transaction has committed.
+        try:
+            await notify_payment_decision(
+                str(business_id), str(payment_id), decision, float(amount),
+                str(order_id) if order_id else None,
+            )
+        except Exception as notify_exc:
+            print(f"[CALYRISIA][Telegram] No se pudo notificar la decisión del pago: {notify_exc}")
+
     return {
         "success": True,
         "status": "approved" if decision == "approve" else "rejected",
@@ -1999,65 +2464,8 @@ async def decide_webchat_payment(
 
 
 @app.post("/api/v1/webchat/stream")
-async def webchat_stream(payload: IncomingMessage):
-    async def event_generator():
-        try:
-            async with get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "SELECT name, price FROM products WHERE business_id = %s",
-                        (payload.business_id,)
-                    )
-                    productos_db = cur.fetchall()
-
-            if not productos_db:
-                catalogo_texto = "Inventario en actualización."
-            else:
-                lista_productos = [f"- {p[0]}: ${p[1]} USD (Disponibilidad inmediata)" for p in productos_db]
-                catalogo_texto = "\n".join(lista_productos)
-
-            prompt_maestro = f"""
-            Rol: Eres el Asesor de Ventas de NovaTelas Boutique.
-            
-            CATÁLOGO ACTUALIZADO:
-            {catalogo_texto}
-            
-            REGLAS DE ORO (INQUEBRANTABLES): 
-            1. SÉ CORTO Y DIRECTO: Máximo 2 párrafos.
-            2. FLUJO NATURAL: Lee el historial. No repitas saludos.
-            3. TOTALES EXACTOS: Suma los precios del catálogo.
-            4. GENERACIÓN DEL BOTÓN (CRÍTICO): Si el cliente dice que va a pagar o da sus datos, tu respuesta DEBE terminar OBLIGATORIAMENTE con esta etiqueta exacta: [BOTON_PAGO:total_en_numeros]. 
-            EJEMPLO EXACTO DE CÓMO DEBES RESPONDER: "Perfecto, enviamos a tu dirección. Haz clic abajo para pagar. [BOTON_PAGO:21.50]"
-            ¡NO uses URLs, NO pongas links, usa ÚNICAMENTE la etiqueta [BOTON_PAGO:total]!
-            
-            HISTORIAL RECIENTE:
-            {payload.message}
-            
-            Tu respuesta:
-            """
-            from google import genai
-
-            if not settings.gemini_api_key.strip():
-                raise RuntimeError("GEMINI_API_KEY no está configurada.")
-
-            client = genai.Client(api_key=settings.gemini_api_key)
-            try:
-                async with client.aio as async_client:
-                    stream = await async_client.models.generate_content_stream(
-                        model=settings.gemini_model,
-                        contents=prompt_maestro,
-                    )
-                    async for chunk in stream:
-                        if chunk.text:
-                            yield chunk.text
-                            await asyncio.sleep(0.01)
-            finally:
-                client.close()
-                    
-        except Exception as exc:
-            yield f"Ocurrió un error en nuestros sistemas: {str(exc)}"
-
-    return StreamingResponse(event_generator(), media_type="text/plain; charset=utf-8")
+async def webchat_stream_retired(payload: IncomingMessage):
+    raise HTTPException(status_code=410, detail="Este endpoint antiguo fue retirado. Usa el canal Webchat de CALYRISIA, que aplica el contexto y los límites del negocio.")
 
 
 @app.get("/api/v1/conversations/{conversation_id}")
@@ -2077,7 +2485,11 @@ async def customer_agent_respond(payload: IncomingMessage) -> AutopilotResponse:
     async with get_connection() as conn:
         service = CustomerAgentService(conn)
         try:
+            consume_ai_response(conn, payload.business_id)
+            conn.commit()
             result = service.respond(payload)
+        except AIQuotaExceeded as quota_exc:
+            raise HTTPException(status_code=429, detail=f"Has usado las {quota_exc.limit} respuestas de IA incluidas este mes. Contacta con CALYRISIA para ampliar la cuota o cambiar de plan.") from quota_exc
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Customer Agent error: {exc}") from exc
     return AutopilotResponse(**result)
@@ -2226,34 +2638,48 @@ async def recommendations_dashboard(
 
 
 @app.get("/api/v1/demo/overview")
-async def demo_overview(
-    business_id: UUID,
-    current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
-) -> dict:
-    _require_business_access(current_user, business_id)
-    async with get_connection() as conn:
-        try:
-            return Day3DemoService(conn).overview(business_id=business_id)
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Day 3 demo overview error: {exc}") from exc
+async def demo_overview_retired():
+    raise HTTPException(status_code=410, detail="La demo pública fue retirada. Contacta con CALYRISIA para contratar el servicio.")
+
+
+@app.get("/api/v1/onboarding/catalog")
+async def get_public_onboarding_catalog() -> dict:
+    """Public catalogue used by onboarding to list only compatible business profiles per plan."""
+    return plan_catalog()
 
 
 @app.post("/api/v1/onboarding/business", status_code=201)
-async def create_business_and_owner(payload: OnboardingRequest):
+async def create_business_and_owner(payload: OnboardingRequest, request: Request):
+    # Public onboarding is a sales request. Provisioning paid tenants is internal and
+    # fails closed unless the deployment has a private server-side provisioning key.
+    expected_key = os.getenv("CALYRISIA_ONBOARDING_ADMIN_KEY", "").strip()
+    supplied_key = request.headers.get("x-internal-onboarding-key", "").strip()
+    if not expected_key:
+        raise HTTPException(status_code=410, detail="La activación de cuentas se realiza después de confirmar la contratación. Solicita tu plan por los canales comerciales de CALYRISIA.")
+    if not supplied_key or not hmac.compare_digest(supplied_key, expected_key):
+        raise HTTPException(status_code=403, detail="La provisión de negocios requiere autorización interna.")
+
+    try:
+        canonical_type, selected_plan, type_profile = validate_plan_business_type(payload.business_type, payload.plan_code)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
     business_id = uuid4()
     user_id = uuid4()
     password_hash = get_password_hash(payload.owner_password)
-    prompt_text = (payload.ai_prompt or "").strip() or f"Eres el asistente inteligente de {payload.business_name}, especializado en {payload.business_type}."
+    prompt_text = (payload.ai_prompt or "").strip() or f"Eres el asistente inteligente de {payload.business_name}, especializado en {type_profile['label']}."
     
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
+                # Make the additive subscription column available even if the startup schema worker is still running.
+                cur.execute("ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS plan_code varchar(30) NOT NULL DEFAULT 'emprendedor'")
                 cur.execute(
                     """
-                    INSERT INTO businesses (id, name, business_type, description, currency, status)
-                    VALUES (%s, %s, %s, %s, %s, 'active')
+                    INSERT INTO businesses (id, name, business_type, description, currency, status, plan_code)
+                    VALUES (%s, %s, %s, %s, %s, 'active', %s)
                     """,
-                    (str(business_id), payload.business_name, payload.business_type, prompt_text, payload.currency)
+                    (str(business_id), payload.business_name, canonical_type, prompt_text, payload.currency, selected_plan)
                 )
                 
                 cur.execute(
@@ -2283,12 +2709,15 @@ async def create_business_and_owner(payload: OnboardingRequest):
                     cur.execute(
                         """
                         INSERT INTO business_profiles (
-                            id, business_id, industry, short_description, legal_name, operating_hours, policies, objectives, status, profile_version
+                            id, business_id, industry, short_description, legal_name, operating_hours, policies, objectives,
+                            additional_settings, status, profile_version
                         ) VALUES (
-                            gen_random_uuid(), %s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, 'active', 1
+                            gen_random_uuid(), %s, %s, %s, %s, '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, %s, 'active', 1
                         )
                         """,
-                        (str(business_id), payload.business_type, prompt_text, payload.business_name)
+                        (str(business_id), type_profile["family"], prompt_text, payload.business_name,
+                         Jsonb({"business_type_code": canonical_type, "business_module": type_profile["module"],
+                                "dashboard_label": type_profile["dashboard_label"], "plan_code": selected_plan}))
                     )
                 except Exception:
                     pass
@@ -2297,6 +2726,8 @@ async def create_business_and_owner(payload: OnboardingRequest):
                 # El stock inicial se establece en cero para no inventar existencias.
                 try:
                     raw_items = _parse_custom_products(payload.products_text) if payload.products_text else []
+                    if len(raw_items) > plan_limits(selected_plan)["products"]:
+                        raise ValueError(f"El plan {selected_plan} admite hasta {plan_limits(selected_plan)['products']} productos iniciales.")
                     for item in raw_items:
                         p_id = str(uuid4())
                         cur.execute(
@@ -2313,14 +2744,16 @@ async def create_business_and_owner(payload: OnboardingRequest):
                             """,
                             (str(business_id), p_id, 0.0, 0.0)
                         )
+                except ValueError:
+                    raise
                 except Exception as p_err:
-                    pass
+                    print(f"[Onboarding] No se pudo importar el catálogo inicial: {p_err}")
             
             try:
                 provision_data = OnboardingService(conn).provision_new_tenant(
                     business_id=business_id,
                     business_name=payload.business_name,
-                    business_type=payload.business_type
+                    business_type=canonical_type
                 )
             except Exception as prov_err:
                 conn.rollback()
@@ -2328,11 +2761,11 @@ async def create_business_and_owner(payload: OnboardingRequest):
                 with conn.cursor() as cur:
                     cur.execute(
                         """
-                        INSERT INTO businesses (id, name, business_type, currency, status)
-                        VALUES (%s, %s, %s, %s, 'active')
+                        INSERT INTO businesses (id, name, business_type, currency, status, plan_code)
+                        VALUES (%s, %s, %s, %s, 'active', %s)
                         ON CONFLICT (id) DO NOTHING
                         """,
-                        (str(business_id), payload.business_name, payload.business_type, payload.currency)
+                        (str(business_id), payload.business_name, canonical_type, payload.currency, selected_plan)
                     )
                     cur.execute(
                         """
@@ -2355,6 +2788,10 @@ async def create_business_and_owner(payload: OnboardingRequest):
                 "success": True,
                 "message": "Negocio creado y provisionado exitosamente.",
                 "business_id": str(business_id),
+                "plan_code": selected_plan,
+                "business_type": canonical_type,
+                "dashboard_module": type_profile["module"],
+                "dashboard_label": type_profile["dashboard_label"],
                 "access_token": access_token,
                 "token_type": "bearer",
                 "provisioning_details": provision_data
@@ -3356,7 +3793,7 @@ async def submit_feedback(payload: FeedbackRequest) -> dict:
 async def list_store_products(business_id: str | None = Query(default=None)) -> dict:
     try:
         async with get_connection() as conn:
-            biz = _get_webchat_demo_business(conn, business_id)
+            biz = _get_active_webchat_business(conn, business_id)
             target_biz_id = str(biz["id"])
             with conn.cursor() as cur:
                 cur.execute(
@@ -3379,28 +3816,5 @@ async def list_store_products(business_id: str | None = Query(default=None)) -> 
         raise HTTPException(status_code=500, detail=f"Error al consultar productos: {str(exc)}")
 
 @app.post("/api/v1/products/seed-sample")
-async def seed_sample_products(
-    current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
-) -> dict:
-    try:
-        business_id = UUID(current_user["business_id"])
-        async with get_connection() as conn:
-            biz = _get_webchat_demo_business(conn, business_id)
-            samples = _get_default_10_products(biz["business_type"], biz["currency"])
-            with conn.cursor() as cur:
-                for item in samples:
-                    p_id = str(uuid4())
-                    cur.execute("""
-                        INSERT INTO products (id, business_id, name, price, category, status)
-                        VALUES (%s, %s, %s, %s, %s, 'active')
-                    """, (p_id, str(biz["id"]), item["name"], item["price"], item.get("category", "General")))
-                    cur.execute("""
-                        INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
-                        VALUES (gen_random_uuid(), %s, %s, 25.0, 5.0, 'tienda')
-                    """, (str(biz["id"]), p_id))
-                conn.commit()
-            return {"success": True, "message": f"Se han cargado {len(samples)} productos de prueba con stock a {biz['name']}."}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error al cargar productos: {str(exc)}")
+async def seed_sample_products_retired(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    raise HTTPException(status_code=410, detail="La carga de productos de muestra fue retirada. Importa el catálogo real desde Dashboard → Inventario y Catálogo.")

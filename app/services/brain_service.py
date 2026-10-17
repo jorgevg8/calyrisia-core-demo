@@ -214,48 +214,8 @@ class BrainService:
             )
             rows = cur.fetchall()
 
-            # Si el negocio no tiene productos aún, auto-sembrar 10 productos reales de su rubro
-            if not rows:
-                try:
-                    cur.execute("SELECT business_type, currency FROM businesses WHERE id = %s", (str(business_id),))
-                    biz_row = cur.fetchone()
-                    b_type = (biz_row[0] if biz_row else "supermercado") or "supermercado"
-                    curr = (biz_row[1] if biz_row else "USD") or "USD"
-                    
-                    samples = self._sample_products_by_type(b_type, curr)
-                    for item in samples:
-                        p_id = str(uuid4())
-                        cur.execute(
-                            """
-                            INSERT INTO products (id, business_id, name, price, category, status)
-                            VALUES (%s, %s, %s, %s, %s, 'active')
-                            """,
-                            (p_id, str(business_id), item["name"], item["price"], item.get("category", "General")),
-                        )
-                        cur.execute(
-                            """
-                            INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location)
-                            VALUES (gen_random_uuid(), %s, %s, 25.0, 5.0, 'tienda')
-                            """,
-                            (str(business_id), p_id),
-                        )
-                    self.conn.commit()
+            # A commercial tenant starts with its own real catalog. Never fabricate products or stock.
 
-                    cur.execute(
-                        """
-                        SELECT id, name, sku, description, category, brand,
-                               price, status, is_service
-                        FROM products
-                        WHERE business_id = %s
-                          AND status = 'active'
-                        ORDER BY name
-                        LIMIT %s
-                        """,
-                        (str(business_id), limit),
-                    )
-                    rows = cur.fetchall()
-                except Exception:
-                    pass
 
         return [
             {
@@ -775,8 +735,8 @@ CONTEXTO OPERATIVO:
                             return (
                                 f"¡Excelente elección! Hemos registrado tu pedido para {tipo}.\n\n"
                                 f"Total a pagar: {curr} {total_val:.2f}.\n"
-                                f"Métodos de pago disponibles: Pago Móvil (Demo) y Transferencia Bancaria.\n\n"
-                                f"Haz clic en el botón de abajo para procesar tu pago de demostración y enviarlo a validación en el Dashboard:\n"
+                                f"Puedes continuar con el pago usando uno de los métodos configurados por el negocio.\n\n"
+                                f"La solicitud quedará pendiente de verificación manual por el comercio:\n"
                                 f"[BOTON_PAGO: {total_val:.2f}]"
                             )
             except Exception as e:
@@ -784,8 +744,8 @@ CONTEXTO OPERATIVO:
 
         if is_payment_query:
             return (
-                f"En {biz_name} aceptamos Pago Móvil (Demo), Transferencia Bancaria y Efectivo. "
-                f"Una vez indiques los productos que deseas llevar, podrás procesar el pago directamente con el botón interactivo para que quede pendiente de aprobación en el Dashboard."
+                f"Puedo ayudarte con tu pedido en {biz_name}. Los métodos de pago disponibles dependen de las opciones que el negocio haya configurado. "
+                f"Dime qué productos necesitas y te ayudaré a revisar el total antes de indicarte cómo continuar."
             )
 
         successful = [

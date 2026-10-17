@@ -1,130 +1,86 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calyrisia OS - Onboarding</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080e18">
+  <title>Encuentra tu plan | CALYRISIA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Efectos de luz de fondo para dar la vibra de Galaxia -->
-    <div class="ambient-light light-1"></div>
-    <div class="ambient-light light-2"></div>
+  <div class="ambient-light light-1" aria-hidden="true"></div>
+  <div class="ambient-light light-2" aria-hidden="true"></div>
 
-    <div class="onboarding-container">
-        <div class="brand-header">
-            <!-- Logo minimalista en SVG de Calyrisia OS -->
-            <svg class="galaxy-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="4" fill="url(#galaxy-grad)"/>
-                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(30 16 16)" stroke="url(#galaxy-grad)" stroke-width="1.5"/>
-                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(-30 16 16)" stroke="url(#galaxy-grad)" stroke-width="1.5"/>
-                <defs>
-                    <linearGradient id="galaxy-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#00f2fe" />
-                        <stop offset="1" stop-color="#4facfe" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <span class="brand-text">Calyrisia OS</span>
-        </div>
+  <main class="onboarding-container">
+    <header class="brand-header">
+      <svg class="galaxy-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="16" cy="16" r="4" fill="url(#galaxy-grad)"/>
+        <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(30 16 16)" stroke="url(#galaxy-grad)" stroke-width="1.5"/>
+        <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(-30 16 16)" stroke="url(#galaxy-grad)" stroke-width="1.5"/>
+        <defs><linearGradient id="galaxy-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse"><stop stop-color="#00f2fe"/><stop offset="1" stop-color="#7c6cff"/></linearGradient></defs>
+      </svg>
+      <span class="brand-text">CALYRISIA</span>
+      <span class="header-pill">Planificación comercial</span>
+    </header>
 
-        <!-- PASO 1: Tipo de Negocio -->
-        <div id="step-1" class="step active">
-            <h2>Configura tu entorno</h2>
-            <p class="subtitle">Selecciona la industria de tu negocio para adaptar el núcleo de la IA.</p>
-            <div class="input-group">
-                <select id="business_type" class="input-field custom-select">
-                    <option value="" disabled selected>Elige una industria...</option>
-                    <option value="textil">Tienda Textil / Sábanas</option>
-                    <option value="clinica">Clínica / Salud</option>
-                    <option value="supermercado">Supermercado</option>
-                    <option value="restaurante">Restaurante</option>
-                    <option value="servicios">Servicios Profesionales</option>
-                </select>
-            </div>
-            <button class="btn btn-primary" onclick="nextStep(2)">Continuar</button>
-        </div>
-
-        <!-- PASO 2: Detalles del Negocio -->
-        <div id="step-2" class="step hidden">
-            <h2>Detalles del Negocio</h2>
-            <p class="subtitle">Personaliza la identidad de tu agente autónomo.</p>
-            
-            <div class="input-group">
-                <input type="text" id="business_name" class="input-field" placeholder="Nombre del Negocio (Ej: Confort Hogar Cumaná)">
-            </div>
-            <div class="input-group">
-                <textarea id="ai_prompt" class="input-field" rows="3" placeholder="Instrucciones para la IA (Tono de voz, directrices...)"></textarea>
-            </div>
-            <div class="row">
-                <input type="text" id="currency" class="input-field" value="USD" placeholder="Moneda (USD, VES)">
-                <input type="text" id="timezone" class="input-field" value="America/Caracas" placeholder="Zona Horaria">
-            </div>
-            <div class="input-group" style="margin-top: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label style="font-size: 0.85rem; font-weight: 500; color: #38bdf8;">📦 Catálogo Inicial (10 productos para la IA)</label>
-                    <button type="button" onclick="loadSampleProducts()" style="background: none; border: none; color: #00f2fe; font-size: 0.78rem; cursor: pointer; text-decoration: underline;">Cargar 10 sugeridos</button>
-                </div>
-                <textarea id="products_list" class="input-field" rows="6" style="font-family: monospace; font-size: 0.82rem; line-height: 1.4;" placeholder="10 productos (uno por línea, ej: Hamburguesa Doble - 10.00)"></textarea>
-                <span style="font-size: 0.72rem; color: #94a3b8; margin-top: 4px; display: block;">La IA usará estos 10 productos para recomendar y vender en el chat. Puedes editarlos libremente.</span>
-            </div>
-            
-            <div class="btn-group">
-                <button class="btn btn-secondary" onclick="prevStep(1)">Atrás</button>
-                <button class="btn btn-primary" onclick="nextStep(3)">Continuar</button>
-            </div>
-        </div>
-
-        <!-- PASO 3: Datos del Propietario -->
-        <div id="step-3" class="step hidden">
-            <h2>Acceso Ejecutivo</h2>
-            <p class="subtitle">Crea las credenciales de administrador (Owner).</p>
-
-            <div class="input-group">
-                <input type="text" id="owner_full_name" class="input-field" placeholder="Nombre Completo">
-            </div>
-            <div class="input-group">
-                <input type="email" id="owner_email" class="input-field" placeholder="Correo Electrónico">
-            </div>
-            <div class="input-group">
-                <input type="text" id="owner_phone" class="input-field" placeholder="Teléfono (Ej: +58 414...)">
-            </div>
-            <div class="input-group">
-                <input type="password" id="owner_password" class="input-field" placeholder="Contraseña segura">
-            </div>
-            
-            <div class="btn-group">
-                <button class="btn btn-secondary" onclick="prevStep(2)">Atrás</button>
-                <button class="btn btn-primary btn-launch" onclick="submitOnboarding()">Lanzar Sistema 🚀</button>
-            </div>
-        </div>
-
-        <!-- PASO 4: Éxito -->
-        <div id="step-4" class="step hidden text-center">
-            <div class="success-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-            </div>
-            <h2>¡Despliegue Exitoso!</h2>
-            <p class="subtitle">Tu ecosistema Galaxy está en línea y operando.</p>
-            <div class="id-box">
-                <span class="id-label">ID DE TU COMERCIO (TENANT)</span>
-                <strong id="final_business_id">Generando...</strong>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 24px;">
-                <button class="btn btn-primary btn-full" onclick="goToWebchat()" style="background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #020617; font-weight: 700; box-shadow: 0 0 20px rgba(0,242,254,0.3);">
-                    💬 Probar el Webchat de mi Negocio
-                </button>
-                <button class="btn btn-primary btn-full" onclick="goToDashboard()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);">
-                    📊 Ir al Centro de Mando (Dashboard)
-                </button>
-                <button class="btn btn-full" onclick="goToFeedback()" style="background: transparent; color: #94a3b8; font-size: 0.85rem; border: none; cursor: pointer;">
-                    ⭐ Dejar Feedback de la Demo
-                </button>
-            </div>
-        </div>
+    <div class="stepper" aria-label="Pasos de solicitud">
+      <span class="step-dot active" id="stepper-1">1 <small>Actividad</small></span><span class="step-line"></span>
+      <span class="step-dot" id="stepper-2">2 <small>Negocio</small></span><span class="step-line"></span>
+      <span class="step-dot" id="stepper-3">3 <small>Solicitud</small></span>
     </div>
 
-    <script src="app.js"></script>
+    <section id="step-1" class="step active">
+      <div class="eyebrow">01 · ENCUENTRA TU PLAN</div>
+      <h1>Tu negocio tiene su propio ritmo.<br><span>CALYRISIA se adapta a él.</span></h1>
+      <p class="subtitle">Selecciona el tipo de operación. Te mostraremos únicamente la categoría de negocio correspondiente a cada plan, con un panel adaptado a tu actividad.</p>
+      <div id="plan-options" class="plan-options" aria-live="polite">
+        <div class="loading-card">Cargando opciones de negocio…</div>
+      </div>
+      <div class="selection-status" id="selection-status">Selecciona una actividad para continuar.</div>
+      <div class="actions actions-end"><a class="btn btn-quiet" href="/">Volver a CALYRISIA</a><button class="btn btn-primary" id="continue-step-1" onclick="nextStep(2)" disabled>Continuar <span>→</span></button></div>
+    </section>
+
+    <section id="step-2" class="step hidden">
+      <div class="eyebrow">02 · CUÉNTANOS SOBRE TU NEGOCIO</div>
+      <h1>Preparemos una solución<br><span>para tu operación.</span></h1>
+      <p class="subtitle">Estos datos nos permiten confirmar el alcance, los canales y la configuración apropiada. No se crea una cuenta ni se activa un plan en este paso.</p>
+      <div class="selected-plan-strip" id="selected-plan-strip"></div>
+      <div class="form-grid">
+        <label class="field full">Nombre del negocio<input id="business_name" maxlength="200" placeholder="Ej. Bodegón El Centro" autocomplete="organization" required></label>
+        <label class="field">Tu nombre<input id="owner_full_name" maxlength="150" placeholder="Nombre y apellido" autocomplete="name" required></label>
+        <label class="field">Correo de contacto<input id="owner_email" type="email" maxlength="255" placeholder="nombre@empresa.com" autocomplete="email" required></label>
+        <label class="field">WhatsApp de contacto<input id="owner_phone" maxlength="50" placeholder="+58…" autocomplete="tel"></label>
+        <label class="field">Moneda principal<select id="currency"><option value="USD">USD · Dólar estadounidense</option><option value="VES">VES · Bolívar</option><option value="EUR">EUR · Euro</option><option value="COP">COP · Peso colombiano</option><option value="MXN">MXN · Peso mexicano</option></select></label>
+        <label class="field">Zona horaria<select id="timezone"><option value="America/Caracas">Venezuela · Caracas</option><option value="America/Bogota">Colombia · Bogotá</option><option value="America/Mexico_City">México · Ciudad de México</option><option value="America/New_York">Estados Unidos · Nueva York</option><option value="Europe/Madrid">España · Madrid</option><option value="UTC">UTC</option></select></label>
+        <fieldset class="field full channel-field"><legend>¿Dónde atiendes a tus clientes?</legend><p class="field-help">Marca los canales que te interesan. La disponibilidad depende del plan y de la activación de cada integración.</p>
+          <div class="channel-options">
+            <label class="check-option"><input type="checkbox" name="channels" value="Telegram"><span><strong>Telegram</strong><small>Bot conectado a tu operación</small></span></label>
+            <label class="check-option"><input type="checkbox" name="channels" value="Webchat"><span><strong>Webchat</strong><small>Para tu propia página web</small></span></label>
+            <label class="check-option"><input type="checkbox" name="channels" value="WhatsApp"><span><strong>WhatsApp</strong><small>Requiere validación de integración</small></span></label>
+          </div>
+        </fieldset>
+        <label class="field full">¿Qué te gustaría mejorar primero?<textarea id="business_needs" rows="3" maxlength="1500" placeholder="Ej. responder preguntas de productos, organizar citas, controlar reservas o reducir tareas manuales."></textarea></label>
+      </div>
+      <p class="privacy-note">Esta solicitud se enviará a CALYRISIA para revisar el plan. No incluyas contraseñas, datos de pago ni información médica de clientes.</p>
+      <div class="actions"><button class="btn btn-quiet" onclick="prevStep(1)">← Atrás</button><button class="btn btn-primary" onclick="prepareRequest()">Revisar solicitud <span>→</span></button></div>
+    </section>
+
+    <section id="step-3" class="step hidden">
+      <div class="eyebrow">03 · RESUMEN</div>
+      <h1>Tu solicitud, <span>lista para revisar.</span></h1>
+      <p class="subtitle">Verifica que elegiste el perfil adecuado. Al continuar, podrás enviar los datos por el canal comercial que prefieras.</p>
+      <div class="request-summary" id="request-summary"></div>
+      <div class="next-note"><span class="note-icon">✦</span><div><strong>¿Qué pasa después?</strong><p>Revisaremos el tipo de negocio, el volumen, los canales y las funciones requeridas. La activación y la configuración del dashboard se realizan después de confirmar la contratación.</p></div></div>
+      <div class="actions actions-stack">
+        <button class="btn btn-primary btn-full" onclick="sendWhatsAppRequest()">Solicitar por WhatsApp <span>↗</span></button>
+        <button class="btn btn-secondary btn-full" onclick="sendEmailRequest()">Solicitar por correo <span>↗</span></button>
+        <button class="btn btn-quiet" onclick="prevStep(2)">← Editar datos</button>
+      </div>
+    </section>
+
+    <footer class="page-footer"><span>© CALYRISIA · autonomous Business Intelligence</span><a href="/contacto/">Contacto comercial</a></footer>
+  </main>
+  <script src="app.js"></script>
 </body>
 </html>

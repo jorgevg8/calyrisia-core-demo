@@ -1,173 +1,653 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calyrisia OS | Inteligencia Artificial para Comercios</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-        :root {
-            --bg-deep: #030712;
-            --primary: #00f2fe;
-            --primary-grad: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
-            --accent-grad: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
-            --glass-bg: rgba(17, 24, 39, 0.6);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --text-main: #f9fafb;
-            --text-muted: #9ca3af;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-        body {
-            background-color: var(--bg-deep);
-            color: var(--text-main);
-            background-image: 
-                radial-gradient(ellipse at 20% 20%, rgba(0, 242, 254, 0.12), transparent 45%),
-                radial-gradient(ellipse at 80% 30%, rgba(168, 85, 247, 0.12), transparent 45%),
-                radial-gradient(ellipse at 50% 80%, rgba(56, 189, 248, 0.08), transparent 50%);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-        h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
-        .nav {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 24px 8%; max-width: 1300px; margin: 0 auto;
-        }
-        .logo-wrap { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
-        .logo-svg { width: 38px; height: 38px; filter: drop-shadow(0 0 12px rgba(0, 242, 254, 0.4)); }
-        .logo-text { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .nav-links { display: flex; gap: 24px; align-items: center; }
-        .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
-        .nav-link:hover { color: #fff; }
-        .btn-nav {
-            padding: 8px 18px; border-radius: 12px; background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--glass-border); color: #fff; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: all 0.2s;
-        }
-        .btn-nav:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.2); }
-        .hero {
-            text-align: center; padding: 70px 20px 40px; max-width: 900px; margin: 0 auto;
-        }
-        .badge {
-            display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 30px;
-            background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.25);
-            font-size: 0.85rem; color: #38bdf8; font-weight: 500; margin-bottom: 24px;
-        }
-        .hero h1 {
-            font-size: 3.5rem; font-weight: 800; line-height: 1.15; letter-spacing: -1.5px; margin-bottom: 20px;
-        }
-        .hero-grad { background: linear-gradient(135deg, #ffffff 30%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p {
-            font-size: 1.15rem; color: var(--text-muted); line-height: 1.6; max-width: 680px; margin: 0 auto 36px;
-        }
-        .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 50px; }
-        .btn-primary {
-            display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 14px;
-            background: var(--primary-grad); color: #020617; font-weight: 600; text-decoration: none;
-            box-shadow: 0 0 25px rgba(0, 242, 254, 0.35); transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 35px rgba(0, 242, 254, 0.55); }
-        .btn-secondary {
-            display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 14px;
-            background: var(--glass-bg); border: 1px solid var(--glass-border); color: #fff; text-decoration: none;
-            font-weight: 500; backdrop-filter: blur(10px); transition: all 0.2s;
-        }
-        .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
-        .grid-features {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;
-            max-width: 1200px; margin: 40px auto 80px; padding: 0 20px;
-        }
-        .card {
-            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px;
-            padding: 30px; backdrop-filter: blur(12px); transition: transform 0.2s, border-color 0.2s;
-        }
-        .card:hover { transform: translateY(-4px); border-color: rgba(0, 242, 254, 0.3); }
-        .card-icon {
-            width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; margin-bottom: 20px;
-        }
-        .icon-blue { background: rgba(0, 242, 254, 0.1); color: #00f2fe; }
-        .icon-purple { background: rgba(168, 85, 247, 0.1); color: #c084fc; }
-        .icon-emerald { background: rgba(52, 211, 153, 0.1); color: #34d399; }
-        .card h3 { font-size: 1.3rem; margin-bottom: 10px; font-weight: 600; }
-        .card p { color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; }
-        .banner-feedback {
-            max-width: 1000px; margin: 0 auto 90px; padding: 40px; border-radius: 24px;
-            background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(30, 41, 59, 0.5));
-            border: 1px solid rgba(0, 242, 254, 0.2); text-align: center;
-        }
-        .banner-feedback h2 { font-size: 2rem; margin-bottom: 12px; }
-        .banner-feedback p { color: var(--text-muted); max-width: 580px; margin: 0 auto 24px; }
-        footer { text-align: center; padding: 30px; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--glass-border); }
-        @media(max-width: 768px) {
-            .hero h1 { font-size: 2.5rem; }
-            .nav { flex-direction: column; gap: 16px; }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080b16">
+  <meta name="description" content="CALYRISIA conecta la atención al cliente, tu catálogo y tus procesos en una plataforma de inteligencia empresarial autónoma, con control en manos de tu negocio.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="CALYRISIA — Tu negocio, con inteligencia propia">
+  <meta property="og:description" content="Menos tareas repetitivas. Más control, contexto y tiempo para hacer crecer tu negocio.">
+  <title>CALYRISIA — Tu negocio, con inteligencia propia</title>
+  <style>
+    :root {
+      --bg: #080b16;
+      --bg-2: #0b1020;
+      --panel: rgba(17, 24, 43, .78);
+      --panel-strong: #11182b;
+      --line: rgba(174, 193, 230, .14);
+      --text: #f4f7ff;
+      --muted: #a4afc7;
+      --cyan: #5be7f2;
+      --blue: #78a9ff;
+      --violet: #b49aff;
+      --mint: #88f0c5;
+      --radius: 22px;
+      --max: 1180px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 92px; overflow-x: hidden; }
+    body {
+      margin: 0; color: var(--text); background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6; overflow-x: hidden;
+      background-image: radial-gradient(ellipse at 12% 6%, rgba(57, 199, 234, .10), transparent 34%),
+                        radial-gradient(ellipse at 93% 22%, rgba(136, 107, 235, .12), transparent 33%),
+                        linear-gradient(180deg, #080b16 0%, #0b1020 56%, #080b16 100%);
+    }
+    a { color: inherit; text-decoration: none; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { font: inherit; }
+    .container { width: min(var(--max), calc(100% - 44px)); margin-inline: auto; }
+    .eyebrow { display: inline-flex; gap: 9px; align-items: center; color: #bceff6; font-size: .78rem; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    .eyebrow::before { content: ""; width: 20px; height: 1px; background: var(--cyan); box-shadow: 0 0 12px rgba(91,231,242,.7); }
+    .muted { color: var(--muted); }
+    .gradient-text { color: transparent; background: linear-gradient(100deg, #f9fbff 0%, #9feef7 42%, #b5a4ff 100%); background-clip: text; -webkit-background-clip: text; }
+    .section { padding: 104px 0; position: relative; }
+    .section-head { max-width: 710px; margin-bottom: 42px; }
+    .section-head.center { margin-inline: auto; text-align: center; }
+    .section-head.center .eyebrow { justify-content: center; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -.045em; }
+    h1 { font-size: clamp(2.8rem, 6vw, 5.5rem); line-height: .99; margin: 21px 0 24px; font-weight: 760; }
+    h2 { font-size: clamp(2.05rem, 4.1vw, 3.55rem); line-height: 1.06; margin: 16px 0 17px; font-weight: 730; }
+    h3 { font-size: 1.22rem; line-height: 1.25; margin-bottom: 11px; font-weight: 680; }
+    .lead { color: #b4bfd5; font-size: clamp(1rem, 1.4vw, 1.13rem); line-height: 1.78; max-width: 640px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 13px 19px; border-radius: 12px; border: 1px solid transparent; font-weight: 720; font-size: .93rem; transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease; cursor: pointer; }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { color: #07111b; background: linear-gradient(110deg, #83f0f0, #86b9ff 70%, #b2a0ff); box-shadow: 0 10px 35px rgba(87, 202, 237, .17); }
+    .btn-primary:hover { box-shadow: 0 14px 42px rgba(87, 202, 237, .27); }
+    .btn-secondary { color: #eef4ff; background: rgba(255,255,255,.035); border-color: rgba(198,213,245,.18); }
+    .btn-secondary:hover { background: rgba(255,255,255,.075); border-color: rgba(198,213,245,.32); }
+    .btn-small { padding: 10px 13px; font-size: .86rem; border-radius: 10px; }
+    .icon { width: 22px; height: 22px; display: inline-block; flex: 0 0 auto; }
+    .icon svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Navigation */
+    .topbar { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid rgba(166,190,232,.1); background: rgba(8,11,22,.78); backdrop-filter: blur(18px); }
+    .nav { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 26px; }
+    .brand { display: inline-flex; align-items: center; gap: 11px; flex-shrink: 0; }
+    .brand-mark { width: 38px; height: 38px; filter: drop-shadow(0 0 15px rgba(91,231,242,.24)); }
+    .brand-name { font-size: 1.23rem; font-weight: 850; letter-spacing: .13em; color: #f4f7ff; }
+    .brand-name span { color: #9beaf2; }
+    .nav-links { display: flex; align-items: center; gap: 25px; }
+    .nav-links > a:not(.btn) { color: #b2bdd3; font-size: .9rem; transition: color .18s; }
+    .nav-links > a:not(.btn):hover { color: #fff; }
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+    .menu-toggle { display: none; color: #eff4ff; border: 1px solid var(--line); background: rgba(255,255,255,.04); padding: 9px 11px; border-radius: 10px; }
+
+    /* Hero */
+    .hero { padding: 88px 0 67px; position: relative; }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.03fr) minmax(400px, .97fr); align-items: center; gap: 48px; }
+    .announcement { display: inline-flex; align-items: center; gap: 9px; border-radius: 100px; border: 1px solid rgba(131,226,240,.2); background: rgba(85,202,235,.075); padding: 7px 12px; color: #c4f3f6; font-size: .8rem; font-weight: 650; }
+    .announcement-dot { width: 7px; height: 7px; background: var(--mint); border-radius: 50%; box-shadow: 0 0 0 4px rgba(136,240,197,.1), 0 0 16px rgba(136,240,197,.5); }
+    .hero-copy h1 { max-width: 690px; }
+    .hero-copy .lead { margin-bottom: 28px; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+    .micro-note { color: #8290ac; font-size: .82rem; display: flex; gap: 8px; align-items: flex-start; }
+    .micro-note svg { color: var(--mint); margin-top: 3px; flex-shrink: 0; }
+    .hero-visual { min-width: 0; position: relative; padding: 9px; }
+    .visual-glow { position: absolute; width: 78%; aspect-ratio: 1; border-radius: 50%; top: 9%; left: 10%; background: #477fe7; filter: blur(90px); opacity: .16; pointer-events: none; }
+    .orbit { position: absolute; width: 390px; height: 390px; border: 1px solid rgba(105,207,239,.11); border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+    .orbit::before, .orbit::after { content: ""; position: absolute; border: 1px solid rgba(169,142,255,.12); border-radius: 50%; inset: 34px -25px; transform: rotate(45deg); }
+    .orbit::after { inset: 70px -5px; transform: rotate(-35deg); }
+    .app-window { position: relative; z-index: 1; border-radius: 19px; border: 1px solid rgba(190,210,249,.2); background: linear-gradient(145deg, rgba(23,32,55,.97), rgba(11,17,33,.97)); box-shadow: 0 35px 100px rgba(0,0,0,.42), inset 0 1px rgba(255,255,255,.04); overflow: hidden; transform: perspective(1500px) rotateY(-4deg) rotateX(2deg); }
+    .window-top { display: flex; align-items: center; justify-content: space-between; padding: 15px 17px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.018); }
+    .window-dots { display: flex; gap: 5px; }
+    .window-dots i { display: block; width: 7px; height: 7px; border-radius: 50%; background: #39445e; }
+    .window-title { font-size: .77rem; color: #cbd6ec; font-weight: 650; }
+    .live-label { font-size: .67rem; color: #9cebc9; display: flex; align-items: center; gap: 6px; }
+    .live-label::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #7de6af; }
+    .app-content { padding: 18px; }
+    .welcome { display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; margin-bottom: 16px; }
+    .welcome strong { display: block; font-size: 1.15rem; letter-spacing: -.03em; }
+    .welcome span { font-size: .72rem; color: #8e9cb8; }
+    .tiny-chip { border-radius: 7px; padding: 5px 8px; color: #a8ebf2; background: rgba(91,231,242,.08); border: 1px solid rgba(91,231,242,.16); font-size: .65rem; white-space: nowrap; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; margin-bottom: 12px; }
+    .stat { border: 1px solid rgba(164,187,227,.12); background: rgba(255,255,255,.027); border-radius: 11px; padding: 11px 10px; }
+    .stat small { display: block; color: #8e9cb8; font-size: .64rem; margin-bottom: 5px; }
+    .stat strong { font-size: 1.18rem; display: block; line-height: 1.3; }
+    .stat em { display: block; font-style: normal; font-size: .62rem; margin-top: 4px; color: #9cebc9; }
+    .preview-lower { display: grid; grid-template-columns: .96fr 1.04fr; gap: 10px; }
+    .mini-panel { min-width: 0; border: 1px solid rgba(164,187,227,.12); background: rgba(255,255,255,.025); border-radius: 11px; padding: 12px; }
+    .mini-panel h4 { font-size: .73rem; margin: 0 0 11px; font-weight: 700; }
+    .task-row { display: flex; align-items: center; gap: 8px; font-size: .65rem; color: #b8c4dc; margin: 10px 0; }
+    .task-bullet { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; color: #a6b8ff; background: rgba(133,155,255,.11); flex-shrink: 0; }
+    .task-bullet svg { width: 14px; height: 14px; }
+    .task-row span:last-child { margin-left: auto; color: #91e5c1; font-size: .6rem; }
+    .chat-bubble { border-radius: 9px; padding: 8px 9px; font-size: .65rem; line-height: 1.45; color: #b9c6df; background: rgba(133,155,255,.085); margin: 7px 0; }
+    .chat-bubble.answer { margin-left: 12px; background: rgba(91,231,242,.075); color: #d6edf5; border: 1px solid rgba(91,231,242,.08); }
+    .visual-caption { position: relative; z-index: 2; font-size: .69rem; color: #71809e; text-align: center; margin-top: 12px; }
+    .float-pill { position: absolute; z-index: 3; display: flex; align-items: center; gap: 9px; padding: 11px 14px; border: 1px solid rgba(193,213,246,.19); border-radius: 13px; background: rgba(13,20,39,.92); box-shadow: 0 15px 35px rgba(0,0,0,.26); font-size: .76rem; color: #e6edfb; backdrop-filter: blur(16px); }
+    .float-pill .round-icon { width: 29px; height: 29px; display: grid; place-items: center; background: rgba(136,240,197,.1); color: var(--mint); border-radius: 9px; }
+    .float-pill .round-icon svg { width: 16px; height: 16px; }
+    .float-pill strong { display: block; font-size: .75rem; }
+    .float-pill small { display: block; color: #8e9cb8; font-size: .64rem; }
+    .float-top { top: 16%; right: -11px; }
+    .float-bottom { bottom: 13%; left: -21px; }
+
+    /* Proof strip */
+    .value-strip { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: rgba(255,255,255,.018); }
+    .value-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; padding: 25px 0; }
+    .value-item { display: flex; align-items: center; justify-content: center; gap: 11px; color: #b8c4dc; font-size: .89rem; font-weight: 600; text-align: center; }
+    .value-item .icon { color: var(--cyan); width: 20px; height: 20px; }
+
+    /* Cards / capabilities */
+    .feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .feature-card { padding: 26px; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(150deg, rgba(21,30,52,.82), rgba(13,19,35,.76)); transition: border-color .2s, transform .2s, background .2s; }
+    .feature-card:hover { transform: translateY(-4px); border-color: rgba(91,231,242,.3); background: linear-gradient(150deg, rgba(24,37,61,.92), rgba(13,19,35,.85)); }
+    .feature-icon { width: 47px; height: 47px; border-radius: 14px; display: grid; place-items: center; color: var(--cyan); background: rgba(91,231,242,.085); border: 1px solid rgba(91,231,242,.13); margin-bottom: 22px; }
+    .feature-icon.violet { color: var(--violet); background: rgba(180,154,255,.09); border-color: rgba(180,154,255,.14); }
+    .feature-icon.mint { color: var(--mint); background: rgba(136,240,197,.08); border-color: rgba(136,240,197,.13); }
+    .feature-icon.blue { color: var(--blue); background: rgba(120,169,255,.09); border-color: rgba(120,169,255,.13); }
+    .feature-icon svg { width: 23px; height: 23px; }
+    .feature-card p { color: var(--muted); font-size: .91rem; line-height: 1.75; margin-bottom: 0; }
+    .feature-tag { display: inline-block; color: #9eb1d0; font-size: .72rem; margin-top: 18px; }
+
+    /* Platform story */
+    .story-panel { border: 1px solid var(--line); border-radius: 28px; overflow: hidden; background: linear-gradient(135deg, rgba(20,29,51,.92), rgba(13,19,35,.88)); display: grid; grid-template-columns: .93fr 1.07fr; }
+    .story-copy { padding: clamp(28px, 5vw, 56px); align-self: center; }
+    .story-copy .lead { font-size: 1rem; margin-bottom: 24px; }
+    .check-list { list-style: none; padding: 0; margin: 25px 0 0; display: grid; gap: 13px; }
+    .check-list li { display: flex; align-items: flex-start; gap: 11px; color: #c4cee1; font-size: .92rem; }
+    .check { width: 20px; height: 20px; display: grid; place-items: center; flex-shrink: 0; color: var(--mint); border-radius: 50%; background: rgba(136,240,197,.09); margin-top: 2px; }
+    .check svg { width: 12px; height: 12px; }
+    .story-visual { position: relative; min-height: 420px; padding: 40px; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 55% 49%, rgba(97,133,255,.19), transparent 52%), rgba(5,10,23,.26); border-left: 1px solid var(--line); }
+    .flow-board { position: relative; width: 100%; max-width: 450px; }
+    .flow-node { display: flex; gap: 13px; align-items: center; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(174,193,230,.18); background: rgba(15,23,43,.94); box-shadow: 0 16px 36px rgba(0,0,0,.18); }
+    .flow-node + .flow-node { margin-top: 19px; }
+    .flow-icon { display: grid; place-items: center; width: 39px; height: 39px; border-radius: 11px; background: rgba(91,231,242,.09); color: var(--cyan); flex-shrink: 0; }
+    .flow-icon svg { width: 20px; height: 20px; }
+    .flow-node:nth-of-type(3) .flow-icon { color: var(--violet); background: rgba(180,154,255,.09); }
+    .flow-node:nth-of-type(4) .flow-icon { color: var(--mint); background: rgba(136,240,197,.09); }
+    .flow-node strong { display: block; font-size: .87rem; }
+    .flow-node small { display: block; margin-top: 2px; color: #8e9cb8; font-size: .75rem; }
+    .flow-line { height: 19px; margin-left: 34px; border-left: 1px dashed rgba(109,214,238,.42); }
+    .flow-line::after { content: ""; display: block; width: 6px; height: 6px; border-right: 1px solid var(--cyan); border-bottom: 1px solid var(--cyan); transform: rotate(45deg) translate(5px, 7px); }
+    .story-note { margin-top: 17px; color: #71809e; font-size: .7rem; text-align: center; }
+
+    /* Use cases */
+    .use-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 13px; }
+    .use-card { padding: 22px 20px; border-radius: 17px; border: 1px solid var(--line); background: rgba(255,255,255,.022); }
+    .use-card .icon { color: var(--blue); width: 23px; height: 23px; margin-bottom: 19px; }
+    .use-card h3 { font-size: 1.02rem; margin-bottom: 7px; }
+    .use-card p { color: var(--muted); font-size: .82rem; line-height: 1.68; margin-bottom: 0; }
+
+    /* Human control */
+    .control-card { position: relative; padding: clamp(27px, 5vw, 55px); border-radius: 26px; border: 1px solid rgba(136,240,197,.17); background: radial-gradient(ellipse at 92% 3%, rgba(136,240,197,.09), transparent 36%), linear-gradient(125deg, rgba(19,34,46,.93), rgba(13,19,35,.93)); display: grid; grid-template-columns: 1fr .72fr; align-items: center; gap: 55px; }
+    .control-card .feature-icon { margin-bottom: 18px; }
+    .control-card p { color: #b2bfd5; max-width: 670px; }
+    .approval-preview { border: 1px solid rgba(178,199,231,.16); border-radius: 16px; background: rgba(5,12,25,.58); padding: 17px; }
+    .approval-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--line); font-size: .77rem; font-weight: 700; }
+    .pending-badge { font-size: .65rem; color: #ffd18b; background: rgba(255,209,139,.09); border: 1px solid rgba(255,209,139,.16); border-radius: 7px; padding: 4px 7px; }
+    .approval-body { padding: 15px 0; display: flex; gap: 11px; align-items: flex-start; }
+    .approval-symbol { width: 35px; height: 35px; display: grid; place-items: center; color: #ffd18b; background: rgba(255,209,139,.09); border-radius: 10px; flex-shrink: 0; }
+    .approval-symbol svg { width: 18px; height: 18px; }
+    .approval-body strong { display: block; font-size: .8rem; margin-bottom: 3px; }
+    .approval-body p { font-size: .73rem; color: #8e9cb8; margin: 0; }
+    .approval-actions { display: flex; gap: 8px; }
+    .approval-actions span { text-align: center; flex: 1; font-size: .7rem; padding: 8px; border-radius: 8px; background: rgba(136,240,197,.08); color: #adf2d5; border: 1px solid rgba(136,240,197,.13); }
+    .approval-actions span:last-child { color: #b6c4de; background: rgba(255,255,255,.035); border-color: var(--line); }
+    .approval-caption { color: #71809e; font-size: .67rem; margin: 11px 0 0; }
+
+    /* Plans */
+    .plans { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; align-items: stretch; }
+    .plan-card { padding: 27px; border-radius: 21px; border: 1px solid var(--line); background: linear-gradient(160deg, rgba(19,28,49,.85), rgba(12,17,32,.85)); display: flex; flex-direction: column; position: relative; }
+    .plan-card.featured { border-color: rgba(91,231,242,.42); box-shadow: 0 0 0 1px rgba(91,231,242,.06), 0 22px 55px rgba(0,0,0,.15); background: linear-gradient(155deg, rgba(26,44,65,.93), rgba(12,18,33,.92)); }
+    .plan-ribbon { position: absolute; top: -12px; right: 20px; background: linear-gradient(110deg, #83f0f0, #9eb5ff); color: #091322; border-radius: 100px; font-size: .69rem; font-weight: 850; padding: 5px 10px; letter-spacing: .03em; }
+    .plan-label { color: #9aaccb; font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .plan-card h3 { font-size: 1.48rem; margin: 9px 0 8px; }
+    .plan-desc { color: #9eabc4; font-size: .86rem; min-height: 48px; margin-bottom: 18px; }
+    .plan-fit { color:#7f91ac; font-size:.72rem; line-height:1.55; margin:-7px 0 16px; }
+    .plan-fit strong { color:#b8c9dd; font-weight:650; }
+    .plan-price { color: #f2f6ff; font-size: 1.25rem; font-weight: 760; padding: 15px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 19px; }
+    .plan-price .price-amount { font-size: 2rem; letter-spacing: -.04em; line-height: 1; }
+    .plan-price small { display: block; color: #8e9cb8; font-size: .72rem; font-weight: 450; margin-top: 3px; }
+    .plan-features { list-style: none; padding: 0; margin: 0 0 24px; display: grid; gap: 12px; flex: 1; }
+    .plan-features li { color: #bdc8dd; font-size: .84rem; display: flex; gap: 9px; align-items: flex-start; }
+    .plan-features .check { width: 17px; height: 17px; margin-top: 1px; }
+    .plan-card .btn { width: 100%; margin-top: auto; }
+    .pricing-note { color: #8795af; max-width: 760px; margin: 24px auto 0; text-align: center; font-size: .82rem; }
+
+    /* FAQ / CTA / footer */
+    .faq-grid { max-width: 850px; margin: auto; display: grid; gap: 10px; }
+    details.faq-item { border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.022); padding: 0 19px; }
+    details.faq-item summary { cursor: pointer; list-style: none; padding: 19px 31px 19px 0; font-weight: 650; font-size: .94rem; position: relative; }
+    details.faq-item summary::-webkit-details-marker { display: none; }
+    details.faq-item summary::after { content: "+"; position: absolute; right: 0; top: 13px; color: var(--cyan); font-size: 1.55rem; font-weight: 400; }
+    details.faq-item[open] summary::after { content: "−"; }
+    details.faq-item p { color: var(--muted); font-size: .88rem; line-height: 1.75; margin: 0; padding: 0 0 18px; max-width: 760px; }
+    .final-cta { padding: 0 0 95px; }
+    .cta-panel { text-align: center; padding: clamp(36px, 6vw, 72px) 25px; border-radius: 28px; border: 1px solid rgba(113,207,238,.22); background: radial-gradient(ellipse at 50% -8%, rgba(91,231,242,.15), transparent 52%), radial-gradient(ellipse at 100% 100%, rgba(180,154,255,.10), transparent 42%), #0e1528; position: relative; overflow: hidden; }
+    .cta-panel h2 { max-width: 780px; margin-inline: auto; }
+    .cta-panel p { color: #aab8d0; max-width: 650px; margin: 0 auto 25px; }
+    .cta-actions { display: flex; gap: 11px; justify-content: center; flex-wrap: wrap; }
+    footer { border-top: 1px solid var(--line); padding: 27px 0 35px; background: rgba(3,6,14,.27); }
+    .footer-main { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .footer-brand p { color: #7f8ca7; font-size: .77rem; margin: 9px 0 0; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 20px; color: #9daac2; font-size: .82rem; }
+    .footer-links a:hover { color: #fff; }
+    .copyright { border-top: 1px solid rgba(174,193,230,.08); margin-top: 25px; padding-top: 19px; display: flex; justify-content: space-between; gap: 12px; color: #6e7b96; font-size: .73rem; }
+    .skip-link { position: absolute; left: -999px; top: auto; }
+    .skip-link:focus { left: 15px; top: 15px; z-index: 999; padding: 10px; background: #fff; color: #000; }
+
+    @media (max-width: 1000px) {
+      .hero-grid { grid-template-columns: minmax(0,1fr) minmax(340px,.9fr); gap: 25px; }
+      .float-top { right: -2px; }
+      .feature-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .use-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+      .control-card { gap: 28px; }
+      .nav-links { gap: 16px; }
+    }
+    @media (max-width: 790px) {
+      .container { width: min(var(--max), calc(100% - 32px)); }
+      .section { padding: 76px 0; }
+      .nav { min-height: 70px; }
+      .menu-toggle { display: inline-flex; align-items: center; justify-content: center; }
+      .nav-links { display: none; position: absolute; left: 16px; right: 16px; top: 69px; padding: 17px; border-radius: 16px; border: 1px solid var(--line); background: rgba(10,15,29,.98); box-shadow: 0 20px 50px rgba(0,0,0,.35); align-items: stretch; flex-direction: column; gap: 15px; }
+      .nav-links.open { display: flex; }
+      .nav-links > a:not(.btn) { padding: 5px 2px; }
+      .nav-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .hero { padding: 65px 0 55px; }
+      .hero-grid { grid-template-columns: 1fr; }
+      .hero-copy { max-width: 700px; }
+      .hero-visual { width: min(100%, 600px); margin: 16px auto 0; }
+      .app-window { transform: none; }
+      .orbit { width: 320px; height: 320px; }
+      .float-top { right: 0; top: 10%; }
+      .float-bottom { left: 0; bottom: 8%; }
+      .story-panel { grid-template-columns: 1fr; }
+      .story-visual { border-left: 0; border-top: 1px solid var(--line); min-height: 390px; }
+      .control-card { grid-template-columns: 1fr; }
+      .approval-preview { max-width: 520px; width: 100%; }
+      .plans { grid-template-columns: 1fr; max-width: 570px; margin-inline: auto; gap: 18px; }
+      .plan-desc { min-height: unset; }
+      .footer-main { align-items: flex-start; flex-direction: column; }
+    }
+    @media (max-width: 540px) {
+      .orbit { display: none; }
+      .brand-mark { width: 34px; height: 34px; }
+      .brand-name { font-size: 1.06rem; }
+      h1 { font-size: clamp(2.55rem, 13vw, 3.8rem); }
+      h2 { font-size: clamp(2rem, 10vw, 2.7rem); }
+      .hero-actions { align-items: stretch; flex-direction: column; }
+      .hero-actions .btn { width: 100%; }
+      .value-row { grid-template-columns: 1fr; gap: 14px; padding: 22px 0; }
+      .value-item { justify-content: flex-start; text-align: left; }
+      .feature-grid, .use-grid { grid-template-columns: 1fr; }
+      .feature-card { padding: 23px; }
+      .app-content { padding: 12px; }
+      .window-top { padding: 12px; }
+      .stat-grid { gap: 6px; }
+      .stat { padding: 9px 7px; }
+      .stat strong { font-size: 1rem; }
+      .stat small { font-size: .57rem; }
+      .preview-lower { grid-template-columns: 1fr; }
+      .mini-panel:first-child { display: none; }
+      .float-pill { padding: 8px 10px; font-size: .68rem; }
+      .float-top { top: -3px; right: -2px; }
+      .float-bottom { bottom: -2px; left: -1px; }
+      .story-copy { padding: 28px 23px; }
+      .story-visual { padding: 24px 18px; min-height: 340px; }
+      .control-card { padding: 27px 22px; }
+      .copyright { flex-direction: column; }
+      .footer-links { gap: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+
+    .contact-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; max-width:700px; margin:30px auto 0; text-align:left; }
+    .contact-details a { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid rgba(174,193,230,.16); background:rgba(255,255,255,.025); border-radius:14px; color:#edf4ff; text-decoration:none; min-width:0; }
+    .contact-details a:hover { border-color:rgba(91,231,242,.35); background:rgba(91,231,242,.045); }
+    .contact-icon { width:38px; height:38px; display:grid; place-items:center; flex-shrink:0; border-radius:11px; color:#5be7f2; background:rgba(91,231,242,.09); font-weight:800; }
+    .contact-details strong,.contact-details small { display:block; overflow-wrap:anywhere; }
+    .contact-details small { margin-top:4px; color:#9eabc4; font-size:.82rem; }
+    @media(max-width:650px){ .contact-details{grid-template-columns:1fr;} }
+  </style>
 </head>
 <body>
-    <nav class="nav">
-        <a href="/" class="logo-wrap">
-            <svg class="logo-svg" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="4" fill="url(#cg)"/>
-                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(30 16 16)" stroke="url(#cg)" stroke-width="1.8"/>
-                <ellipse cx="16" cy="16" rx="14" ry="4" transform="rotate(-30 16 16)" stroke="url(#cg)" stroke-width="1.8"/>
-                <defs>
-                    <linearGradient id="cg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#00f2fe" />
-                        <stop offset="1" stop-color="#9333ea" />
-                    </linearGradient>
-                </defs>
-            </svg>
-            <span class="logo-text">Calyrisia</span>
-        </a>
-        <div class="nav-links">
-            <a href="/webchat" class="nav-link">Webchat Demo</a>
-            <a href="/dashboard/" class="btn-nav">Dashboard</a>
-            <a href="/feedback" class="btn-nav"><i class="ph ph-chat-circle-dots"></i> Feedback</a>
+  <a class="skip-link" href="#contenido">Saltar al contenido</a>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="/" aria-label="CALYRISIA, inicio">
+        <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <defs><linearGradient id="calyrisia-mark" x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse"><stop stop-color="#5BE7F2"/><stop offset=".5" stop-color="#78A9FF"/><stop offset="1" stop-color="#B49AFF"/></linearGradient></defs>
+          <circle cx="20" cy="20" r="4.5" fill="url(#calyrisia-mark)"/>
+          <ellipse cx="20" cy="20" rx="17" ry="6.2" transform="rotate(32 20 20)" stroke="url(#calyrisia-mark)" stroke-width="1.6"/>
+          <ellipse cx="20" cy="20" rx="17" ry="6.2" transform="rotate(-32 20 20)" stroke="url(#calyrisia-mark)" stroke-width="1.6"/>
+          <circle cx="6.3" cy="12.6" r="1.5" fill="#5BE7F2"/><circle cx="32.8" cy="28" r="1.5" fill="#B49AFF"/>
+        </svg>
+        <span class="brand-name">CALY<span>RISIA</span></span>
+      </a>
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="navLinks">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <nav class="nav-links" id="navLinks" aria-label="Navegación principal">
+        <a href="#plataforma">Plataforma</a>
+        <a href="#como-funciona">Cómo funciona</a>
+        <a href="#planes">Planes</a>
+        <a href="#preguntas">Preguntas</a>
+        <div class="nav-actions">
+          <a class="btn btn-secondary btn-small" href="/dashboard/">Iniciar sesión</a>
+          <a class="btn btn-primary btn-small" href="/contacto/">Hablar con ventas <span aria-hidden="true">↗</span></a>
         </div>
-    </nav>
+      </nav>
+    </div>
+  </header>
 
+  <main id="contenido">
     <section class="hero">
-        <div class="badge">
-            <i class="ph-fill ph-sparkle"></i> Calyrisia Core v1.0 — Demo en Vivo
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="announcement"><span class="announcement-dot"></span> Inteligencia empresarial, más allá de un chatbot</div>
+          <h1>Tu negocio merece un <span class="gradient-text">cerebro propio.</span></h1>
+          <p class="lead">CALYRISIA conecta la atención al cliente, tu catálogo y tus operaciones para ayudarte a responder mejor, ordenar procesos y tomar decisiones con más contexto.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/contacto/">Solicitar implementación <span aria-hidden="true">↗</span></a>
+            <a class="btn btn-secondary" href="#planes"><span aria-hidden="true">↘</span> Ver planes y límites</a>
+          </div>
+          <div class="micro-note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+            <span>Automatización con contexto de tu negocio y control humano cuando importa.</span>
+          </div>
         </div>
-        <h1>Inteligencia Artificial Autónoma <br><span class="hero-grad">para hacer crecer tu Comercio</span></h1>
-        <p>Tu asesor comercial 24/7 que atiende a tus clientes, entiende tu rubro, recomienda productos de tu catálogo y automatiza tus ventas con supervisión del dueño.</p>
-        <div class="hero-actions">
-            <a href="/onboarding" class="btn-primary"><i class="ph-bold ph-rocket-launch"></i> Probar Demo (Crear Negocio)</a>
-            <a href="/webchat" class="btn-secondary"><i class="ph-bold ph-chat-teardrop-dots"></i> Abrir Webchat IA</a>
-            <a href="/dashboard/" class="btn-secondary"><i class="ph-bold ph-gauge"></i> Centro de Mando</a>
+
+        <div class="hero-visual" aria-label="Vista ilustrativa del centro de operaciones de CALYRISIA">
+          <div class="visual-glow"></div><div class="orbit"></div>
+          <div class="float-pill float-top"><span class="round-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg></span><span><strong>Contexto conectado</strong><small>Catálogo · clientes · procesos</small></span></div>
+          <div class="app-window">
+            <div class="window-top"><div class="window-dots"><i></i><i></i><i></i></div><div class="window-title">CALYRISIA / Centro de operaciones</div><div class="live-label">Vista conceptual</div></div>
+            <div class="app-content">
+              <div class="welcome"><div><strong>Tu negocio, en un solo lugar</strong><span>Una vista ilustrativa de la plataforma</span></div><span class="tiny-chip">Business Intelligence</span></div>
+              <div class="stat-grid">
+                <div class="stat"><small>Conversaciones</small><strong>—</strong><em>Actividad de tu negocio</em></div>
+                <div class="stat"><small>Pedidos por revisar</small><strong>—</strong><em>Estado de solicitudes</em></div>
+                <div class="stat"><small>Catálogo</small><strong>—</strong><em>Productos vinculados</em></div>
+              </div>
+              <div class="preview-lower">
+                <div class="mini-panel"><h4>Actividad operativa</h4>
+                  <div class="task-row"><span class="task-bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h13"/></svg></span>Pedido recibido <span>Nuevo</span></div>
+                  <div class="task-row"><span class="task-bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>Cliente atendido <span>Listo</span></div>
+                  <div class="task-row"><span class="task-bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-7"/></svg></span>Dato para revisar <span>Ver</span></div>
+                </div>
+                <div class="mini-panel"><h4>Asistente comercial</h4>
+                  <div class="chat-bubble">¿Tienen cargadores USB-C disponibles?</div>
+                  <div class="chat-bubble answer">Puedo revisar el catálogo del negocio y orientarte con los modelos y precios registrados.</div>
+                  <div class="chat-bubble" style="max-width:72%;opacity:.68">Perfecto, muéstrame las opciones.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="float-pill float-bottom"><span class="round-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span><span><strong>Tu negocio mantiene el control</strong><small>Reglas y aprobaciones configurables</small></span></div>
+          <p class="visual-caption">Vista conceptual del producto; los datos reales aparecerán dentro de la cuenta de cada negocio.</p>
         </div>
+      </div>
     </section>
 
-    <section class="grid-features">
-        <div class="card">
-            <div class="card-icon icon-blue"><i class="ph ph-brain"></i></div>
-            <h3>Asesor IA Especializado</h3>
-            <p>Se adapta al instante a lo que vendas: ropa, salud, comida, repuestos o servicios. Responde dudas con lenguaje natural y cierra ventas.</p>
-        </div>
-        <div class="card">
-            <div class="card-icon icon-purple"><i class="ph ph-chart-line-up"></i></div>
-            <h3>Centro de Mando Propietario</h3>
-            <p>Visualiza en tiempo real las conversaciones, citas agendadas, pedidos generados y métricas clave de salud del cliente.</p>
-        </div>
-        <div class="card">
-            <div class="card-icon icon-emerald"><i class="ph ph-shield-check"></i></div>
-            <h3>Autonomía con Control Humano</h3>
-            <p>Niveles de gobernanza inteligentes: el asistente resuelve lo cotidiano y solicita tu aprobación inmediata para operaciones sensibles.</p>
-        </div>
-    </section>
-
-    <div class="banner-feedback">
-        <h2>¿Probaste la demo? Déjanos tu opinión</h2>
-        <p>Tu retroalimentación nos ayuda a perfeccionar la plataforma antes del lanzamiento comercial.</p>
-        <a href="/feedback" class="btn-primary"><i class="ph-bold ph-star"></i> Dejar mi Feedback</a>
+    <div class="value-strip">
+      <div class="container value-row">
+        <div class="value-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg></span> IA adaptada a tu operación</div>
+        <div class="value-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/><path d="m15 16 2 2 4-4"/></svg></span> Procesos conectados</div>
+        <div class="value-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span> Control en manos del dueño</div>
+      </div>
     </div>
 
-    <footer>
-        <p>&copy; 2026 Calyrisia Technologies. Demo de Software Operativo con IA Autónoma.</p>
-    </footer>
+    <section class="section" id="plataforma">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">Una plataforma, más posibilidades</span>
+          <h2>No es solo responder mensajes.<br><span class="gradient-text">Es conectar el trabajo.</span></h2>
+          <p class="lead">Cuando la información de tu negocio está conectada, la IA puede ayudar a resolver consultas y a mover tareas con menos fricción.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3Z"/><path d="M9 22h6M9 16h6M12 3v2M3 10h2m14 0h2M5.6 4.6 7 6m10 10 1.4 1.4m0-12.8L17 6"/></svg></div>
+            <h3>Un asistente con contexto</h3>
+            <p>Responde con la información disponible de tu negocio, entiende las consultas habituales y guía al cliente de una forma más natural.</p>
+            <span class="feature-tag">Atención más consistente</span>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon violet"><svg viewBox="0 0 24 24"><path d="M3 7 12 3l9 4-9 4-9-4Z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4"/></svg></div>
+            <h3>Catálogo y disponibilidad</h3>
+            <p>Mantén productos, precios y cantidades organizados para que la atención y la operación trabajen sobre una misma fuente de información.</p>
+            <span class="feature-tag">Menos respuestas desactualizadas</span>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon mint"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h5M8 16h8"/><path d="m16 12 1.5 1.5L20 11"/></svg></div>
+            <h3>Pedidos y tareas</h3>
+            <p>Centraliza la información de las solicitudes y da estructura a los siguientes pasos, sin depender de recordar cada conversación.</p>
+            <span class="feature-tag">Del mensaje a la operación</span>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon blue"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6m-3-3h6"/></svg></div>
+            <h3>Memoria de clientes</h3>
+            <p>Organiza el contexto de las interacciones para dar continuidad a la atención y comprender mejor las necesidades de tus clientes.</p>
+            <span class="feature-tag">Atención con continuidad</span>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon violet"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 6-8"/><path d="M15 5h5v5"/></svg></div>
+            <h3>Visibilidad para el dueño</h3>
+            <p>Consulta la actividad desde un centro de mando y ten una visión más clara de lo que ocurre con clientes, solicitudes y procesos.</p>
+            <span class="feature-tag">Más contexto para decidir</span>
+          </article>
+          <article class="feature-card">
+            <div class="feature-icon mint"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/><path d="m8.5 12 2.3 2.3 4.7-4.8"/></svg></div>
+            <h3>Automatización con reglas</h3>
+            <p>Define cómo debe comportarse el asistente y qué acciones requieren revisión, para que la automatización se ajuste a tu manera de trabajar.</p>
+            <span class="feature-tag">Autonomía con límites claros</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="como-funciona" style="padding-top:24px">
+      <div class="container">
+        <div class="story-panel">
+          <div class="story-copy">
+            <span class="eyebrow">Cómo funciona</span>
+            <h2>De herramientas separadas a una <span class="gradient-text">operación conectada.</span></h2>
+            <p class="lead">CALYRISIA está pensada para trabajar con el contexto y las reglas de cada negocio, en lugar de dar respuestas aisladas sin conocer la operación.</p>
+            <ul class="check-list">
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Configura tu negocio.</strong> Define el tipo de empresa, productos, servicios y reglas principales.</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Conecta la atención.</strong> Da a los clientes una forma más clara de consultar, preguntar y solicitar.</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Supervisa y mejora.</strong> Revisa la actividad y conserva el control sobre las decisiones importantes.</span></li>
+            </ul>
+            <div style="margin-top:27px"><a class="btn btn-primary" href="/contacto/">Hablar sobre mi negocio <span aria-hidden="true">↗</span></a></div>
+          </div>
+          <div class="story-visual">
+            <div class="flow-board" aria-label="Diagrama ilustrativo del funcionamiento de CALYRISIA">
+              <div class="flow-node"><span class="flow-icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v12H8l-4 3V5Z"/><path d="M8 9h8M8 13h5"/></svg></span><div><strong>1. Conversación</strong><small>Una pregunta, consulta o solicitud del cliente</small></div></div>
+              <div class="flow-line"></div>
+              <div class="flow-node"><span class="flow-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2M12 2v2M22 12h-2"/></svg></span><div><strong>2. Contexto del negocio</strong><small>Catálogo, datos disponibles y reglas definidas</small></div></div>
+              <div class="flow-line"></div>
+              <div class="flow-node"><span class="flow-icon"><svg viewBox="0 0 24 24"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg></span><div><strong>3. Acción o respuesta</strong><small>Una respuesta útil o una tarea organizada</small></div></div>
+              <div class="flow-line"></div>
+              <div class="flow-node"><span class="flow-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></span><div><strong>4. Supervisión del dueño</strong><small>Revisión cuando el proceso lo requiere</small></div></div>
+              <p class="story-note">Flujo conceptual: las funciones disponibles dependen de la configuración del negocio.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:24px">
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow">Pensado para operaciones reales</span>
+          <h2>Una base flexible para distintos negocios.</h2>
+          <p class="lead" style="margin-inline:auto">Empieza por los procesos que hoy te quitan tiempo y amplía la automatización conforme tu negocio lo necesite.</p>
+        </div>
+        <div class="use-grid">
+          <article class="use-card"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 8h16l-1 13H5L4 8Z"/><path d="M8 8a4 4 0 0 1 8 0M3 4h18"/></svg></span><h3>Tiendas y comercios</h3><p>Consultas de productos, precios, disponibilidad, pedidos y seguimiento.</p></article>
+          <article class="use-card"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 3h16v18H4zM8 7h8M8 11h8M8 15h4"/><path d="M7 3V1m10 2V1"/></svg></span><h3>Servicios y citas</h3><p>Atención de solicitudes, recopilación de datos y coordinación de próximos pasos.</p></article>
+          <article class="use-card"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 6h18M5 6l1 15h12l1-15M9 6V4a3 3 0 0 1 6 0v2"/><path d="M9 11v5m6-5v5"/></svg></span><h3>Restaurantes y pedidos</h3><p>Preguntas frecuentes, opciones de catálogo y solicitudes mejor organizadas.</p></article>
+          <article class="use-card"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13M7 21v-7h10v7M8 9h.01M12 9h.01M16 9h.01"/></svg></span><h3>Equipos en crecimiento</h3><p>Un punto común para revisar actividad, reglas y tareas repetitivas de operación.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:10px">
+      <div class="container">
+        <div class="control-card">
+          <div>
+            <div class="feature-icon mint"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <span class="eyebrow">Autonomía responsable</span>
+            <h2>La IA ayuda.<br><span class="gradient-text">Tú sigues al mando.</span></h2>
+            <p>La automatización debe respetar las reglas de cada empresa. Diseña flujos para que las tareas rutinarias avancen y las acciones delicadas puedan quedar sujetas a revisión humana.</p>
+            <ul class="check-list">
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span>Define qué puede resolver el asistente y cuándo debe escalar.</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span>Revisa solicitudes y decisiones que necesitan la intervención del equipo.</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span>Mantén los procesos alineados con las políticas de tu negocio.</span></li>
+            </ul>
+          </div>
+          <div>
+            <div class="approval-preview">
+              <div class="approval-head"><span>Centro de revisión</span><span class="pending-badge">Requiere aprobación</span></div>
+              <div class="approval-body"><span class="approval-symbol"><svg viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span><div><strong>Solicitud lista para revisar</strong><p>Ejemplo ilustrativo de una tarea que el negocio puede someter a revisión.</p></div></div>
+              <div class="approval-actions"><span>✓ Aprobar</span><span>Ver detalles</span></div>
+              <p class="approval-caption">Representación conceptual de un flujo de control, no una captura real del sistema.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="planes">
+      <div class="container">
+        <div class="section-head center">
+          <span class="eyebrow">Planes transparentes</span>
+          <h2>Empieza con lo esencial.<br><span class="gradient-text">Escala cuando tu operación lo necesite.</span></h2>
+          <p class="lead" style="margin-inline:auto">Precios mensuales en USD con límites publicados de catálogo, imágenes y uso de IA. Cada plan se adapta al tamaño y al tipo de negocio.</p>
+        </div>
+        <div class="plans">
+          <article class="plan-card">
+            <div class="plan-label">Plan Emprendedor</div><h3>Para pequeños negocios</h3>
+            <p class="plan-desc">Para tiendas pequeñas con ventas y catálogo, o profesionales independientes que necesitan una agenda sencilla de citas.</p>
+            <p class="plan-fit"><strong>Perfiles compatibles:</strong> ventas y catálogo pequeño · citas y servicios independientes.</p>
+            <div class="plan-price"><span class="price-amount">$19</span><small>USD / mes</small></div>
+            <ul class="plan-features">
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Hasta 100 productos</strong> en el catálogo</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Hasta 100 imágenes de catálogo</strong>, 1 por producto</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>600 respuestas de IA al mes</strong> incluidas</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>1 canal de atención: Telegram o Webchat</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Dashboard de inventario y catálogo para ventas, o agenda básica para citas y servicios independientes</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Consultas de productos, precios y disponibilidad cuando se use el perfil de ventas</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Registro de clientes e historial de conversaciones</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Pedidos y referencias de pago para revisión humana</li>
+            </ul>
+            <a class="btn btn-secondary" href="/onboarding/?plan=emprendedor">Elegir Emprendedor <span aria-hidden="true">↗</span></a>
+          </article>
+          <article class="plan-card featured">
+            <span class="plan-ribbon">Ideal para crecer</span>
+            <div class="plan-label">Smart Business</div><h3>Para operaciones medianas</h3>
+            <p class="plan-desc">Para locales comerciales, bodegones, minimarkets, restaurantes, consultorios y clínicas que necesitan coordinar inventario, citas o reservas.</p>
+            <p class="plan-fit"><strong>Perfiles compatibles:</strong> locales · bodegones · minimarkets · restaurantes · consultorios · clínicas · servicios con equipo.</p>
+            <div class="plan-price"><span class="price-amount">$49</span><small>USD / mes</small></div>
+            <ul class="plan-features">
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Hasta 1.000 productos</strong> en el catálogo</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Hasta 2.000 imágenes de catálogo</strong>, máximo 3 por producto</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>2.500 respuestas de IA al mes</strong> incluidas</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Hasta 2 canales: Telegram y Webchat</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Panel especializado según el negocio: citas, reservas, pedidos o inventario</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Alertas de inventario y carga de catálogo por archivo</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Automatización de seguimiento y reportes operativos</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Integración de WhatsApp disponible como implementación adicional, según validación y costos del proveedor</li>
+            </ul>
+            <a class="btn btn-primary" href="/onboarding/?plan=smart_business">Elegir Smart Business <span aria-hidden="true">↗</span></a>
+          </article>
+          <article class="plan-card">
+            <div class="plan-label">Enterprise</div><h3>Para ventas de alto volumen</h3>
+            <p class="plan-desc">Para supermercados, hipermercados, tiendas grandes, cadenas, distribuidores y empresas con operaciones de alto volumen.</p>
+            <p class="plan-fit"><strong>Perfiles compatibles:</strong> supermercados · hipermercados · tiendas grandes · cadenas · distribuidores y grandes empresas.</p>
+            <div class="plan-price"><span class="price-amount">$99</span><small>USD / mes · desde</small></div>
+            <ul class="plan-features">
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Hasta 10.000 productos</strong> en el catálogo</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>Hasta 10.000 imágenes de catálogo</strong>, máximo 5 por producto</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span><strong>10.000 respuestas de IA al mes</strong> incluidas</span></li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Hasta 3 canales, según integración contratada</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Operaciones por lotes, indicadores avanzados y alertas</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Configuración de roles, permisos y aprobaciones por equipo, según alcance contratado</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Auditoría e integraciones API/webhooks sujetas a validación técnica y alcance contratado</li>
+              <li><span class="check"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span>Diseño de operación multi-sucursal según alcance acordado</li>
+            </ul>
+            <a class="btn btn-secondary" href="/onboarding/?plan=enterprise">Consultar Enterprise <span aria-hidden="true">↗</span></a>
+          </article>
+        </div>
+        <p class="pricing-note">Las respuestas de IA se cuentan por cada respuesta generada para un cliente. Al llegar al límite mensual, las respuestas de IA quedarán pausadas hasta el próximo ciclo o hasta acordar una ampliación con CALYRISIA. Los límites de imágenes son topes de catálogo, no almacenamiento ilimitado. WhatsApp, mensajería externa, modelos de IA extraordinarios, integraciones y desarrollos a medida pueden tener cargos de activación o consumo.</p>
+      </div>
+    </section>
+
+    <section class="section" id="preguntas" style="padding-top:32px">
+      <div class="container">
+        <div class="section-head center"><span class="eyebrow">Preguntas frecuentes</span><h2>Respuestas claras antes de empezar.</h2></div>
+        <div class="faq-grid">
+          <details class="faq-item"><summary>¿CALYRISIA es solo un chatbot?</summary><p>No. CALYRISIA conecta la atención con los datos y procesos del negocio: catálogo, solicitudes, clientes y tareas operativas, con control humano para acciones sensibles.</p></details>
+          <details class="faq-item"><summary>¿Qué negocio puede contratar cada plan?</summary><p>Emprendedor está dirigido a ventas y catálogo para negocios pequeños o citas para profesionales independientes. Smart Business es para locales, bodegones, minimarkets, restaurantes, consultorios, clínicas y equipos de servicios. Enterprise es para supermercados, hipermercados, tiendas grandes, cadenas, distribuidores y empresas de alto volumen. El onboarding muestra los perfiles compatibles con cada plan.</p></details>
+          <details class="faq-item"><summary>¿Qué pasa cuando consumo las respuestas de IA del mes?</summary><p>El plan incluye una cuota mensual publicada. Al agotarla, las respuestas de IA se pausan hasta el siguiente ciclo. Contacta con CALYRISIA para revisar un cambio de plan o una ampliación; no se activa consumo adicional ni se realizan cargos automáticos por exceso.</p></details>
+          <details class="faq-item"><summary>¿Puedo usar CALYRISIA en Telegram, WhatsApp o mi página web?</summary><p>Telegram y el Webchat de CALYRISIA forman parte de la oferta inicial según plan. La conexión de WhatsApp requiere una activación específica, verificación de compatibilidad y puede tener costes del proveedor o de implementación.</p></details>
+          <details class="faq-item"><summary>¿La IA puede aprobar pagos o tomar cualquier decisión?</summary><p>Las reglas de automatización se configuran según tu negocio. Las operaciones delicadas, como validar pagos o autorizar acciones sensibles, pueden permanecer sujetas a aprobación humana.</p></details>
+          <details class="faq-item"><summary>¿Qué límites tiene cada catálogo?</summary><p>Emprendedor admite hasta 100 productos y 100 imágenes; Smart Business, hasta 1.000 productos y 2.000 imágenes; Enterprise, hasta 10.000 productos y 10.000 imágenes. Cada producto tiene un máximo de 1, 3 o 5 imágenes según el plan. En la versión actual, las imágenes se asocian mediante una URL pública al importar el catálogo desde CSV.</p></details>
+          <details class="faq-item"><summary>¿Cómo contrato?</summary><p>Escríbenos por WhatsApp o correo. Revisaremos el tipo de negocio, el volumen de catálogo, los canales que utilizas y las automatizaciones que necesitas para recomendar el plan adecuado.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta" id="contacto">
+      <div class="container">
+        <div class="cta-panel">
+          <span class="eyebrow" style="justify-content:center">Contacto comercial</span>
+          <h2>Cuéntanos cómo funciona tu negocio.</h2>
+          <p>Te ayudaremos a elegir el plan, definir los límites del catálogo y ordenar las automatizaciones más útiles para tu operación.</p>
+          <div class="cta-actions">
+            <a class="btn btn-primary" href="https://wa.me/584128418550?text=Hola%20CALYRISIA%2C%20quiero%20informaci%C3%B3n%20sobre%20sus%20planes." target="_blank" rel="noopener">Contactar por WhatsApp <span aria-hidden="true">↗</span></a>
+            <a class="btn btn-secondary" href="mailto:jorge@calyrisia.com?subject=Consulta%20comercial%20CALYRISIA">Escribir por correo</a>
+          </div>
+          <div class="contact-details">
+            <a href="https://wa.me/584128418550" target="_blank" rel="noopener"><span class="contact-icon">WA</span><span><strong>WhatsApp comercial</strong><small>+58 412-8418550</small></span></a>
+            <a href="mailto:jorge@calyrisia.com"><span class="contact-icon">@</span><span><strong>Correo empresarial</strong><small>jorge@calyrisia.com</small></span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <a class="brand" href="/" aria-label="CALYRISIA, inicio">
+            <svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true"><defs><linearGradient id="calyrisia-mark-footer" x1="3" y1="3" x2="37" y2="37"><stop stop-color="#5BE7F2"/><stop offset=".5" stop-color="#78A9FF"/><stop offset="1" stop-color="#B49AFF"/></linearGradient></defs><circle cx="20" cy="20" r="4.5" fill="url(#calyrisia-mark-footer)"/><ellipse cx="20" cy="20" rx="17" ry="6.2" transform="rotate(32 20 20)" stroke="url(#calyrisia-mark-footer)" stroke-width="1.6"/><ellipse cx="20" cy="20" rx="17" ry="6.2" transform="rotate(-32 20 20)" stroke="url(#calyrisia-mark-footer)" stroke-width="1.6"/></svg>
+            <span class="brand-name">CALY<span>RISIA</span></span>
+          </a>
+          <p>Inteligencia empresarial autónoma.</p>
+        </div>
+        <nav class="footer-links" aria-label="Enlaces del pie de página">
+          <a href="#plataforma">Plataforma</a><a href="#planes">Planes</a><a href="#preguntas">Preguntas frecuentes</a><a href="/contacto/">Contacto</a><a href="mailto:jorge@calyrisia.com">Correo comercial</a><a href="/dashboard/">Acceso clientes</a>
+        </nav>
+      </div>
+      <div class="copyright"><span>© 2026 CALYRISIA. Todos los derechos reservados.</span><span>Tu negocio. Tu contexto. Más posibilidades.</span></div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const toggle = document.getElementById('menuToggle');
+      const links = document.getElementById('navLinks');
+      if (!toggle || !links) return;
+      toggle.addEventListener('click', function () {
+        const isOpen = links.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', String(isOpen));
+        toggle.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
+      });
+      links.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+          links.classList.remove('open');
+          toggle.setAttribute('aria-expanded', 'false');
+          toggle.setAttribute('aria-label', 'Abrir menú');
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

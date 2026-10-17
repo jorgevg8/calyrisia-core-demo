@@ -25,7 +25,7 @@ function updateHeaderUI() {
       tenantPill.textContent = `ID: ${state.businessId.slice(0, 8)}...`;
       tenantPill.title = `Tenant activo: ${state.businessId}`;
     } else {
-      tenantPill.textContent = "Demo fijo";
+      tenantPill.textContent = "Sin negocio configurado";
     }
   }
   document.title = `${state.bizName} - Asesor IA`;
@@ -33,15 +33,14 @@ function updateHeaderUI() {
 
 function switchTenant() {
   const current = state.businessId || "";
-  const input = prompt("Ingresa el ID del negocio que deseas probar (o deja vacío para usar el negocio activo):", current);
+  const input = prompt("Ingresa el ID del negocio que debe atender este Webchat:", current);
   if (input !== null) {
     const clean = input.trim();
     if (clean) {
       localStorage.setItem("calyrisia_current_business_id", clean);
       window.location.href = `/webchat?business_id=${encodeURIComponent(clean)}`;
     } else {
-      localStorage.removeItem("calyrisia_current_business_id");
-      window.location.href = '/webchat';
+      alert("Webchat necesita el identificador del negocio. No existe un negocio predeterminado.");
     }
   }
 }
@@ -87,7 +86,7 @@ function addMessage(role, text) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function renderPaymentCard(amount, items = []) {
+async function renderPaymentCard(amount, items = []) {
   cardCounter++;
   const cardId = `pay-card-${cardCounter}`;
   const messagesEl = $("messages");
@@ -98,82 +97,71 @@ function renderPaymentCard(amount, items = []) {
   card.id = cardId;
   card.dataset.items = JSON.stringify(items || []);
   card.innerHTML = `
-    <div class="pay-card-header">
-      <span class="pay-badge">MÉTODO DE PAGO</span>
-      <span class="pay-amount">$${amount.toFixed(2)} USD</span>
-    </div>
-    <div class="pay-title">Pago Móvil / Transferencia (Demo)</div>
-    <div class="pay-info">
-      <div class="pay-info-row"><span>Banco:</span> <strong>Mercantil / Banesco</strong></div>
-      <div class="pay-info-row"><span>Teléfono:</span> <strong>0414-1234567</strong></div>
-      <div class="pay-info-row"><span>C.I / RIF:</span> <strong>V-28.123.456</strong></div>
-    </div>
-    <div id="status-box-${cardId}" class="pay-status-box hidden"></div>
-    <button type="button" class="btn-pay-demo" id="btn-pay-${cardId}" onclick="submitDemoPayment(${amount}, '${cardId}')">
-      ⚡ Procesar Pago Demo ($${amount.toFixed(2)} USD)
-    </button>
+    <div class="pay-card-header"><span class="pay-badge">INSTRUCCIONES DE PAGO</span><span class="pay-amount">$${amount.toFixed(2)} USD</span></div>
+    <div class="pay-title">Métodos de cobro de este negocio</div>
+    <div id="pay-instructions-${cardId}" class="pay-info">Consultando las instrucciones configuradas por el comercio…</div>
   `;
   messagesEl.appendChild(card);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  const info = $(`pay-instructions-${cardId}`);
+  try {
+    if (!state.businessId) throw new Error("No se identificó el negocio.");
+    const res = await fetch(`/api/v1/webchat/payment-instructions?business_id=${encodeURIComponent(state.businessId)}`);
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.detail || "No se pudieron cargar las instrucciones de pago.");
+    const methods = Array.isArray(data.methods) ? data.methods : [];
+    if (!methods.length) {
+      info.innerHTML = '<p>El negocio todavía no ha configurado métodos de cobro. Por seguridad, no realices transferencias. Contacta al comercio para recibir instrucciones oficiales.</p>';
+      return;
+    }
+    const methodsHtml = methods.map(m => `<div class="pay-info-row" style="display:block;padding:5px 0;"><strong>${escapeHtmlText(m.label)}</strong><p style="white-space:pre-wrap;margin-top:5px;">${escapeHtmlText(m.instructions)}</p></div>`).join('<hr style="border:0;border-top:1px solid #e2e8f0;margin:7px 0;">');
+    const methodOptions = methods.map(m => `<option value="${escapeHtmlText(m.code)}">${escapeHtmlText(m.label)}</option>`).join('');
+    info.innerHTML = `${methodsHtml}<label style="display:block;margin-top:10px;font-size:.8rem;">Método utilizado<select id="payment-method-${cardId}" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit;">${methodOptions}</select></label><label style="display:block;margin-top:10px;font-size:.8rem;">Referencia o detalles del pago<textarea id="payment-details-${cardId}" rows="3" maxlength="4000" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit;resize:vertical;" placeholder="Introduce la referencia después de realizar el pago"></textarea></label><button type="button" class="btn-pay-submit" id="btn-pay-${cardId}" style="margin-top:10px;" onclick="submitBusinessPayment(${amount}, '${cardId}')">Enviar referencia para revisión</button><div id="status-box-${cardId}" class="pay-status-box hidden"></div>`;
+    const cardEl = $(`pay-instructions-${cardId}`);
+    cardEl.dataset.methods = JSON.stringify(methods.map(m => ({code:m.code,label:m.label})));
+  } catch (err) {
+    info.textContent = `No se pudieron consultar las instrucciones de pago: ${err.message}`;
+  }
 }
 
-async function submitDemoPayment(amount, cardId) {
-  const btn = document.getElementById(`btn-pay-${cardId}`);
-  const statusBox = document.getElementById(`status-box-${cardId}`);
-  const card = document.getElementById(cardId);
-  let items = [];
-  if (card && card.dataset.items) {
-    try {
-      items = JSON.parse(card.dataset.items);
-    } catch (e) {}
-  }
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spin">⏳</span> Enviando a validación...`;
-  }
+function escapeHtmlText(value) {
+  return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+}
 
+async function submitBusinessPayment(amount, cardId) {
+  const btn = $(`btn-pay-${cardId}`);
+  const statusBox = $(`status-box-${cardId}`);
+  const card = $(cardId);
+  const referenceEl = $(`payment-details-${cardId}`);
+  const details = String(referenceEl?.value || '').trim();
+  if (!details) {
+    if (statusBox) { statusBox.className = 'pay-status-box error'; statusBox.textContent = 'Introduce la referencia o los detalles del pago antes de enviarlos.'; }
+    return;
+  }
+  let items = [];
+  try { items = JSON.parse(card?.dataset.items || '[]'); } catch (e) {}
+  const methodsEl = $(`pay-instructions-${cardId}`);
+  let methods = [];
+  try { methods = JSON.parse(methodsEl?.dataset.methods || '[]'); } catch (e) {}
+  const method = String($(`payment-method-${cardId}`)?.value || methods[0]?.code || '');
+  if (!method) { if (statusBox) { statusBox.className = 'pay-status-box error'; statusBox.textContent = 'Selecciona un método de cobro habilitado por el comercio.'; } return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando a revisión…'; }
   try {
-    const res = await fetch("/api/v1/webchat/payment/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: amount,
-        business_id: state.businessId,
-        customer_id: state.customerId,
-        payment_method: "Pago Móvil (Demo)",
-        items: items
-      })
+    const res = await fetch('/api/v1/webchat/payment/request', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({amount, business_id:state.businessId, customer_id:state.customerId, payment_method:method, items, customer_payment_details:details})
     });
     const data = await res.json();
-    if (!res.ok || !data.success) {
-      throw new Error(data.detail || "No se pudo registrar la solicitud de pago.");
-    }
-
-    const paymentId = data.payment_id;
-    if (btn) {
-      btn.style.display = "none";
-    }
-    if (statusBox) {
-      statusBox.className = "pay-status-box pending";
-      statusBox.innerHTML = `
-        <div style="font-weight: 700; color: #92400e;">🟡 Pago en Aprobación</div>
-        <div style="font-size: 0.8rem; color: #78350f;">Monto: $${amount.toFixed(2)} USD. Pendiente de validación por el dueño en el Dashboard.</div>
-      `;
-    }
-
-    addMessage("bot", `Hemos recibido tu solicitud de pago por USD ${amount.toFixed(2)}. Está en estado pendiente de aprobación por el dueño en el Dashboard.`);
-
-    pollPaymentStatus(paymentId, cardId, amount);
-
-  } catch (err) {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `⚡ Reintentar Pago ($${amount.toFixed(2)} USD)`;
-    }
-    if (statusBox) {
-      statusBox.className = "pay-status-box error";
-      statusBox.textContent = `Error: ${err.message}`;
-    }
+    if (!res.ok || !data.success) throw new Error(data.detail || 'No se pudo registrar la solicitud de pago.');
+    if (btn) btn.style.display = 'none';
+    if (referenceEl) referenceEl.disabled = true;
+    if (statusBox) { statusBox.className='pay-status-box pending'; statusBox.textContent=`Referencia recibida para USD ${amount.toFixed(2)}. El comercio debe verificar el pago y aprobar o rechazar la solicitud.`; }
+    addMessage('bot', `Recibimos los datos de tu pago por USD ${amount.toFixed(2)}. La solicitud está pendiente de revisión del comercio.`);
+    pollPaymentStatus(data.payment_id, cardId, amount);
+  } catch(err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Reintentar envío de referencia'; }
+    if (statusBox) { statusBox.className='pay-status-box error'; statusBox.textContent=`Error: ${err.message}`; }
   }
 }
 

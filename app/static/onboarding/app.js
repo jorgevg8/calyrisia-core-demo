@@ -1,173 +1,204 @@
-// Muestras de 10 productos por industria
-const INDUSTRY_PRODUCTS = {
-    restaurante: `Hamburguesa Especial Calyrisia - 8.50
-Hamburguesa Doble Queso y Tocineta - 11.00
-Perro Caliente Gigante con Todo - 4.00
-Papas Fritas Rústicas con Queso - 3.50
-Nuggets de Pollo Crujientes (8 pcs) - 5.00
-Pizza Personal Pepperoni - 7.00
-Tequeños con Salsa Tártara (6 pcs) - 4.50
-Refresco Frío 355ml - 1.50
-Malteada Cremosa de Chocolate - 3.50
-Postre Brownie con Helado - 4.00`,
+const FALLBACK_PLANS = [
+  {code:'emprendedor',label:'Emprendedor',price_usd:19,business_types:[
+    {code:'sales_small',label:'Ventas y catálogo para negocio pequeño',description:'Pequeñas tiendas y emprendimientos que venden productos.',dashboard_label:'Inventario y catálogo'},
+    {code:'appointments_small',label:'Citas y servicios independientes',description:'Profesionales independientes, salones pequeños y servicios por cita.',dashboard_label:'Agenda de citas'}
+  ]},
+  {code:'smart_business',label:'Smart Business',price_usd:49,business_types:[
+    {code:'local_store',label:'Local comercial o tienda mediana',description:'Tiendas con inventario creciente.',dashboard_label:'Inventario y operación comercial'},
+    {code:'bodega',label:'Bodegón o bodega mediana',description:'Catálogo más amplio y movimiento frecuente.',dashboard_label:'Inventario y operación comercial'},
+    {code:'minimarket',label:'Minimarket',description:'Tienda de conveniencia con catálogo de tamaño medio.',dashboard_label:'Inventario y operación comercial'},
+    {code:'restaurant',label:'Restaurante o cafetería',description:'Pedidos, menú, mesas y reservas.',dashboard_label:'Mesas y reservas'},
+    {code:'consultorio',label:'Consultorio profesional',description:'Citas y seguimiento de atención.',dashboard_label:'Agenda de atención'},
+    {code:'clinic',label:'Clínica o centro de salud',description:'Agenda de atención para servicios de salud.',dashboard_label:'Agenda de atención'},
+    {code:'service_team',label:'Empresa de servicios con equipo',description:'Agendas y seguimiento para varios profesionales.',dashboard_label:'Agenda de citas y servicios'}
+  ]},
+  {code:'enterprise',label:'Enterprise',price_usd:99,business_types:[
+    {code:'supermarket',label:'Supermercado',description:'Catálogo amplio y operación con alto volumen.',dashboard_label:'Operación de alto volumen'},
+    {code:'hypermarket',label:'Hipermercado o gran superficie',description:'Amplio inventario y operación de ventas masivas.',dashboard_label:'Operación de alto volumen'},
+    {code:'large_store',label:'Tienda grande o cadena de tiendas',description:'Operaciones grandes y múltiples ubicaciones.',dashboard_label:'Operación de alto volumen'},
+    {code:'large_company',label:'Empresa o distribuidor de alto volumen',description:'Equipos, procesos complejos y grandes volúmenes.',dashboard_label:'Operación empresarial'}
+  ]}
+];
 
-    textil: `Camisa de Lino Manga Larga - 25.00
-Pantalón Jean Slim Fit Clásico - 32.00
-Vestido Casual Elegante - 28.00
-Blusa de Seda Estampada - 22.00
-Chaqueta Denim Clásica - 45.00
-Short Playero Casual - 16.00
-Franela Básica 100% Algodón - 12.00
-Zapatos Casuales de Cuero - 48.00
-Cinturón de Cuero Reversible - 15.00
-Lentes de Sol Polarizados - 18.00`,
+const CONTACT_WHATSAPP = '584128418550';
+const CONTACT_EMAIL = 'jorge@calyrisia.com';
+const PLAN_BADGES = {emprendedor:'Para operaciones pequeñas',smart_business:'Para negocios en crecimiento',enterprise:'Para grandes operaciones'};
+let planCatalog = FALLBACK_PLANS;
+let planFilterCode = new URLSearchParams(window.location.search).get('plan') || '';
+let selectedBusinessType = '';
+let selectedPlan = null;
+let selectedProfile = null;
 
-    supermercado: `Harina de Maíz PAN 1kg - 1.30
-Arroz Blanco Premium 1kg - 1.20
-Aceite Vegetal 1 Litro - 2.80
-Queso Blanco Llanero 1kg - 5.50
-Café Molido Gourmet 500g - 4.20
-Pasta Larga Espagueti 1kg - 1.50
-Leche Líquida Completa 1L - 1.80
-Nutella Crema Avellanas 350g - 5.50
-Refresco Familiar 2 Litros - 2.50
-Pack 4 Rollos Papel Higiénico - 2.00`,
-
-    clinica: `Consulta Médica General - 25.00
-Consulta Odontológica y Limpieza - 35.00
-Perfil 20 Exámenes de Sangre - 20.00
-Ecosonograma Abdominal - 30.00
-Electrocardiograma con Informe - 22.00
-Control Pediátrico Integral - 28.00
-Tratamiento de Conducto - 60.00
-Extracción Dental Simple - 20.00
-Prueba Rápida de Laboratorio - 10.00
-Certificado Médico Vial - 15.00`,
-
-    servicios: `Cable de Carga Rápida USB-C - 6.00
-Cargador de Pared 20W - 12.00
-Auriculares Inalámbricos Bluetooth - 22.00
-Soporte Magnético para Teléfono - 8.50
-Powerbank Portátil 10000mAh - 18.00
-Protector de Pantalla Vidrio 9D - 5.00
-Funda Protectora Antigolpes - 7.50
-Memoria MicroSD 64GB Clase 10 - 9.00
-Mouse Inalámbrico Ergonómico - 11.50
-Teclado Mecánico RGB - 35.00`
-};
-
-function loadSampleProducts() {
-    const bType = document.getElementById('business_type').value || 'restaurante';
-    const productsEl = document.getElementById('products_list');
-    if (productsEl && (!productsEl.value.trim() || confirm('¿Deseas reemplazar el catálogo actual por los 10 productos sugeridos?'))) {
-        productsEl.value = INDUSTRY_PRODUCTS[bType] || INDUSTRY_PRODUCTS.restaurante;
-    }
+function escapeHtml(value) {
+  return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
 }
 
-// Navegación entre pasos
+async function loadPlanOptions() {
+  try {
+    const response = await fetch('/api/v1/onboarding/catalog', {headers:{'Accept':'application/json'}});
+    if (!response.ok) throw new Error('catalog unavailable');
+    const data = await response.json();
+    if (Array.isArray(data.plans) && data.plans.length) planCatalog = data.plans;
+  } catch (error) {
+    console.info('Usando catálogo local del onboarding.', error);
+  }
+  renderPlanOptions();
+}
+
+function renderPlanOptions() {
+  const root = document.getElementById('plan-options');
+  if (!root) return;
+  const visiblePlans = ['emprendedor','smart_business','enterprise'].includes(planFilterCode)
+    ? planCatalog.filter(plan => plan.code === planFilterCode)
+    : planCatalog;
+  const filterBanner = ['emprendedor','smart_business','enterprise'].includes(planFilterCode)
+    ? `<div class="plan-filter-banner"><span>Estás viendo perfiles compatibles con <strong>${escapeHtml((planCatalog.find(p => p.code === planFilterCode) || {}).label || planFilterCode)}</strong>.</span><button type="button" onclick="clearPlanFilter()">Comparar todos los planes</button></div>`
+    : '';
+  root.innerHTML = filterBanner + visiblePlans.map(plan => {
+    const featured = plan.code === 'smart_business';
+    const categories = (plan.business_types || []).map(type => `
+      <button type="button" class="business-choice ${selectedBusinessType === type.code ? 'selected' : ''}" data-business-type="${escapeHtml(type.code)}" onclick="selectBusinessType('${escapeHtml(type.code)}')">
+        <span class="choice-indicator">${selectedBusinessType === type.code ? '✓' : '＋'}</span>
+        <span class="choice-copy"><strong>${escapeHtml(type.label)}</strong><small>${escapeHtml(type.description || '')}</small><em>Dashboard: ${escapeHtml(type.dashboard_label || 'Panel personalizado')}</em></span>
+      </button>`).join('');
+    return `<article class="plan-choice-card ${featured ? 'featured' : ''} ${selectedPlan?.code === plan.code ? 'plan-selected' : ''}">
+      ${featured ? '<span class="popular-tag">RECOMENDADO PARA NEGOCIOS EN CRECIMIENTO</span>' : ''}
+      <div class="plan-card-top"><div><span class="plan-kicker">${escapeHtml(PLAN_BADGES[plan.code] || 'Plan CALYRISIA')}</span><h2>${escapeHtml(plan.label)}</h2></div><div class="plan-price"><strong>$${Number(plan.price_usd).toFixed(0)}</strong><small>USD / mes</small></div></div>
+      <p class="plan-intro">Selecciona el tipo de negocio que corresponde a este plan.</p>
+      <div class="business-choice-list">${categories}</div>
+    </article>`;
+  }).join('');
+  updateSelectedStatus();
+}
+
+function selectBusinessType(typeCode) {
+  for (const plan of planCatalog) {
+    const profile = (plan.business_types || []).find(item => item.code === typeCode);
+    if (profile) {
+      selectedBusinessType = typeCode;
+      selectedPlan = plan;
+      selectedProfile = profile;
+      renderPlanOptions();
+      updateSelectedStatus();
+      break;
+    }
+  }
+}
+
+function clearPlanFilter() {
+  planFilterCode = '';
+  const cleanUrl = `${window.location.pathname}${window.location.hash || ''}`;
+  window.history.replaceState({}, '', cleanUrl);
+  renderPlanOptions();
+}
+
+function updateSelectedStatus() {
+  const status = document.getElementById('selection-status');
+  const next = document.getElementById('continue-step-1');
+  if (selectedProfile && selectedPlan) {
+    status.innerHTML = `<span class="status-check">✓</span> Seleccionaste <strong>${escapeHtml(selectedProfile.label)}</strong>. Plan compatible: <strong>${escapeHtml(selectedPlan.label)} · $${Number(selectedPlan.price_usd).toFixed(0)}/mes</strong>.`;
+    if (next) next.disabled = false;
+  } else {
+    status.textContent = 'Selecciona una actividad para continuar.';
+    if (next) next.disabled = true;
+  }
+}
+
 function nextStep(stepNumber) {
-    if (stepNumber === 2) {
-        // Al entrar al paso 2, precargar los 10 productos si está vacío
-        const bType = document.getElementById('business_type').value || 'restaurante';
-        const productsEl = document.getElementById('products_list');
-        if (productsEl && !productsEl.value.trim()) {
-            productsEl.value = INDUSTRY_PRODUCTS[bType] || INDUSTRY_PRODUCTS.restaurante;
-        }
-    }
+  if (stepNumber === 2 && (!selectedProfile || !selectedPlan)) return;
+  document.querySelectorAll('.step').forEach(step => { step.classList.add('hidden'); step.classList.remove('active'); });
+  const target = document.getElementById(`step-${stepNumber}`);
+  if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
+  document.querySelectorAll('.step-dot').forEach(dot => dot.classList.remove('active','done'));
+  for (let i=1;i<=3;i++) {
+    const dot = document.getElementById(`stepper-${i}`);
+    if (dot && i < stepNumber) dot.classList.add('done');
+    if (dot && i === stepNumber) dot.classList.add('active');
+  }
+  if (stepNumber === 2) renderSelectedPlanStrip();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function prevStep(stepNumber) { nextStep(stepNumber); }
 
-    document.querySelectorAll('.step').forEach(step => step.classList.add('hidden'));
-    document.querySelectorAll('.step').forEach(step => step.classList.remove('active'));
-    
-    const nextEl = document.getElementById(`step-${stepNumber}`);
-    if (nextEl) {
-        nextEl.classList.remove('hidden');
-        nextEl.classList.add('active');
-    }
+function renderSelectedPlanStrip() {
+  const strip = document.getElementById('selected-plan-strip');
+  if (!strip || !selectedProfile || !selectedPlan) return;
+  strip.innerHTML = `<div class="strip-icon">✦</div><div><strong>${escapeHtml(selectedProfile.label)}</strong><small>${escapeHtml(selectedProfile.dashboard_label || 'Panel personalizado')}</small></div><div class="strip-price"><strong>$${Number(selectedPlan.price_usd).toFixed(0)}</strong><small>USD/mes</small></div>`;
 }
 
-function prevStep(stepNumber) {
-    nextStep(stepNumber);
+function readRequest() {
+  const name = document.getElementById('business_name').value.trim();
+  const owner = document.getElementById('owner_full_name').value.trim();
+  const email = document.getElementById('owner_email').value.trim();
+  if (!selectedProfile || !selectedPlan) throw new Error('Selecciona primero una actividad compatible.');
+  if (!name) throw new Error('Escribe el nombre del negocio.');
+  if (!owner) throw new Error('Escribe tu nombre.');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Escribe un correo de contacto válido.');
+  const channels = Array.from(document.querySelectorAll('input[name="channels"]:checked')).map(el => el.value);
+  return {
+    businessName:name, owner, email,
+    phone:document.getElementById('owner_phone').value.trim(),
+    currency:document.getElementById('currency').value,
+    timezone:document.getElementById('timezone').value,
+    needs:document.getElementById('business_needs').value.trim(),
+    channels
+  };
 }
 
-// Envío al backend
-async function submitOnboarding() {
-    const aiPromptInput = document.getElementById('ai_prompt');
-    const productsInput = document.getElementById('products_list');
-
-    const payload = {
-        business_type: document.getElementById('business_type').value || 'restaurante',
-        business_name: document.getElementById('business_name').value,
-        ai_prompt: aiPromptInput ? aiPromptInput.value.trim() : "",
-        products_text: productsInput ? productsInput.value.trim() : "",
-        currency: document.getElementById('currency').value || 'USD',
-        owner_full_name: document.getElementById('owner_full_name').value,
-        owner_email: document.getElementById('owner_email').value,
-        owner_phone: document.getElementById('owner_phone').value,
-        owner_password: document.getElementById('owner_password').value
-    };
-
-    const launchBtn = document.querySelector('.btn-launch');
-    if (launchBtn) {
-        launchBtn.disabled = true;
-        launchBtn.innerText = "Provisionando IA y Catálogo...";
-    }
-
-    try {
-        const response = await fetch('/api/v1/onboarding/business', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            localStorage.setItem("calyrisia_current_business_id", data.business_id);
-            localStorage.setItem("calyrisia_current_business_name", payload.business_name);
-            localStorage.setItem("calyrisia_current_business_type", payload.business_type);
-            
-            // Iniciar sesión automáticamente en este negocio para el Dashboard
-            if (data.access_token) {
-                localStorage.setItem("galaxy_access_token", data.access_token);
-                localStorage.setItem("galaxy_role", "OWNER");
-            }
-
-            // Limpiar chats anteriores para evitar mezclas entre negocios
-            localStorage.removeItem("galaxy_webchat_customer_id");
-            localStorage.removeItem("galaxy_webchat_conversation_id");
-
-            document.getElementById('final_business_id').innerText = data.business_id;
-            nextStep(4);
-        } else {
-            alert("Error en el registro: " + (data.detail || JSON.stringify(data)));
-            if (launchBtn) {
-                launchBtn.disabled = false;
-                launchBtn.innerText = "Lanzar Sistema 🚀";
-            }
-        }
-    } catch (error) {
-        console.error("Error de red:", error);
-        alert("Ocurrió un error al conectar con el servidor.");
-        if (launchBtn) {
-            launchBtn.disabled = false;
-            launchBtn.innerText = "Lanzar Sistema 🚀";
-        }
-    }
+function prepareRequest() {
+  let request;
+  try { request = readRequest(); } catch (error) { alert(error.message); return; }
+  const channelText = request.channels.length ? request.channels.join(', ') : 'Por definir con CALYRISIA';
+  const summary = document.getElementById('request-summary');
+  summary.innerHTML = `
+    <div class="summary-plan"><div><span class="summary-eyebrow">PLAN COMPATIBLE</span><h2>${escapeHtml(selectedPlan.label)}</h2><p>${escapeHtml(selectedProfile.description || '')}</p></div><div class="summary-amount"><strong>$${Number(selectedPlan.price_usd).toFixed(0)}</strong><small>USD / mes</small></div></div>
+    <div class="summary-grid">
+      <div><small>Negocio</small><strong>${escapeHtml(request.businessName)}</strong></div>
+      <div><small>Dashboard inicial</small><strong>${escapeHtml(selectedProfile.dashboard_label || 'Panel personalizado')}</strong></div>
+      <div><small>Contacto</small><strong>${escapeHtml(request.owner)} · ${escapeHtml(request.email)}</strong></div>
+      <div><small>Canales de interés</small><strong>${escapeHtml(channelText)}</strong></div>
+      <div><small>Moneda</small><strong>${escapeHtml(request.currency)}</strong></div>
+      <div><small>Zona horaria</small><strong>${escapeHtml(request.timezone)}</strong></div>
+      ${request.phone ? `<div class="summary-wide"><small>WhatsApp</small><strong>${escapeHtml(request.phone)}</strong></div>` : ''}
+      ${request.needs ? `<div class="summary-wide"><small>Prioridad del negocio</small><strong>${escapeHtml(request.needs)}</strong></div>` : ''}
+    </div>`;
+  nextStep(3);
 }
 
-function goToDashboard() {
-    window.location.href = '/dashboard/';
+function composeMessage() {
+  const r = readRequest();
+  const channelText = r.channels.length ? r.channels.join(', ') : 'Por definir';
+  return [
+    'Hola CALYRISIA, quiero solicitar una propuesta para mi negocio.',
+    '',
+    `Plan compatible: ${selectedPlan.label} — $${Number(selectedPlan.price_usd).toFixed(0)} USD/mes.`,
+    `Tipo de negocio: ${selectedProfile.label} (${selectedBusinessType}).`,
+    `Dashboard requerido: ${selectedProfile.dashboard_label || 'Panel personalizado'}.`,
+    `Negocio: ${r.businessName}`,
+    `Contacto: ${r.owner}`,
+    `Correo: ${r.email}`,
+    r.phone ? `WhatsApp: ${r.phone}` : '',
+    `Canales de interés: ${channelText}`,
+    `Moneda: ${r.currency}`,
+    `Zona horaria: ${r.timezone}`,
+    r.needs ? `Prioridad: ${r.needs}` : '',
+    '',
+    'Entiendo que la activación y la configuración se confirman con CALYRISIA antes de empezar.'
+  ].filter(Boolean).join('\n');
 }
 
-function goToWebchat() {
-    const bizId = localStorage.getItem("calyrisia_current_business_id");
-    if (bizId) {
-        window.location.href = `/webchat?business_id=${encodeURIComponent(bizId)}`;
-    } else {
-        window.location.href = '/webchat';
-    }
+function sendWhatsAppRequest() {
+  try {
+    const message = composeMessage();
+    window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+  } catch (error) { alert(error.message); }
+}
+function sendEmailRequest() {
+  try {
+    const message = composeMessage();
+    const subject = `Solicitud CALYRISIA - ${selectedPlan.label} - ${document.getElementById('business_name').value.trim()}`;
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+  } catch (error) { alert(error.message); }
 }
 
-function goToFeedback() {
-    window.location.href = '/feedback';
-}
+loadPlanOptions();

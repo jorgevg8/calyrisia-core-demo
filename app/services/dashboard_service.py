@@ -22,7 +22,7 @@ class DashboardService:
             cur.execute(
                 """
                 SELECT b.id, b.name, b.business_type, b.timezone, b.currency, b.status,
-                       bp.industry, bp.short_description
+                       bp.industry, bp.short_description, COALESCE(to_jsonb(b)->>'plan_code', 'emprendedor')
                 FROM businesses b
                 LEFT JOIN LATERAL (
                     SELECT industry, short_description
@@ -86,6 +86,7 @@ class DashboardService:
                 "status": business[5],
                 "industry": business[6],
                 "short_description": business[7],
+                "plan_code": business[8] or "emprendedor",
             },
             "analytics": {
                 **analytics,

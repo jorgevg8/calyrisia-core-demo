@@ -127,6 +127,13 @@
         
         .view-section { display: none; padding: 20px 40px 60px; overflow-y: auto; height: calc(100vh - 75px); scroll-behavior: smooth; }
         .view-section.active { display: block; }
+        .preview-banner { flex: 0 0 auto; padding: 10px 20px; background: linear-gradient(90deg, rgba(8,47,73,.96), rgba(49,26,91,.96)); border-bottom: 1px solid rgba(103,232,249,.25); color: #e0f2fe; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; line-height: 1.5; }
+        .preview-banner strong { color: #67e8f9; letter-spacing: .04em; }
+        .preview-links { display: flex; flex-wrap: nowrap; gap: 6px; max-width: min(72vw, 1100px); overflow-x: auto; padding-bottom: 2px; }
+        .preview-links a { color: #e0e7ff; text-decoration: none; border: 1px solid rgba(199,210,254,.25); background: rgba(255,255,255,.06); padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+        .preview-links a:hover { border-color: #67e8f9; background: rgba(103,232,249,.12); }
+        body.preview-mode .view-section { height: calc(100vh - 132px); }
+        @media (max-width: 720px) { .preview-banner { padding: 9px 12px; } .preview-links { flex-basis: 100%; max-width: 100%; } body.preview-mode .view-section { height: calc(100vh - 150px); padding: 18px 16px 40px; } }
         .section-header { margin-bottom: 35px; }
         .section-header h2 { font-size: 28px; font-weight: 500; margin-bottom: 6px; color: #fff; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
@@ -188,16 +195,40 @@
         .chat-user { align-self: flex-end; background: var(--primary-metallic); color: #000; border-radius: 16px 16px 4px 16px; font-weight: 500; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2); }
         .chat-input-area { padding: 15px 20px; background: rgba(0,0,0,0.4); border-top: 1px solid var(--glass-border); display: flex; gap: 10px; align-items: center; }
 
-        /* WIDGET WEBCHAT OMNICANAL FLOTANTE */
-        .webchat-widget { position: fixed; bottom: 30px; right: 30px; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; gap: 15px; }
-        .webchat-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--primary-metallic); box-shadow: 0 10px 30px rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; font-size: 32px; color: #000; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: none; }
-        .webchat-btn:hover { transform: scale(1.1); box-shadow: 0 15px 35px rgba(0, 242, 254, 0.6); }
-        .webchat-panel { width: 380px; height: 600px; background: rgba(7, 11, 20, 0.95); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transform: translateY(20px) scale(0.95); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); transform-origin: bottom right; }
-        .webchat-panel.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
-        .webchat-header { padding: 20px; background: linear-gradient(180deg, rgba(0,242,254,0.1) 0%, transparent 100%); border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-        
         .login-wrap { display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; position: relative; z-index: 10; }
         .login-card { padding: 45px; width: 100%; max-width: 400px; animation: fadeUp 0.6s ease-out; }
+
+        .vertical-intro { display:flex; justify-content:space-between; gap:18px; align-items:flex-start; flex-wrap:wrap; margin-bottom:22px; }
+        .vertical-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
+        .vertical-card { padding:20px; border:1px solid var(--glass-border); border-radius:17px; background:linear-gradient(145deg,rgba(20,31,51,.78),rgba(8,14,28,.72)); min-width:0; }
+        .vertical-card h3 { font-size:14px; margin:0 0 8px; color:#eaf5ff; }
+        .vertical-number { font-size:26px; font-family:'Outfit',sans-serif; color:#fff; margin:7px 0 4px; }
+        .vertical-small { font-size:12px; color:var(--text-muted); line-height:1.65; }
+        .vertical-layout { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr); gap:18px; align-items:start; }
+        .vertical-form { display:grid; gap:12px; }
+        .vertical-form label { display:grid; gap:7px; font-size:12px; color:#bac8df; }
+        .vertical-form input,.vertical-form select,.vertical-form textarea { min-width:0; }
+        .booking-list { display:grid; gap:10px; }
+        .booking-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px; border:1px solid var(--glass-border); border-radius:13px; background:rgba(255,255,255,.025); }
+        .booking-row h4 { font-size:13px; margin-bottom:5px; }
+        .booking-row p { color:var(--text-muted); font-size:11px; line-height:1.6; overflow-wrap:anywhere; }
+        .booking-row-actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+        .booking-row-actions button { padding:8px 10px; font-size:10px; }
+        .table-board { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px; }
+        .table-tile { padding:16px 10px; border:1px solid rgba(16,185,129,.25); border-radius:15px; background:rgba(16,185,129,.07); text-align:center; min-width:0; }
+        .table-tile.reserved { border-color:rgba(245,158,11,.38); background:rgba(245,158,11,.09); }
+        .table-tile .table-num { font-size:23px; font-weight:700; font-family:'Outfit',sans-serif; color:#fff; }
+        .table-tile strong { display:block; font-size:11px; margin:5px 0; }
+        .table-tile small { display:block; font-size:10px; color:var(--text-muted); overflow-wrap:anywhere; }
+        .plan-usage-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+        .usage-track { height:6px; border-radius:999px; overflow:hidden; background:rgba(148,163,184,.15); margin:10px 0 7px; }
+        .usage-fill { height:100%; width:0; background:linear-gradient(90deg,#42d7e7,#8da9ff); border-radius:999px; }
+        .upgrade-lock { padding:clamp(24px,4vw,38px); border:1px solid rgba(91,231,242,.23); border-radius:22px; background:radial-gradient(ellipse at 100% 0,rgba(91,231,242,.11),transparent 42%),rgba(13,20,37,.76); }
+        .upgrade-lock h3 { font-size:22px; margin:10px 0; }
+        .catalog-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .catalog-preview-img { width:38px;height:38px;object-fit:cover;border-radius:8px;border:1px solid var(--glass-border); }
+        @media(max-width:1000px){ .vertical-layout{grid-template-columns:1fr;} .vertical-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .table-board{grid-template-columns:repeat(3,minmax(0,1fr));} }
+        @media(max-width:640px){ .plan-usage-grid,.vertical-grid{grid-template-columns:1fr;} .table-board{grid-template-columns:repeat(2,minmax(0,1fr));} .booking-row{align-items:flex-start;flex-direction:column;} .booking-row-actions{justify-content:flex-start;} }
     </style>
 </head>
 <body>
@@ -281,9 +312,9 @@
         <div style="padding: 10px 0; flex: 1; display: flex; flex-direction: column; gap: 2px;">
             <div class="sidebar-label">Vista de Negocio</div>
             <div class="nav-item active" onclick="switchView('overview')"><i class="ph ph-chart-line-up"></i> Panel Ejecutivo</div>
-            <div class="nav-item" onclick="openBusinessWebchat()" style="color: #00f2fe; font-weight: 500; background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.2);"><i class="ph-bold ph-chat-teardrop-dots"></i> Webchat de mi Tienda <i class="ph ph-arrow-square-out" style="margin-left: auto;"></i></div>
             <div class="nav-item" onclick="switchView('crm')"><i class="ph ph-users"></i> Clientes & Riesgo</div>
             <div class="nav-item" onclick="openCatalogModal()"><i class="ph ph-package"></i> Catálogo de Productos</div>
+            <div class="nav-item" id="specialized-nav-item" onclick="switchView('specialized')"><i id="specialized-nav-icon" class="ph ph-storefront"></i> <span id="specialized-nav-label">Gestión del Negocio</span></div>
             <div class="nav-item" onclick="switchView('operations')"><i class="ph ph-check-square-offset"></i> Aprobaciones <span id="pending-payments-nav-badge" class="badge danger hidden" style="margin-left:auto;">0</span></div>
             
             <div class="sidebar-divider"></div>
@@ -294,9 +325,9 @@
             <div style="margin-top: auto;">
                 <div class="sidebar-divider"></div>
                 <div class="sidebar-label">Configuración & Logs</div>
-                <div class="nav-item" onclick="switchView('team')"><i class="ph ph-users-three"></i> Equipo</div>
+                <div class="nav-item plan-enterprise-only" onclick="switchView('team')"><i class="ph ph-users-three"></i> Equipo</div>
                 <div class="nav-item" onclick="switchView('settings')"><i class="ph ph-plugs"></i> Canales</div>
-                <div class="nav-item" onclick="switchView('autonomy')" style="font-size: 12px;"><i class="ph ph-terminal"></i> Developer / Auditoría IA</div>
+                <div class="nav-item plan-enterprise-only" onclick="switchView('autonomy')" style="font-size: 12px;"><i class="ph ph-terminal"></i> Developer / Auditoría IA</div>
                 <div class="nav-item" onclick="window.open('/feedback', '_blank')" style="color: #c084fc; font-size: 13px;"><i class="ph-bold ph-star"></i> Dejar Feedback</div>
             </div>
         </div>
@@ -310,9 +341,6 @@
                 <strong id="display-business-id" style="font-family: monospace; font-weight: normal; color: var(--text-muted);">Cargando...</strong>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
-                <a id="btn-top-webchat" href="/webchat" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 10px; font-size: 12px; font-weight: 600; text-decoration: none; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #020617; box-shadow: 0 0 15px rgba(0, 242, 254, 0.35); transition: transform 0.2s;">
-                    <i class="ph-bold ph-chat-teardrop-dots"></i> Probar Webchat
-                </a>
                 <span class="badge success" id="roleBadge" style="background: rgba(16, 185, 129, 0.1); border: none; color: #34d399;"><i class="ph ph-circle-fill" style="font-size: 8px;"></i> ONLINE</span>
                 <button class="btn-secondary" onclick="loadDashboard()" style="padding: 8px 16px;"><i class="ph ph-arrows-clockwise"></i></button>
                 <button class="btn-logout" onclick="logout()" style="padding: 8px 16px;"><i class="ph ph-sign-out"></i></button>
@@ -329,55 +357,49 @@
             <!-- KPIs Rápidos -->
             <div class="kpi-grid">
                 <div class="kpi-card animate-fade-up delay-1">
-                    <div class="kpi-card-header"><h3>Ingresos Generados</h3><i class="ph ph-trend-up" style="color: var(--success);"></i></div>
+                    <div class="kpi-card-header"><h3 id="kpi-sales-title">Ingresos Generados</h3><i class="ph ph-trend-up" style="color: var(--success);"></i></div>
                     <div class="value" id="kpi-sales">$0.00</div>
                 </div>
                 <div class="kpi-card animate-fade-up delay-1">
-                    <div class="kpi-card-header"><h3>Interacciones IA</h3><i class="ph ph-chats" style="color: var(--primary-color);"></i></div>
+                    <div class="kpi-card-header"><h3 id="kpi-chats-title">Interacciones IA</h3><i class="ph ph-chats" style="color: var(--primary-color);"></i></div>
                     <div class="value" id="kpi-chats">0</div>
                 </div>
                 <div class="kpi-card animate-fade-up delay-2">
-                    <div class="kpi-card-header"><h3>Requieren Atención</h3><i class="ph ph-bell-ringing" style="color: var(--warning);"></i></div>
+                    <div class="kpi-card-header"><h3 id="kpi-handoffs-title">Requieren Atención</h3><i class="ph ph-bell-ringing" style="color: var(--warning);"></i></div>
                     <div class="value" id="kpi-handoffs">0</div>
                 </div>
                 <div class="kpi-card animate-fade-up delay-2">
-                    <div class="kpi-card-header"><h3>Ingresos de Hoy</h3><i class="ph ph-calendar-check" style="color: var(--success);"></i></div>
+                    <div class="kpi-card-header"><h3 id="kpi-sales-today-title">Ingresos de Hoy</h3><i class="ph ph-calendar-check" style="color: var(--success);"></i></div>
                     <div class="value" id="kpi-sales-today">$0.00</div>
                 </div>
+            </div>
+
+            <div id="plan-usage-panel" class="panel glass-panel" style="margin:22px 0 24px;padding:22px;">
+                <div class="vertical-intro" style="margin-bottom:14px;"><div><h3 style="margin:0 0 5px;">Tu plan CALYRISIA</h3><p class="muted" id="plan-usage-subtitle">Consumo del mes y capacidad incluida.</p></div><span class="badge" id="current-plan-badge">Emprendedor · $19/mes</span></div>
+                <div class="plan-usage-grid" id="plan-usage-grid"><p class="muted">Consultando uso del plan...</p></div>
             </div>
 
             <div id="pending-payments-alert" class="payment-alert hidden">
                 <div>
                     <h3><i class="ph ph-bell-ringing"></i> Pagos pendientes de revisión</h3>
-                    <p class="muted" id="pending-payments-summary">Hay pagos de Webchat esperando tu aprobación.</p>
+                    <p class="muted" id="pending-payments-summary">Hay pagos de Telegram o Webchat esperando tu aprobación.</p>
                 </div>
                 <button class="btn-payment-approve" onclick="switchView('operations')"><i class="ph ph-check-circle"></i> Revisar pagos</button>
             </div>
 
-            <!-- Radar de Oportunidades y Anomalías enfocadas en Negocio -->
             <div class="panel-grid animate-fade-up delay-2">
                 <div class="panel glass-panel opp-card">
-                    <h3><i class="ph ph-sparkle"></i> Oportunidades Listas para Ejecutar</h3>
-                    <div class="list-item" style="flex-direction: column; align-items: flex-start; background: transparent; border-color: rgba(16, 185, 129, 0.2);">
-                        <div style="display: flex; justify-content: space-between; width: 100%;">
-                            <span class="badge ai">VENTA B2B</span>
-                            <span class="badge success" style="background: var(--money-metallic); color: #000; border: none;">Prioridad Alta</span>
-                        </div>
-                        <div class="opp-value">+$1,500.00</div>
-                        <h4>Venta Express - Pantalones Negros (50 unds)</h4>
-                        <p class="muted" style="margin-bottom: 15px;">El cliente solicitó cotización. La IA está lista para despacharla.</p>
-                        <button class="btn-money" style="width: 100%;"><i class="ph ph-check"></i> Ejecutar Automáticamente</button>
+                    <h3><i class="ph ph-sparkle"></i> Oportunidades del negocio</h3>
+                    <div class="list-item" style="display:block;background:transparent;border-color:rgba(91,231,242,.16);">
+                        <p class="muted" style="line-height:1.8;">Las oportunidades se mostrarán cuando CALYRISIA detecte señales reales en las conversaciones, pedidos y datos de este negocio. No se muestran operaciones ficticias.</p>
+                        <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="switchView('specialized')"><i class="ph ph-arrow-right"></i> Ver panel de mi negocio</button>
                     </div>
                 </div>
-
-                <div class="panel glass-panel" style="border-color: rgba(244, 63, 94, 0.3);">
-                    <h3 style="color: #fb7185;"><i class="ph ph-warning-octagon"></i> Alertas Operativas</h3>
-                    <div class="list-item" style="background: transparent; border-color: rgba(244, 63, 94, 0.2);">
-                        <div class="list-item-content">
-                            <h4 style="color: #f8fafc;">Caída en tiempo de respuesta</h4>
-                            <p class="muted" style="margin-top: 4px;">El soporte tardó 19 min promedio hoy (Normal: 4 min).</p>
-                        </div>
-                        <button class="btn-secondary" style="padding: 6px 12px; font-size: 10px;">Verificar</button>
+                <div class="panel glass-panel">
+                    <h3><i class="ph ph-shield-check" style="color:var(--success);"></i> Alertas operativas</h3>
+                    <div class="list-item" style="display:block;background:transparent;border-color:rgba(148,163,184,.16);">
+                        <p class="muted" style="line-height:1.8;">Aquí aparecerán alertas reales de inventario, pedidos o solicitudes pendientes. Cuando aún no existan datos suficientes, este espacio permanecerá sin alertas.</p>
+                        <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="switchView('operations')"><i class="ph ph-receipt"></i> Revisar operaciones</button>
                     </div>
                 </div>
             </div>
@@ -391,6 +413,10 @@
         </div>
 
         <!-- VISTA 2: NÚCLEO AUTÓNOMO (La vista Developer oculta de la jerga) -->
+        <div id="view-specialized" class="view-section">
+            <div id="specialized-workspace"><div class="panel glass-panel"><p class="muted">Preparando el espacio especializado del negocio...</p></div></div>
+        </div>
+
         <div id="view-autonomy" class="view-section">
             <div class="section-header animate-fade-up">
                 <h2>Cerebro Autónomo & Logs</h2>
@@ -443,7 +469,7 @@
         </div>
         
         <div id="view-operations" class="view-section">
-            <div class="section-header"><h2>Centro de Aprobaciones</h2><p class="muted">Valida las solicitudes de pago iniciadas desde el Webchat. La aprobación de esta demo registra la venta en Galaxy; no verifica transferencias reales de Binance.</p></div>
+            <div class="section-header"><h2>Centro de Aprobaciones</h2><p class="muted">Valida las solicitudes de pago recibidas por Telegram o Webchat. La aprobación registra el pedido y actualiza el inventario según los datos del pedido; no verifica transferencias bancarias reales.</p></div>
             <div class="panel glass-panel" style="margin-bottom:20px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
                     <h3><i class="ph ph-clock-countdown" style="color:var(--warning);"></i> Pagos pendientes</h3>
@@ -463,8 +489,72 @@
         </div>
         
         <div id="view-settings" class="view-section">
-            <div class="section-header"><h2>Conexión de Canales</h2><p class="muted">Configura Telegram, WhatsApp y Webhooks.</p></div>
-            <div class="panel glass-panel"><p class="muted">Panel de integraciones API.</p></div>
+            <div class="section-header"><h2>Conexión de Canales</h2><p class="muted">Telegram ejecuta el mismo cerebro, catálogo, clientes y flujo de pedidos de CALYRISIA.</p></div>
+            <div class="panel glass-panel" style="max-width: 980px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(56,189,248,.12);display:flex;align-items:center;justify-content:center;color:#38bdf8;font-size:25px;"><i class="ph ph-telegram-logo"></i></div>
+                        <div><h3 style="margin:0 0 4px;">Telegram · Canal del negocio</h3><p class="muted" style="margin:0;font-size:12px;">Conecta Telegram para atender clientes y recibir avisos de pedidos o pagos pendientes.</p></div>
+                    </div>
+                    <div id="telegram-status-badge" class="badge" style="padding:8px 12px;">No configurado</div>
+                </div>
+                <div id="telegram-bot-summary" class="muted" style="margin-bottom:18px;font-size:13px;">El bot queda vinculado a este negocio. Configura solo canales incluidos en tu plan.</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+                    <div><label for="telegram-bot-token" style="display:block;margin-bottom:8px;font-size:12px;color:#cbd5e1;">Token del bot (desde @BotFather)</label><input id="telegram-bot-token" type="password" autocomplete="off" placeholder="Pega aquí el token de Telegram" style="width:100%;"></div>
+                    <div><label for="telegram-owner-chat-id" style="display:block;margin-bottom:8px;font-size:12px;color:#cbd5e1;">Chat ID de Telegram del dueño</label><input id="telegram-owner-chat-id" inputmode="numeric" placeholder="Ej. 123456789" style="width:100%;"></div>
+                </div>
+                <p class="muted" style="font-size:12px;line-height:1.7;margin-top:12px;">Para obtener tu Chat ID, abre el bot en Telegram, pulsa <strong>Iniciar</strong> y envíale <code>/id</code>. Copia el número que responda y pégalo aquí. El dueño debe haber iniciado el bot para que Telegram permita enviarle alertas.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+                    <button class="btn-action" id="telegram-save-btn" onclick="saveTelegramChannel()"><i class="ph ph-floppy-disk"></i> Guardar y activar Telegram</button>
+                    <button class="btn-secondary" id="telegram-test-btn" onclick="testTelegramChannel()"><i class="ph ph-paper-plane-tilt"></i> Probar notificación</button>
+                    <button class="btn-secondary" id="telegram-toggle-btn" onclick="toggleTelegramChannel()"><i class="ph ph-power"></i> Desactivar canal</button>
+                </div>
+                <div id="telegram-channel-message" role="status" style="margin-top:14px;font-size:13px;"></div>
+                <div style="margin-top:18px;padding:13px 15px;border-radius:12px;background:rgba(15,23,42,.65);border:1px solid rgba(148,163,184,.15);font-size:12px;color:#cbd5e1;line-height:1.7;">
+                    <strong style="color:#e2e8f0;">Revisión de pagos</strong><br>
+                    CALYRISIA puede registrar referencias o detalles enviados por el cliente como solicitudes pendientes y avisar al dueño. Antes de aprobar cualquier solicitud, verifica el ingreso del dinero directamente en tu cuenta o proveedor de pago. CALYRISIA no verifica automáticamente transferencias bancarias.
+                </div>
+            </div>
+            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(45,212,191,.12);display:flex;align-items:center;justify-content:center;color:#5eead4;font-size:25px;"><i class="ph ph-globe"></i></div>
+                        <div><h3 style="margin:0 0 4px;">Webchat · Tu página web</h3><p class="muted" style="margin:0;font-size:12px;">Activa o desactiva Webchat según los canales incluidos en tu plan. Al activarlo, el asistente podrá atender a quienes visiten tu página.</p></div>
+                    </div>
+                    <div id="webchat-status-badge" class="badge" style="padding:8px 12px;">Consultando estado…</div>
+                </div>
+                <div id="channels-summary" class="muted" style="font-size:13px;line-height:1.7;margin-top:15px;">Consultando los canales incluidos en tu plan…</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+                    <button class="btn-action" id="webchat-toggle-btn" onclick="toggleDashboardWebchat()"><i class="ph ph-power"></i> Activar Webchat</button>
+                    <button class="btn-secondary" onclick="openBusinessWebchat()"><i class="ph ph-arrow-square-out"></i> Abrir Webchat del negocio</button>
+                </div>
+            </div>
+            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                    <div style="width:48px;height:48px;border-radius:14px;background:rgba(167,139,250,.12);display:flex;align-items:center;justify-content:center;color:#c4b5fd;font-size:25px;"><i class="ph ph-wallet"></i></div>
+                    <div><h3 style="margin:0 0 4px;">Métodos de cobro del negocio</h3><p class="muted" style="margin:0;font-size:12px;">Configura las instrucciones reales que recibirá el cliente por los canales conectados.</p></div>
+                </div>
+                <p class="muted" style="font-size:12px;line-height:1.7;margin:12px 0 16px;">CALYRISIA registra las referencias para que el equipo las revise. No valida automáticamente transferencias ni movimientos bancarios. Nunca escribas contraseñas, códigos de acceso ni claves privadas.</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;">
+                    <div style="padding:16px;border:1px solid rgba(148,163,184,.15);border-radius:14px;background:rgba(15,23,42,.35);">
+                        <label style="display:flex;align-items:center;gap:9px;font-weight:650;margin-bottom:10px;"><input id="pay-mobile-enabled" type="checkbox" style="width:auto;"> Pago Móvil</label>
+                        <textarea id="pay-mobile-instructions" rows="5" maxlength="3000" placeholder="Banco, teléfono, cédula/RIF y nombre del titular…" style="width:100%;resize:vertical;"></textarea>
+                    </div>
+                    <div style="padding:16px;border:1px solid rgba(148,163,184,.15);border-radius:14px;background:rgba(15,23,42,.35);">
+                        <label style="display:flex;align-items:center;gap:9px;font-weight:650;margin-bottom:10px;"><input id="pay-binance-enabled" type="checkbox" style="width:auto;"> Binance Pay</label>
+                        <textarea id="pay-binance-instructions" rows="5" maxlength="3000" placeholder="Identificador de pago público e instrucciones para transferir…" style="width:100%;resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;"><button class="btn-action" onclick="savePaymentInstructions()"><i class="ph ph-floppy-disk"></i> Guardar métodos de cobro</button><span class="muted" id="payment-instructions-message" role="status" style="font-size:12px;"></span></div>
+            </div>
+            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:48px;height:48px;border-radius:14px;background:rgba(34,197,94,.10);display:flex;align-items:center;justify-content:center;color:#86efac;font-size:25px;"><i class="ph ph-whatsapp-logo"></i></div>
+                    <div><h3 style="margin:0 0 4px;">WhatsApp Business</h3><p class="muted" style="margin:0;font-size:12px;">Integración sujeta a validación de cuenta, proveedor y plan contratado.</p></div>
+                </div>
+                <p class="muted" style="font-size:13px;line-height:1.7;margin:14px 0;">La conexión de WhatsApp no se activa desde este panel todavía. Solicita una evaluación comercial para revisar compatibilidad, configuración y posibles costes del proveedor.</p>
+                <a class="btn-secondary" href="https://wa.me/584128418550?text=Hola%20CALYRISIA%2C%20quiero%20consultar%20la%20integraci%C3%B3n%20de%20WhatsApp%20Business." target="_blank" rel="noopener"><i class="ph ph-chat-circle-text"></i> Consultar integración</a>
+            </div>
         </div>
 
         <!-- VISTA COPILOT (Clean) -->
@@ -489,36 +579,6 @@
     </div>
 </div>
 
-<!-- ==============================================
-     NUEVO: WIDGET WEBCHAT OMNICANAL FLOTANTE
-     ============================================== -->
-<div class="webchat-widget">
-    <div class="webchat-panel" id="webchat-panel">
-        <div class="webchat-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <svg style="width: 26px; height: 26px;"><use href="#atom-animated"></use></svg>
-                <div>
-                    <h4 style="font-size: 14px; color: #fff;">Soporte Omnicanal</h4>
-                    <p style="font-size: 10px; color: var(--success);">IA Activa (Simulador)</p>
-                </div>
-            </div>
-            <i class="ph ph-x" style="cursor: pointer; color: var(--text-muted);" onclick="toggleWebchat()"></i>
-        </div>
-        <div class="chat-box" id="webchat-box" style="flex: 1; padding: 20px; overflow-y: auto; background: rgba(0,0,0,0.2);">
-            <div class="chat-msg chat-bot" style="font-size: 12px; background: rgba(255,255,255,0.05); border: none;">
-                Hola! Soy el Agente Virtual. Pruébame enviando un mensaje como si fueras un cliente externo. (Ej: "¿Tienen stock?")
-            </div>
-        </div>
-        <div class="chat-input-area" style="padding: 12px; background: rgba(0,0,0,0.5);">
-            <input type="text" id="webchat-input" placeholder="Escribe un mensaje..." style="border-radius: 20px; padding: 10px 15px; font-size: 12px;" onkeypress="if(event.key === 'Enter') sendWebchatMessage()">
-            <button class="btn-action" style="padding: 10px 14px; border-radius: 50%; min-width: 40px;" onclick="sendWebchatMessage()"><i class="ph ph-paper-plane-right"></i></button>
-        </div>
-    </div>
-    <button class="webchat-btn" onclick="toggleWebchat()">
-        <i class="ph ph-chat-teardrop-dots"></i>
-    </button>
-</div>
-
 <script>
 /* =========================================================================
    LÓGICA REAL COMPLETA DE CALYRISIA
@@ -527,25 +587,41 @@
 const tokenKey = 'galaxy_access_token';
 const roleKey = 'galaxy_role';
 let currentBusinessId = null;
-
-// La sesión de demo es única por negocio y se crea desde la API; nunca se reutilizan IDs globales.
-let demoCustomerId = null;
-let demoConversationId = null;
-let demoSessionBusinessId = null;
-
-async function ensureDashboardWebchatSession() {
-    if (!currentBusinessId) throw new Error('No hay un negocio autenticado.');
-    if (demoCustomerId && demoSessionBusinessId === currentBusinessId) return;
-    const session = await api('/api/v1/webchat/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ business_id: currentBusinessId, customer_id: null, visitor_name: 'Cliente Demo Dashboard' })
-    });
-    if (!session.success || !session.customer?.id) throw new Error('No se pudo crear una sesión aislada para este negocio.');
-    demoCustomerId = session.customer.id;
-    demoConversationId = null;
-    demoSessionBusinessId = currentBusinessId;
-}
+let currentBusiness = null;
+let currentPlanCode = 'emprendedor';
+let currentRestaurantTableCount = 12;
+let currentRestaurantBookings = [];
+const CALYRISIA_PLAN_LIMITS = {
+    emprendedor: { label:'Emprendedor', price:19, products:100, images:100, imagesPerProduct:1, ai:600, channels:1 },
+    smart_business: { label:'Smart Business', price:49, products:1000, images:2000, imagesPerProduct:3, ai:2500, channels:2 },
+    enterprise: { label:'Enterprise', price:99, products:10000, images:10000, imagesPerProduct:5, ai:10000, channels:3 }
+};
+// Las vistas previas usan los mismos componentes del dashboard, pero datos aislados en memoria.
+// Nunca llaman a la API real ni requieren crear un negocio o usuario.
+const PREVIEW_PROFILES = {
+    ventas: { label:'Ventas y catálogo', business_type:'sales_small', plan_code:'emprendedor', industry:'Comercio minorista', name:'Tienda Emprendedora' },
+    citas: { label:'Citas profesionales', business_type:'appointments_small', plan_code:'emprendedor', industry:'Servicios profesionales', name:'Agenda Profesional' },
+    local: { label:'Local comercial', business_type:'local_store', plan_code:'smart_business', industry:'Comercio local', name:'Local Comercial' },
+    bodegon: { label:'Bodegón', business_type:'bodega', plan_code:'smart_business', industry:'Bodegón y abarrotes', name:'Bodegón Central' },
+    minimarket: { label:'Minimarket', business_type:'minimarket', plan_code:'smart_business', industry:'Minimarket', name:'Minimarket Express' },
+    restaurante: { label:'Restaurante', business_type:'restaurant', plan_code:'smart_business', industry:'Restaurante', name:'Restaurante La Mesa' },
+    consultorio: { label:'Consultorio', business_type:'consultorio', plan_code:'smart_business', industry:'Salud y consultas médicas', name:'Consultorio Médico' },
+    clinica: { label:'Clínica', business_type:'clinic', plan_code:'smart_business', industry:'Clínica de salud', name:'Clínica Integral' },
+    supermercado: { label:'Supermercado', business_type:'supermarket', plan_code:'enterprise', industry:'Supermercado de alto volumen', name:'Supermercado Central' },
+    hipermercado: { label:'Hipermercado', business_type:'hypermarket', plan_code:'enterprise', industry:'Hipermercado y ventas masivas', name:'Hipermercado Nova' },
+    empresa: { label:'Empresa grande', business_type:'large_company', plan_code:'enterprise', industry:'Empresa con operaciones múltiples', name:'Grupo Empresarial' }
+};
+const PREVIEW_PROFILE_KEY = new URLSearchParams(window.location.search).get('preview') || '';
+const PREVIEW_PROFILE = PREVIEW_PROFILES[PREVIEW_PROFILE_KEY] || null;
+const PREVIEW_MODE = Boolean(PREVIEW_PROFILE);
+let previewBookings = [];
+let previewCatalog = [];
+let previewOrders = [];
+let previewTableCount = 12;
+let previewWebchatEnabled = true;
+let previewTelegramEnabled = true;
+let previewPaymentInstructions = { methods: { pago_movil: { enabled:false, instructions:'' }, binance: { enabled:false, instructions:'' } } };
+let previewRecordCounter = 100;
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -556,23 +632,106 @@ function escapeHtml(value) {
         .replaceAll("'", '&#039;');
 }
 
+function normalizeBusinessText(value) {
+    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function normalizePlanCode(value) {
+    const valueNorm = normalizeBusinessText(value).replace(/ /g, '_');
+    if (['enterprise'].includes(valueNorm)) return 'enterprise';
+    if (['smart','smart_business','pro','business'].includes(valueNorm)) return 'smart_business';
+    return 'emprendedor';
+}
+function planRank(plan) { return ({emprendedor:0, smart_business:1, enterprise:2})[normalizePlanCode(plan)] ?? 0; }
+const BUSINESS_TYPE_TO_KIND = {
+    sales_small:'retail', appointments_small:'appointments', local_store:'retail', bodega:'retail',
+    minimarket:'retail', restaurant:'restaurant', consultorio:'appointments', clinic:'appointments',
+    service_team:'appointments', supermarket:'enterprise', hypermarket:'enterprise',
+    large_store:'enterprise', large_company:'enterprise'
+};
+const BUSINESS_TYPE_TO_PLAN = {
+    sales_small:'emprendedor', appointments_small:'emprendedor',
+    local_store:'smart_business', bodega:'smart_business', minimarket:'smart_business',
+    restaurant:'smart_business', consultorio:'smart_business', clinic:'smart_business', service_team:'smart_business',
+    supermarket:'enterprise', hypermarket:'enterprise', large_store:'enterprise', large_company:'enterprise'
+};
+function canonicalBusinessType(value) {
+    return normalizeBusinessText(value).replace(/ /g, '_');
+}
+function businessKind(value) {
+    if (value && typeof value === 'object') {
+        const exactType = canonicalBusinessType(value.business_type);
+        if (BUSINESS_TYPE_TO_KIND[exactType]) return BUSINESS_TYPE_TO_KIND[exactType];
+        return businessKind([value.business_type, value.industry, value.name].filter(Boolean).join(' '));
+    }
+    const t = normalizeBusinessText(value);
+    const exactType = t.replace(/ /g, '_');
+    if (BUSINESS_TYPE_TO_KIND[exactType]) return BUSINESS_TYPE_TO_KIND[exactType];
+    if (/restaur|comida|cafeter|pizzeria|panader|restaurant|food service|(^| )bar( |$)/.test(t)) return 'restaurant';
+    if (/clinica|salud|medic|odont|laboratorio|cita|servicio|salon|barber|consult|clinic|health|dental|appointment|beauty|professional/.test(t)) return 'appointments';
+    if (/supermerc|hipermerc|mayorista|distribuid|almacen|bodega grande|cadena|corporativ|empresa|industrial|alto volumen|mass|hypermarket|wholesale|warehouse|enterprise|large business/.test(t)) return 'enterprise';
+    return 'retail';
+}
+function requiredPlanForBusiness(value) {
+    if (value && typeof value === 'object') {
+        const exactType = canonicalBusinessType(value.business_type);
+        if (BUSINESS_TYPE_TO_PLAN[exactType]) return BUSINESS_TYPE_TO_PLAN[exactType];
+        return requiredPlanForBusiness([value.business_type, value.industry, value.name].filter(Boolean).join(' '));
+    }
+    const t = normalizeBusinessText(value);
+    const exactType = t.replace(/ /g, '_');
+    if (BUSINESS_TYPE_TO_PLAN[exactType]) return BUSINESS_TYPE_TO_PLAN[exactType];
+    const kind = businessKind(t);
+    return kind === 'enterprise' ? 'enterprise' : (['restaurant','appointments'].includes(kind) ? 'smart_business' : 'emprendedor');
+}
+function whatsappUpgradeText(plan, businessName) {
+    const message = `Hola CALYRISIA, quiero revisar el plan ${plan} para ${businessName || 'mi negocio'}.`;
+    return `https://wa.me/584128418550?text=${encodeURIComponent(message)}`;
+}
+function setupBusinessNavigation(business) {
+    const kind = businessKind(business);
+    const navLabel = document.getElementById('specialized-nav-label');
+    const navIcon = document.getElementById('specialized-nav-icon');
+    if (navLabel) navLabel.textContent = kind === 'restaurant' ? 'Mesas y Reservas' : kind === 'appointments' ? 'Agenda de Citas' : kind === 'enterprise' ? 'Operación de Alto Volumen' : 'Inventario y Catálogo';
+    if (navIcon) navIcon.className = 'ph ' + (kind === 'restaurant' ? 'ph-fork-knife' : kind === 'appointments' ? 'ph-calendar-check' : kind === 'enterprise' ? 'ph-buildings' : 'ph-storefront');
+    document.querySelectorAll('.plan-enterprise-only').forEach(el => el.classList.toggle('hidden', currentPlanCode !== 'enterprise'));
+    const teamNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'team'"));
+    if (teamNav) teamNav.classList.toggle('hidden', currentPlanCode !== 'enterprise');
+    const copilotNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'copilot'"));
+    if (copilotNav) copilotNav.classList.toggle('hidden', currentPlanCode === 'emprendedor');
+    const catalogNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes('openCatalogModal'));
+    if (catalogNav) {
+        if (kind === 'appointments') {
+            catalogNav.innerHTML = '<i class="ph ph-stethoscope"></i> <span>Servicios y tarifas</span>';
+        } else if (kind === 'restaurant') {
+            catalogNav.innerHTML = '<i class="ph ph-bowl-food"></i> <span>Menú y precios</span>';
+        } else if (kind === 'enterprise') {
+            catalogNav.innerHTML = '<i class="ph ph-package"></i> <span>Catálogo masivo</span>';
+        } else {
+            catalogNav.innerHTML = '<i class="ph ph-package"></i> <span>Catálogo de Productos</span>';
+        }
+    }
+}
+
 function showLogin(message = '') {
     document.getElementById('loginView').classList.remove('hidden');
     document.getElementById('dashboardView').classList.add('hidden');
-    document.querySelector('.webchat-widget').style.display = 'none';
     if(message) document.getElementById('loginError').textContent = message;
 }
 
 function showDashboard() {
     document.getElementById('loginView').classList.add('hidden');
     document.getElementById('dashboardView').classList.remove('hidden');
-    document.querySelector('.webchat-widget').style.display = 'flex';
 }
 
 
-function openBusinessWebchat() {
-    const url = currentBusinessId ? `/webchat?business_id=${encodeURIComponent(currentBusinessId)}` : '/webchat';
-    window.open(url, '_blank');
+async function openBusinessWebchat() {
+    if (PREVIEW_MODE) { showToast('El Webchat conectado al negocio solo se prueba con una cuenta real. Esta vista previa está aislada.'); return; }
+    try {
+        const channels = await api('/api/v1/dashboard/channels');
+        if (!channels.webchat_enabled) { showToast('Activa Webchat antes de abrir el enlace del negocio.', true); return; }
+        if (!currentBusinessId) { showToast('No se encontró el identificador del negocio.', true); return; }
+        window.open(`/webchat?business_id=${encodeURIComponent(currentBusinessId)}`, '_blank', 'noopener');
+    } catch (e) { showToast('No se pudo abrir Webchat: ' + e.message, true); }
 }
 
 function switchView(viewId) {
@@ -583,12 +742,15 @@ function switchView(viewId) {
     const navItem = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'" + viewId + "'"));
     if (navItem) navItem.classList.add('active');
     if (viewId === 'operations') loadPendingWebchatPayments();
+    if (viewId === 'settings') { loadTelegramChannel(true); loadDashboardChannels(); loadPaymentInstructions(); }
+    if (viewId === 'specialized') renderSpecializedWorkspace(currentBusiness);
 }
 
 function logout(silent = false) {
-    demoCustomerId = null;
-    demoConversationId = null;
-    demoSessionBusinessId = null;
+    if (PREVIEW_MODE) {
+        if (!silent) showToast('Estás en modo de vista previa. Abre el enlace del dashboard para continuar.');
+        return;
+    }
     currentBusinessId = null;
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(roleKey);
@@ -596,6 +758,7 @@ function logout(silent = false) {
 }
 
 async function api(path, options = {}) {
+    if (PREVIEW_MODE) return previewApi(path, options);
     const token = localStorage.getItem(tokenKey);
     const headers = { ...(options.headers || {}) };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -607,61 +770,6 @@ async function api(path, options = {}) {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
     return data;
-}
-
-/* ---------------------------------------------------------
-   WIDGET WEBCHAT OMNICANAL
---------------------------------------------------------- */
-function toggleWebchat() {
-    const panel = document.getElementById('webchat-panel');
-    panel.classList.toggle('open');
-}
-
-async function sendWebchatMessage() {
-    if(!currentBusinessId) return showToast('Sincroniza el dashboard primero.', true);
-    const inputEl = document.getElementById('webchat-input');
-    const message = inputEl.value.trim();
-    if (!message) return;
-
-    try {
-        await ensureDashboardWebchatSession();
-    } catch (error) {
-        return showToast('No se pudo iniciar la sesión aislada: ' + error.message, true);
-    }
-
-    const chatBox = document.getElementById('webchat-box');
-    chatBox.innerHTML += `<div class="chat-msg chat-user" style="font-size: 12px; padding: 10px 15px;">${escapeHtml(message)}</div>`;
-    inputEl.value = '';
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    const loadingId = 'loading-web-' + Date.now();
-    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-size: 11px; padding: 10px 15px;"><i class="ph ph-spinner ph-spin"></i> Agente escribiendo...</div>`;
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    try {
-        const data = await api("/api/v1/webchat/message", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                business_id: currentBusinessId,
-                customer_id: demoCustomerId,
-                conversation_id: demoConversationId,
-                message: message,
-                channel: "webchat"
-            })
-        });
-        
-        document.getElementById(loadingId).remove();
-        demoConversationId = data.conversation_id || demoConversationId;
-        let formattedText = escapeHtml(data.response || data.message || "Recibido.").replace(/\n/g, '<br>');
-        chatBox.innerHTML += `<div class="chat-msg chat-bot" style="font-size: 12px; padding: 10px 15px;">${formattedText}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-        
-    } catch (error) {
-        document.getElementById(loadingId).remove();
-        chatBox.innerHTML += `<div class="chat-msg chat-bot error" style="background: rgba(244, 63, 94, 0.1); color: #fb7185; font-size: 12px;">Error: ${error.message}</div>`;
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
 }
 
 /* ---------------------------------------------------------
@@ -691,7 +799,7 @@ async function loadAutonomyData() {
 }
 
 /* ---------------------------------------------------------
-   PAGOS PENDIENTES DEL WEBCHAT (DEMO)
+   SOLICITUDES DE PAGO
 --------------------------------------------------------- */
 function paymentDate(value) {
     if (!value) return 'Fecha no disponible';
@@ -702,7 +810,7 @@ function paymentDate(value) {
 function renderPaymentRow(payment, isPending) {
     const amount = `$${Number(payment.amount || 0).toFixed(2)} ${escapeHtml(payment.currency || 'USD')}`;
     const rawM = String(payment.payment_method || '').toLowerCase();
-    const method = (rawM.includes('movil') || rawM.includes('pago_movil')) ? 'Pago Móvil (demo)' : (rawM.includes('binance') ? 'Binance (demo)' : escapeHtml(payment.payment_method || 'Pago Webchat'));
+    const method = rawM.includes('binance') ? 'Binance Pay' : ((rawM.includes('telegram') && (rawM.includes('movil') || rawM.includes('pago_movil'))) ? 'Pago Móvil · Telegram' : ((rawM.includes('movil') || rawM.includes('pago_movil')) ? 'Pago Móvil' : escapeHtml(payment.payment_method || 'Pago Webchat')));
     const statusLabel = payment.status === 'approved' ? 'Aprobado' : (payment.status === 'rejected' ? 'Rechazado' : 'Pendiente');
     const actions = isPending ? `
         <div class="payment-row-actions">
@@ -710,12 +818,14 @@ function renderPaymentRow(payment, isPending) {
             <button class="btn-payment-reject" onclick="decideWebchatPayment('${escapeHtml(payment.id)}','reject')"><i class="ph ph-x"></i> Rechazar</button>
         </div>` : `<span class="payment-status">${statusLabel}</span>`;
     const orderNote = payment.order_id ? `<p>Pedido generado: ${escapeHtml(payment.order_id).slice(0, 8)}…</p>` : '';
+    const detailText = String(payment.customer_payment_details || '').trim();
+    const customerPaymentDetails = detailText ? `<p style="white-space:pre-wrap;overflow-wrap:anywhere;padding:10px 12px;margin-top:8px;border-radius:9px;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.16);"><strong>Referencia / datos enviados por el cliente:</strong> ${escapeHtml(detailText)}</p>` : '';
     return `<div class="payment-row">
         <div class="payment-row-main">
             <h4>${amount} · ${escapeHtml(payment.customer_name || 'Cliente Webchat')}</h4>
             <p>${method} · Solicitud ${escapeHtml(payment.id).slice(0, 8)}…</p>
             <p>Solicitado: ${escapeHtml(paymentDate(payment.created_at))}</p>
-            ${orderNote}${actions}
+            ${orderNote}${customerPaymentDetails}${actions}
         </div>
     </div>`;
 }
@@ -813,6 +923,118 @@ async function decideWebchatPayment(paymentId, decision) {
 }
 
 /* ---------------------------------------------------------
+   CANAL TELEGRAM: CONFIGURACIÓN Y ESTADO
+--------------------------------------------------------- */
+let telegramChannelLoadInFlight = false;
+async function loadTelegramChannel(fillForm = false) {
+    if (telegramChannelLoadInFlight) return;
+    telegramChannelLoadInFlight = true;
+    const badge = document.getElementById('telegram-status-badge');
+    const summary = document.getElementById('telegram-bot-summary');
+    const message = document.getElementById('telegram-channel-message');
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram');
+        if (fillForm) {
+            const ownerInput = document.getElementById('telegram-owner-chat-id');
+            const tokenInput = document.getElementById('telegram-bot-token');
+            if (ownerInput) ownerInput.value = data.owner_chat_id || '';
+            if (tokenInput) {
+                tokenInput.value = '';
+                tokenInput.placeholder = data.configured
+                    ? `Token guardado ${data.token_hint || ''}; deja vacío para conservarlo`
+                    : 'Pega aquí el token de Telegram obtenido desde @BotFather';
+            }
+        }
+        const enabled = Boolean(data.enabled);
+        if (badge) {
+            badge.textContent = !data.configured ? 'No configurado' : (!enabled ? 'Desactivado' : (data.status === 'error' ? 'Error de conexión' : (data.status === 'active' ? 'Activado' : 'Activando…')));
+            badge.style.background = !data.configured || !enabled ? 'rgba(148,163,184,.12)' : (data.status === 'error' ? 'rgba(244,63,94,.14)' : 'rgba(16,185,129,.14)');
+            badge.style.color = !data.configured || !enabled ? '#cbd5e1' : (data.status === 'error' ? '#fda4af' : '#34d399');
+        }
+        if (summary) {
+            const bot = data.bot_username ? `Bot: @${escapeHtml(data.bot_username)}.` : 'Cada bot queda vinculado al negocio autenticado.';
+            const polling = data.last_poll_at ? `Última conexión local: ${escapeHtml(paymentDate(data.last_poll_at))}.` : 'Esperando la primera conexión local.';
+            const ownerWarning = enabled && !data.owner_chat_id ? ' <span style="color:#fbbf24;">Falta el Chat ID del dueño: no llegarán alertas personales hasta configurarlo.</span>' : '';
+            summary.innerHTML = `${bot} ${polling}${ownerWarning}`;
+        }
+        const toggleButton = document.getElementById('telegram-toggle-btn');
+        const testButton = document.getElementById('telegram-test-btn');
+        if (toggleButton) {
+            toggleButton.disabled = !data.configured;
+            toggleButton.innerHTML = enabled ? '<i class="ph ph-power"></i> Desactivar canal' : '<i class="ph ph-power"></i> Activar canal';
+        }
+        if (testButton) testButton.disabled = !enabled || !data.owner_chat_id;
+        if (data.status === 'error' && message && data.last_error) {
+            message.textContent = `Telegram reportó un problema: ${data.last_error}`;
+            message.style.color = '#fda4af';
+        } else if (message && (message.textContent || '').startsWith('Telegram reportó un problema:')) {
+            message.textContent = '';
+        }
+    } catch (error) {
+        if (message) { message.textContent = `No se pudo leer Telegram: ${error.message}`; message.style.color = '#fda4af'; }
+    } finally {
+        telegramChannelLoadInFlight = false;
+    }
+}
+
+async function saveTelegramChannel() {
+    const button = document.getElementById('telegram-save-btn');
+    const message = document.getElementById('telegram-channel-message');
+    const botToken = document.getElementById('telegram-bot-token')?.value.trim() || '';
+    const ownerChatId = document.getElementById('telegram-owner-chat-id')?.value.trim() || '';
+    if (!botToken && !ownerChatId) {
+        if (message) { message.textContent = 'Pega el token del bot y el Chat ID del dueño.'; message.style.color = '#fda4af'; }
+        return;
+    }
+    if (button) { button.disabled = true; button.innerHTML = '<i class="ph ph-spinner"></i> Validando y activando…'; }
+    if (message) { message.textContent = ''; }
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bot_token: botToken || null, owner_chat_id: ownerChatId || null })
+        });
+        document.getElementById('telegram-bot-token').value = '';
+        if (message) { message.textContent = data.message || 'Telegram configurado y activado.'; message.style.color = '#6ee7b7'; }
+        await loadTelegramChannel(true);
+        showToast(data.message || 'Telegram activado.');
+    } catch (error) {
+        if (message) { message.textContent = error.message; message.style.color = '#fda4af'; }
+        showToast(error.message, true);
+    } finally {
+        if (button) { button.disabled = false; button.innerHTML = '<i class="ph ph-floppy-disk"></i> Guardar y activar Telegram'; }
+    }
+}
+
+async function testTelegramChannel() {
+    const message = document.getElementById('telegram-channel-message');
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram/test', { method: 'POST' });
+        if (message) { message.textContent = data.message; message.style.color = '#6ee7b7'; }
+        showToast(data.message);
+    } catch (error) {
+        if (message) { message.textContent = error.message; message.style.color = '#fda4af'; }
+        showToast(error.message, true);
+    }
+}
+
+async function toggleTelegramChannel() {
+    const toggleButton = document.getElementById('telegram-toggle-btn');
+    const isEnabled = (toggleButton?.textContent || '').toLowerCase().includes('desactivar');
+    const message = document.getElementById('telegram-channel-message');
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram/toggle', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: !isEnabled })
+        });
+        if (message) { message.textContent = data.enabled ? 'Telegram se está activando.' : 'Telegram ha sido desactivado.'; message.style.color = '#6ee7b7'; }
+        await loadTelegramChannel(false);
+    } catch (error) {
+        if (message) { message.textContent = error.message; message.style.color = '#fda4af'; }
+        showToast(error.message, true);
+    }
+}
+
+/* ---------------------------------------------------------
    CARGAR DASHBOARD PRINCIPAL
 --------------------------------------------------------- */
 async function loadDashboard() {
@@ -821,22 +1043,17 @@ async function loadDashboard() {
         const user = me.user;
         if (!['OWNER', 'ADMIN'].includes(user.role)) throw new Error('Credencial sin privilegios de acceso ejecutivo.');
         
-        if (currentBusinessId !== user.business_id) {
-            demoCustomerId = null;
-            demoConversationId = null;
-            demoSessionBusinessId = null;
-        }
         currentBusinessId = user.business_id;
         localStorage.setItem('calyrisia_current_business_id', currentBusinessId);
         document.getElementById('display-business-id').textContent = currentBusinessId.split('-')[0] + '...';
         
-        const topWebchatLink = document.getElementById('btn-top-webchat');
-        if (topWebchatLink && currentBusinessId) {
-            topWebchatLink.href = `/webchat?business_id=${encodeURIComponent(currentBusinessId)}`;
-        }
-
         const data = await api('/api/v1/dashboard/overview');
-        document.getElementById('businessName').textContent = data.business?.name || 'Panel de Control';
+        currentBusiness = data.business || {};
+        currentPlanCode = normalizePlanCode(currentBusiness.plan_code);
+        document.getElementById('businessName').textContent = currentBusiness.name || 'Panel de Control';
+        const kindLabel = ({restaurant:'Restaurante', appointments:'Citas y servicios', enterprise:'Operación de alto volumen', retail:'Comercio minorista'})[businessKind(currentBusiness)];
+        document.getElementById('businessMeta').textContent = `${kindLabel} · Panel adaptado a tu operación`;
+        setupBusinessNavigation(currentBusiness);
 
         const a = data.analytics || {};
         document.getElementById('kpi-sales').textContent = `$${Number(a.orders?.sales_total || 0).toFixed(2)}`;
@@ -858,6 +1075,11 @@ async function loadDashboard() {
 
         await loadAutonomyData();
         await loadPendingWebchatPayments();
+        await loadTelegramChannel(true);
+        await loadDashboardChannels();
+        await loadPlanUsage();
+        await renderSpecializedWorkspace(currentBusiness);
+        await applyBusinessOverview(currentBusiness);
         showDashboard();
 
     } catch (err) {
@@ -933,9 +1155,131 @@ async function sendCopilotMessage(forcedMessage = null) {
 }
 
 /* ---------------------------------------------------------
+   VISTAS PREVIAS DE DASHBOARD (SIN USUARIO NI ESCRITURAS REALES)
+--------------------------------------------------------- */
+function previewIso(minutesFromNow) {
+    return new Date(Date.now() + minutesFromNow * 60000).toISOString();
+}
+function initialisePreviewData() {
+    const kind = businessKind(PREVIEW_PROFILE.business_type);
+    const bookingType = kind === 'restaurant' ? 'reservation' : 'appointment';
+    previewTableCount = kind === 'restaurant' ? 14 : 12;
+    previewBookings = (['appointments','restaurant'].includes(kind)) ? [
+        { id:'preview-booking-1', booking_type:bookingType, customer_name:'María González', customer_phone:'+58 412 555 0101', service_name:kind==='restaurant'?'Mesa familiar':'Consulta inicial', starts_at:previewIso(35), status:'confirmed', party_size:kind==='restaurant'?4:1, table_number:'02', notes:'Registro de ejemplo' },
+        { id:'preview-booking-2', booking_type:bookingType, customer_name:'Carlos Rodríguez', customer_phone:'+58 414 555 0132', service_name:kind==='restaurant'?'Almuerzo de trabajo':'Control / seguimiento', starts_at:previewIso(95), status:'pending', party_size:kind==='restaurant'?3:1, table_number:'05', notes:'Registro de ejemplo' },
+        { id:'preview-booking-3', booking_type:bookingType, customer_name:'Ana Pérez', customer_phone:'+58 424 555 0168', service_name:kind==='restaurant'?'Reserva para dos':'Evaluación / asesoría', starts_at:previewIso(180), status:'confirmed', party_size:2, table_number:'08', notes:'Registro de ejemplo' }
+    ] : [];
+    const rows = kind === 'appointments' ? [
+        ['Consulta inicial',35,'Consultas',0],['Control y seguimiento',20,'Consultas',0],['Evaluación especializada',45,'Evaluaciones',0],['Asesoría de 60 minutos',30,'Asesorías',0]
+    ] : kind === 'restaurant' ? [
+        ['Arepa reina pepiada',7.5,'Arepas',0],['Hamburguesa de la casa',10,'Platos principales',0],['Ensalada César',8,'Ensaladas',0],['Jugo natural',3,'Bebidas',0],['Menú infantil',6,'Menú infantil',0]
+    ] : [
+        ['Café premium 250 g',5.5,'Abarrotes',4],['Aceite vegetal 1 L',3.25,'Abarrotes',18],['Arroz 1 kg',1.8,'Granos',3],['Leche entera 1 L',2.1,'Lácteos',24],['Detergente 900 g',4.75,'Limpieza',6],['Agua mineral 1.5 L',1.2,'Bebidas',2]
+    ];
+    previewCatalog = rows.map((r,i)=>({id:`preview-product-${i+1}`,name:r[0],price:r[1],category:r[2],stock:r[3],images:[]}));
+    previewOrders = kind === 'enterprise' ? [
+        {id:'preview-order-1',order_number:'PED-10482',created_at:previewIso(-40),payment_status:'pendiente',total_amount:1284.5,status:'processing'},
+        {id:'preview-order-2',order_number:'PED-10481',created_at:previewIso(-130),payment_status:'confirmado',total_amount:876.25,status:'pending'},
+        {id:'preview-order-3',order_number:'PED-10480',created_at:previewIso(-250),payment_status:'confirmado',total_amount:2470,status:'created'}
+    ] : [];
+    previewWebchatEnabled = true;
+    previewTelegramEnabled = true;
+    previewPaymentInstructions = { methods: { pago_movil: { enabled:false, instructions:'' }, binance: { enabled:false, instructions:'' } } };
+    previewRecordCounter = 100;
+}
+function previewPlanPayload() {
+    const plan = CALYRISIA_PLAN_LIMITS[currentPlanCode] || CALYRISIA_PLAN_LIMITS.emprendedor;
+    return { label:plan.label, price_usd:plan.price, products:plan.products, images:plan.images, images_per_product:plan.imagesPerProduct, ai_responses_month:plan.ai, channels:plan.channels };
+}
+async function previewApi(path, options = {}) {
+    const method = String(options.method || 'GET').toUpperCase();
+    const url = new URL(path, window.location.origin);
+    let payload = {};
+    try { payload = options.body ? JSON.parse(options.body) : {}; } catch (_) { payload = {}; }
+    const kind = businessKind(PREVIEW_PROFILE.business_type);
+    const bookingTypeForProfile = kind === 'restaurant' ? 'reservation' : 'appointment';
+    if (url.pathname.endsWith('/auth/me')) return { user:{ role:'OWNER', business_id:currentBusinessId, business_name:currentBusiness?.name || PREVIEW_PROFILE.name } };
+    if (url.pathname.endsWith('/dashboard/overview')) return { business:currentBusiness, analytics:{orders:{sales_total:4832.7,sales_today:426.5},conversations_total:128,handoffs_total:7}, insights:[] };
+    if (url.pathname.endsWith('/dashboard/plan-usage')) return { plan:previewPlanPayload(), usage:{ai_responses:142,products:previewCatalog.length,images:previewCatalog.reduce((n,p)=>n+(p.images||[]).length,0),channels:(previewWebchatEnabled?1:0)+(previewTelegramEnabled?1:0)} };
+    if (url.pathname.endsWith('/dashboard/catalog') && method === 'GET') return { products:previewCatalog.map(p=>({...p,images:[...(p.images||[])]})), total:previewCatalog.length };
+    if (url.pathname.endsWith('/dashboard/catalog/import') && method === 'POST') {
+        const rows = Array.isArray(payload.rows)?payload.rows:[];
+        const remaining = Math.max(0, (CALYRISIA_PLAN_LIMITS[currentPlanCode]?.products || 0) - previewCatalog.length);
+        const accepted = rows.slice(0,remaining).map((r)=>({id:`preview-product-${++previewRecordCounter}`,name:String(r.name||'Producto de prueba'),price:Number(r.price||0),category:String(r.category||'General'),stock:Number(r.stock||0),images:Array.isArray(r.image_urls)?r.image_urls:[]}));
+        previewCatalog.push(...accepted);
+        return {success:true,created_products:accepted.length,message:`Vista previa: ${accepted.length} registro(s) añadidos solo en memoria. No se guardó nada en la base de datos.`};
+    }
+    if (url.pathname.endsWith('/dashboard/bookings') && method === 'GET') {
+        const type=url.searchParams.get('booking_type') || bookingTypeForProfile;
+        return {bookings:previewBookings.filter(b=>b.booking_type===type).map(b=>({...b}))};
+    }
+    if (url.pathname.endsWith('/dashboard/bookings') && method === 'POST') {
+        const type=payload.booking_type || bookingTypeForProfile;
+        const record={id:`preview-booking-${++previewRecordCounter}`,booking_type:type,customer_name:String(payload.customer_name||'Cliente de prueba'),customer_phone:String(payload.customer_phone||''),service_name:String(payload.service_name||(type==='reservation'?'Reserva de mesa':'Cita')),starts_at:payload.starts_at||previewIso(120),status:'pending',party_size:Number(payload.party_size||1),table_number:payload.table_number||null,notes:String(payload.notes||'')};
+        previewBookings.unshift(record);
+        return {success:true,message:'Vista previa: registro añadido en memoria, sin guardar datos reales.',booking:record};
+    }
+    const bookingMatch=url.pathname.match(/\/dashboard\/bookings\/([^/]+)$/);
+    if (bookingMatch && method === 'PATCH') {
+        const item=previewBookings.find(b=>b.id===decodeURIComponent(bookingMatch[1]));
+        if (item) item.status=String(payload.status||item.status);
+        return {success:Boolean(item),message:'Vista previa: estado actualizado en memoria.'};
+    }
+    if (url.pathname.endsWith('/dashboard/business-settings') && method === 'GET') return {restaurant_table_count:previewTableCount};
+    if (url.pathname.endsWith('/dashboard/business-settings') && method === 'PUT') { previewTableCount=Math.max(1,Math.min(100,Number(payload.restaurant_table_count||12))); return {restaurant_table_count:previewTableCount,message:'Vista previa: cantidad de mesas actualizada solo en memoria.'}; }
+    if (url.pathname.endsWith('/sales/orders')) return {orders:previewOrders.map(o=>({...o}))};
+    if (url.pathname.endsWith('/dashboard/channels/telegram') && method === 'GET') return {configured:true,enabled:previewTelegramEnabled,owner_chat_id:'preview-chat',token_hint:'(simulado)',message:'Vista previa de Telegram.'};
+    if (url.pathname.endsWith('/dashboard/channels/telegram/toggle') && method === 'POST') { previewTelegramEnabled=Boolean(payload.enabled); return {enabled:previewTelegramEnabled,message:'Vista previa: Telegram actualizado en memoria.'}; }
+    if (url.pathname.endsWith('/dashboard/channels/telegram/test')) return {success:true,message:'Vista previa: notificación simulada.'};
+    if (url.pathname.endsWith('/dashboard/channels/telegram') && method === 'POST') return {success:true,enabled:true,configured:true,message:'Vista previa: canal simulado.'};
+    if (url.pathname.endsWith('/dashboard/channels') && method === 'GET') return {webchat_enabled:previewWebchatEnabled,telegram_enabled:previewTelegramEnabled,active_channels:(previewWebchatEnabled?1:0)+(previewTelegramEnabled?1:0),max_channels:CALYRISIA_PLAN_LIMITS[currentPlanCode].channels};
+    if (url.pathname.endsWith('/dashboard/channels/webchat/toggle') && method === 'POST') { previewWebchatEnabled=Boolean(payload.enabled); return {webchat_enabled:previewWebchatEnabled,message:'Vista previa: Webchat actualizado en memoria.'}; }
+    if (url.pathname.endsWith('/dashboard/payment-instructions') && method === 'GET') return previewPaymentInstructions;
+    if (url.pathname.endsWith('/dashboard/payment-instructions') && method === 'PUT') { previewPaymentInstructions=payload; return {success:true,message:'Vista previa: método de cobro simulado; no se guardó nada real.'}; }
+    if (url.pathname.endsWith('/dashboard/webchat-payments')) return {payments:[]};
+    if (url.pathname.includes('/dashboard/webchat-payments/') && method === 'POST') return {success:true,message:'Vista previa: decisión simulada.'};
+    if (url.pathname.endsWith('/autonomy/audit')) return [];
+    if (url.pathname.endsWith('/owner/copilot')) return {response:'Esta es una vista previa de CALYRISIA. El Copiloto no se conecta a una cuenta ni a datos reales en este modo.'};
+    return {success:true,message:'Acción simulada en vista previa. No se llamó al backend real.'};
+}
+function installPreviewBanner() {
+    const host=document.querySelector('.main-content');
+    if (!host || document.getElementById('preview-mode-banner')) return;
+    const banner=document.createElement('div');
+    banner.id='preview-mode-banner';
+    banner.className='preview-banner';
+    const links=Object.entries(PREVIEW_PROFILES).map(([key,profile])=>`<a href="/dashboard/preview/${key}/"${key===PREVIEW_PROFILE_KEY?' aria-current="page" style="border-color:#67e8f9;background:rgba(103,232,249,.16)"':''}>${escapeHtml(profile.label)}</a>`).join('');
+    banner.innerHTML=`<div><strong><i class="ph ph-eye"></i> MODO PREVISUALIZACIÓN</strong><div>Datos de ejemplo. Puedes probar la interfaz; ningún cambio se guarda en una cuenta real.</div></div><nav class="preview-links" aria-label="Cambiar vista previa">${links}</nav>`;
+    host.prepend(banner);
+}
+function startDashboardPreview() {
+    initialisePreviewData();
+    let robotsMeta=document.querySelector('meta[name="robots"]');
+    if (!robotsMeta) { robotsMeta=document.createElement('meta'); robotsMeta.name='robots'; document.head.appendChild(robotsMeta); }
+    robotsMeta.content='noindex,nofollow';
+    currentBusinessId=`preview-${PREVIEW_PROFILE_KEY}`;
+    currentPlanCode=normalizePlanCode(PREVIEW_PROFILE.plan_code);
+    currentBusiness={id:currentBusinessId,name:`${PREVIEW_PROFILE.name} · Vista previa`,business_type:PREVIEW_PROFILE.business_type,industry:PREVIEW_PROFILE.industry,plan_code:PREVIEW_PROFILE.plan_code,timezone:'America/Caracas',currency:'USD'};
+    document.body.classList.add('preview-mode');
+    const businessName=document.getElementById('businessName'); if(businessName) businessName.textContent=currentBusiness.name;
+    const businessMeta=document.getElementById('businessMeta'); if(businessMeta) businessMeta.textContent=`${PREVIEW_PROFILE.label} · Plan ${CALYRISIA_PLAN_LIMITS[currentPlanCode].label} · Datos de ejemplo`;
+    const businessId=document.getElementById('display-business-id'); if(businessId) businessId.textContent='PREVIEW · SIN CUENTA';
+    const sales=document.getElementById('kpi-sales'); if(sales) sales.textContent=businessKind(currentBusiness)==='restaurant'?'—':'$4,832.70';
+    const today=document.getElementById('kpi-sales-today'); if(today) today.textContent=businessKind(currentBusiness)==='restaurant'?'—':'$426.50';
+    const chats=document.getElementById('kpi-chats'); if(chats) chats.textContent='128';
+    const handoffs=document.getElementById('kpi-handoffs'); if(handoffs) handoffs.textContent='7';
+    setupBusinessNavigation(currentBusiness);
+    installPreviewBanner();
+    showDashboard();
+    switchView('specialized');
+    applyBusinessOverview(currentBusiness);
+}
+/* ---------------------------------------------------------
    INICIALIZACIÓN
 --------------------------------------------------------- */
-if (localStorage.getItem(tokenKey)) { loadDashboard(); } else { showLogin(); }
+if (PREVIEW_MODE) { startDashboardPreview(); }
+else if (localStorage.getItem(tokenKey)) { loadDashboard(); }
+else { showLogin(); }
 // Mantiene las notificaciones de pago actualizadas aunque el dueño esté en otra vista.
 
 /* ---------------------------------------------------------
@@ -943,6 +1287,19 @@ if (localStorage.getItem(tokenKey)) { loadDashboard(); } else { showLogin(); }
 --------------------------------------------------------- */
 function openCatalogModal() {
     const modal = document.getElementById('catalogModal');
+    const business = currentBusiness || {};
+    const kind = businessKind(business);
+    const title = document.getElementById('catalogModalTitle');
+    const csvLabel = document.getElementById('catalogCsvLabel');
+    const appointmentMode = kind === 'appointments';
+    const restaurantMode = kind === 'restaurant';
+    if (title) title.textContent = appointmentMode ? 'Servicios y tarifas' : (restaurantMode ? 'Menú y precios' : (kind === 'enterprise' ? 'Catálogo de alto volumen' : 'Catálogo de Productos'));
+    if (csvLabel) csvLabel.textContent = appointmentMode
+        ? 'Importar lista de servicios CSV · columnas: name, price, category, image_urls (stock se deja en 0; URLs separadas por |)'
+        : (restaurantMode ? 'Importar menú CSV · columnas: name, price, stock, category, image_urls (URLs separadas por |)'
+            : 'Importar catálogo CSV · columnas: name, price, stock, category, image_urls (URLs separadas por |)');
+    const modalIcon = document.getElementById('catalogModalIcon');
+    if (modalIcon) modalIcon.className = 'ph-bold ' + (appointmentMode ? 'ph-stethoscope' : restaurantMode ? 'ph-bowl-food' : 'ph-package');
     if (modal) modal.style.display = 'flex';
     loadStoreProducts();
 }
@@ -955,46 +1312,348 @@ function closeCatalogModal() {
 async function loadStoreProducts() {
     const list = document.getElementById('catalogList');
     if (!list) return;
-    list.innerHTML = '<p style="color: #94a3b8; text-align: center; padding: 20px;"><i class="ph ph-spinner ph-spin"></i> Consultando inventario en tiempo real...</p>';
-    const bizId = (typeof currentBusinessId !== 'undefined' && currentBusinessId) ? currentBusinessId : (localStorage.getItem('calyrisia_current_business_id') || '');
-    const url = bizId ? `/api/v1/products/list?business_id=${encodeURIComponent(bizId)}` : '/api/v1/products/list';
+    const initialKind = businessKind(currentBusiness || {});
+    const initialLoadingText = initialKind === 'appointments' ? 'Consultando servicios y tarifas...' : (initialKind === 'restaurant' ? 'Consultando menú y precios...' : 'Consultando catálogo en tiempo real...');
+    list.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;"><i class="ph ph-spinner ph-spin"></i> ${initialLoadingText}</p>`;
     try {
-        const res = await fetch(url, { cache: "no-store" });
-        const data = await res.json();
+        const data = await api('/api/v1/dashboard/catalog', { cache: "no-store" });
         if (data.products && data.products.length > 0) {
             list.innerHTML = '';
             data.products.forEach(p => {
                 const stockVal = Math.round(Number(p.stock || 0));
                 const stockColor = stockVal > 10 ? '#10b981' : (stockVal > 0 ? '#f59e0b' : '#ef4444');
+                const kind = businessKind(currentBusiness || {});
+                const appointmentMode = kind === 'appointments';
+                const restaurantMode = kind === 'restaurant';
+                const metaLabel = appointmentMode
+                    ? `${escapeHtml(p.category || 'Servicio')} · ${Array.isArray(p.images) ? p.images.length : 0} imagen(es)`
+                    : `${escapeHtml(p.category || 'General')} · ${restaurantMode ? 'Disponibilidad' : 'Stock'}: <strong style="color:${stockColor};font-size:.85rem;">${stockVal}</strong> · ${Array.isArray(p.images) ? p.images.length : 0} imagen(es)`;
+                const img = Array.isArray(p.images) && p.images[0] ? `<img class="catalog-preview-img" src="${escapeHtml(p.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="catalog-preview-img" style="display:grid;place-items:center;color:#64748b;"><i class="ph ph-image"></i></span>';
                 list.innerHTML += `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 8px;">
-                        <div>
-                            <div style="font-weight: 600; color: #f8fafc; font-size: 0.95rem;">${escapeHtml(p.name)}</div>
-                            <span style="font-size: 0.75rem; color: #94a3b8;">${escapeHtml(p.category || 'General')} · Stock: <strong style="color: ${stockColor}; font-size: 0.85rem;">${stockVal}</strong> unid.</span>
-                        </div>
-                        <div style="font-size: 1rem; font-weight: 700; color: #00f2fe;">$${Number(p.price || 0).toFixed(2)}</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:8px;">
+                        <div style="display:flex;gap:11px;align-items:center;min-width:0;">${img}<div style="min-width:0;">
+                            <div style="font-weight:600;color:#f8fafc;font-size:.92rem;overflow-wrap:anywhere;">${escapeHtml(p.name)}</div>
+                            <span style="font-size:.75rem;color:#94a3b8;">${metaLabel}</span>
+                        </div></div>
+                        <div style="font-size:1rem;font-weight:700;color:#00f2fe;white-space:nowrap;">$${Number(p.price || 0).toFixed(2)}</div>
                     </div>`;
             });
         } else {
-            list.innerHTML = '<p class="muted" style="text-align: center; padding: 20px;">No hay productos registrados en este negocio.</p>';
+            const kind = businessKind(currentBusiness || {});
+            const emptyLabel = kind === 'appointments' ? 'No hay servicios registrados en este negocio.' : (kind === 'restaurant' ? 'No hay platos o artículos registrados en el menú.' : 'No hay productos registrados en este negocio.');
+            list.innerHTML = `<p class="muted" style="text-align: center; padding: 20px;">${emptyLabel}</p>`;
         }
     } catch (e) {
         list.innerHTML = `<p style="color: #fda4af; text-align: center; padding: 20px;">Error al cargar catálogo: ${escapeHtml(e.message)}</p>`;
     }
 }
 
-async function seedSampleProducts() {
+function downloadCatalogCsvTemplate() {
+    const appointmentMode = businessKind(currentBusiness || {}) === 'appointments';
+    const sample = appointmentMode
+        ? 'name,price,stock,category,image_urls\nConsulta inicial,25,0,Consulta,https://tu-dominio.com/servicio.jpg\n'
+        : 'name,price,stock,category,image_urls\nProducto real,12.50,8,General,https://tu-dominio.com/imagen-producto.jpg\n';
+    const blob = new Blob(['\ufeff', sample], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = appointmentMode ? 'plantilla_servicios_calyrisia.csv' : 'plantilla_catalogo_calyrisia.csv';
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function formatBookingDate(value) {
+    if (!value) return 'Fecha por definir';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? escapeHtml(value) : d.toLocaleString('es-VE', {dateStyle:'medium', timeStyle:'short'});
+}
+function planUpgradeCard(required, business) {
+    const details = currentPlanCode === 'emprendedor'
+        ? 'Este tipo de operación requiere agenda especializada, reservas y procesos de atención ampliados.'
+        : 'Este perfil requiere herramientas para inventarios de gran volumen, equipos y operaciones empresariales.';
+    return `<div class="upgrade-lock"><span class="badge">Función de ${escapeHtml(required.label)}</span><h3>Este espacio está diseñado para ${escapeHtml(required.label)}</h3><p class="muted" style="max-width:760px;line-height:1.8;">${details} Elige el plan adecuado para activar el panel específico de ${escapeHtml(business?.name || 'tu negocio')}.</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;"><a class="btn btn-primary" target="_blank" rel="noopener" href="${whatsappUpgradeText(required.label,business?.name)}">Consultar cambio de plan <i class="ph ph-arrow-up-right"></i></a><a class="btn btn-secondary" href="/#planes" target="_blank" rel="noopener">Comparar planes</a></div></div>`;
+}
+async function loadPaymentInstructions() {
+    const message = document.getElementById('payment-instructions-message');
     try {
-        const data = await api('/api/v1/products/seed-sample', { method: 'POST' });
-        showToast(data.message || 'Productos de muestra cargados en este negocio.');
-        await loadStoreProducts();
-    } catch(err) {
-        showToast('Error: ' + err.message, true);
+        const data = await api('/api/v1/dashboard/payment-instructions');
+        const mobile = data.methods?.pago_movil || {};
+        const binance = data.methods?.binance || {};
+        const mobileEnabled = document.getElementById('pay-mobile-enabled');
+        const mobileText = document.getElementById('pay-mobile-instructions');
+        const binanceEnabled = document.getElementById('pay-binance-enabled');
+        const binanceText = document.getElementById('pay-binance-instructions');
+        if (mobileEnabled) mobileEnabled.checked = Boolean(mobile.enabled);
+        if (mobileText) mobileText.value = mobile.instructions || '';
+        if (binanceEnabled) binanceEnabled.checked = Boolean(binance.enabled);
+        if (binanceText) binanceText.value = binance.instructions || '';
+        if (message) message.textContent = '';
+    } catch (e) {
+        if (message) message.textContent = 'No se pudieron cargar las instrucciones: ' + e.message;
+    }
+}
+async function savePaymentInstructions() {
+    const message = document.getElementById('payment-instructions-message');
+    const payload = {methods:{
+        pago_movil:{enabled:Boolean(document.getElementById('pay-mobile-enabled')?.checked),instructions:document.getElementById('pay-mobile-instructions')?.value || ''},
+        binance:{enabled:Boolean(document.getElementById('pay-binance-enabled')?.checked),instructions:document.getElementById('pay-binance-instructions')?.value || ''}
+    }};
+    try {
+        const data = await api('/api/v1/dashboard/payment-instructions',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        if (message) message.textContent = data.message || 'Métodos de cobro guardados.';
+        showToast(data.message || 'Métodos de cobro guardados.');
+    } catch (e) {
+        if (message) message.textContent = 'No se pudo guardar: ' + e.message;
+        showToast('No se pudieron guardar los métodos de cobro: ' + e.message, true);
     }
 }
 
+async function loadDashboardChannels() {
+    try {
+        const data = await api('/api/v1/dashboard/channels');
+        const summary = document.getElementById('channels-summary');
+        const badge = document.getElementById('webchat-status-badge');
+        const toggle = document.getElementById('webchat-toggle-btn');
+        if (badge) { badge.textContent = data.webchat_enabled ? 'Activo' : 'Desactivado'; badge.className = 'badge ' + (data.webchat_enabled ? 'success' : ''); }
+        if (toggle) toggle.innerHTML = `<i class="ph ph-power"></i> ${data.webchat_enabled ? 'Desactivar Webchat' : 'Activar Webchat'}`;
+        if (summary) summary.textContent = `Plan ${CALYRISIA_PLAN_LIMITS[currentPlanCode].label}: ${data.active_channels} de ${data.max_channels} canales activos. Telegram: ${data.telegram_enabled ? 'activo' : 'inactivo'}. Webchat: ${data.webchat_enabled ? 'activo' : 'inactivo'}. WhatsApp requiere activación comercial.`;
+    } catch (e) {
+        const summary = document.getElementById('channels-summary'); if (summary) summary.textContent = `No se pudo consultar el estado de los canales: ${e.message}`;
+    }
+}
+async function toggleDashboardWebchat() {
+    try {
+        const state = await api('/api/v1/dashboard/channels');
+        const data = await api('/api/v1/dashboard/channels/webchat/toggle', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:!state.webchat_enabled})});
+        showToast(data.message || 'Estado de Webchat actualizado.');
+        await loadDashboardChannels(); await loadPlanUsage();
+    } catch(e) { showToast('No se pudo cambiar Webchat: ' + e.message, true); }
+}
+
+async function loadPlanUsage() {
+    const grid = document.getElementById('plan-usage-grid');
+    if (!grid) return;
+    try {
+        const data = await api('/api/v1/dashboard/plan-usage');
+        const plan = data.plan || CALYRISIA_PLAN_LIMITS[currentPlanCode];
+        const usage = data.usage || {};
+        const badge = document.getElementById('current-plan-badge');
+        if (badge) badge.textContent = `${plan.label} · $${plan.price_usd}/mes`;
+        const metric = (label, used, max, unit) => {
+            const n = Math.max(0, Number(used || 0)); const cap = Math.max(1, Number(max || 1));
+            const percent = Math.min(100, Math.round(n / cap * 100));
+            return `<div class="vertical-card"><h3>${label}</h3><div class="vertical-number">${n.toLocaleString('es-ES')} <span style="font-size:13px;color:#96a7c4;font-weight:400;">/ ${cap.toLocaleString('es-ES')}</span></div><div class="usage-track"><div class="usage-fill" style="width:${percent}%"></div></div><p class="vertical-small">${percent}% del límite · ${unit}</p></div>`;
+        };
+        grid.innerHTML = metric('Respuestas de IA', usage.ai_responses || 0, plan.ai_responses_month, 'por mes') + metric('Productos de catálogo', usage.products || 0, plan.products, 'productos') + metric('Imágenes de catálogo', usage.images || 0, plan.images, 'imágenes registradas') + metric('Canales activos', usage.channels || 0, plan.channels, 'canales incluidos');
+    } catch (e) {
+        grid.innerHTML = `<p class="muted">No fue posible consultar el consumo del plan: ${escapeHtml(e.message)}</p>`;
+    }
+}
+async function applyBusinessOverview(business) {
+    const kind = businessKind(business);
+    const titleSales = document.getElementById('kpi-sales-title');
+    const titleToday = document.getElementById('kpi-sales-today-title');
+    const valueSales = document.getElementById('kpi-sales');
+    const valueToday = document.getElementById('kpi-sales-today');
+    if (!titleSales || !titleToday || !valueSales || !valueToday) return;
+
+    if (kind === 'appointments' || kind === 'restaurant') {
+        const isRestaurant = kind === 'restaurant';
+        const bookingType = isRestaurant ? 'reservation' : 'appointment';
+        titleSales.textContent = isRestaurant ? 'Reservas registradas' : 'Citas registradas';
+        titleToday.textContent = isRestaurant ? 'Reservas para hoy' : 'Citas para hoy';
+        valueSales.textContent = '—';
+        valueToday.textContent = '—';
+        try {
+            const data = await api(`/api/v1/dashboard/bookings?booking_type=${bookingType}&limit=200`);
+            const bookings = Array.isArray(data.bookings) ? data.bookings : [];
+            const timezone = business.timezone || 'America/Caracas';
+            const dateKey = (value) => {
+                const date = new Date(value);
+                return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('en-CA', {timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
+            };
+            const todayKey = dateKey(new Date());
+            const today = bookings.filter(item => dateKey(item.starts_at) === todayKey && ['pending','confirmed'].includes(String(item.status || '').toLowerCase()));
+            valueSales.textContent = bookings.length.toLocaleString('es-ES');
+            valueToday.textContent = today.length.toLocaleString('es-ES');
+        } catch (error) {
+            console.warn('No se pudo adaptar el resumen a las citas/reservas:', error);
+        }
+    } else if (kind === 'enterprise') {
+        titleSales.textContent = 'Ventas registradas';
+        titleToday.textContent = 'Ingresos de hoy';
+    } else {
+        titleSales.textContent = 'Ingresos Generados';
+        titleToday.textContent = 'Ingresos de Hoy';
+    }
+}
+
+async function renderSpecializedWorkspace(business) {
+    const root = document.getElementById('specialized-workspace');
+    if (!root || !business) return;
+    const kind = businessKind(business);
+    const requiredCode = requiredPlanForBusiness(business);
+    if (planRank(currentPlanCode) < planRank(requiredCode)) {
+        root.innerHTML = `<div class="section-header"><h2>${kind === 'restaurant' ? 'Mesas y reservas' : kind === 'appointments' ? 'Agenda de citas' : 'Operación de alto volumen'}</h2><p class="muted">Vista adaptada a la actividad de tu negocio.</p></div>${planUpgradeCard(CALYRISIA_PLAN_LIMITS[requiredCode], business)}`;
+        return;
+    }
+    if (kind === 'restaurant') {
+        root.innerHTML = restaurantWorkspaceHtml(business);
+        await loadRestaurantTableSettings();
+        await loadBusinessBookings('reservation');
+    } else if (kind === 'appointments') {
+        root.innerHTML = appointmentWorkspaceHtml(business);
+        await loadBusinessBookings('appointment');
+    } else if (kind === 'enterprise') {
+        root.innerHTML = enterpriseWorkspaceHtml(business);
+        await loadEnterpriseWorkspace();
+    } else {
+        root.innerHTML = retailWorkspaceHtml(business);
+        await loadRetailWorkspace();
+    }
+}
+function appointmentWorkspaceHtml(business) {
+    const isHealth = /clinica|salud|medic|odont|laboratorio/i.test(business.business_type || business.industry || '');
+    const title = isHealth ? 'Agenda de atención' : 'Agenda de citas y servicios';
+    const catalogHeading = isHealth ? 'Servicios, consultas y tarifas' : 'Servicios y tarifas';
+    return `<div class="section-header"><h2>${title}</h2><p class="muted">Organiza citas, gestiona tu lista de servicios y da seguimiento desde un solo espacio.</p></div>
+      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-calendar-check"></i> Agenda</h3><div class="vertical-number" id="booking-count">—</div><p class="vertical-small">Registros en este negocio</p></div><div class="vertical-card"><h3><i class="ph ph-clock"></i> Por confirmar</h3><div class="vertical-number" id="booking-pending-count">—</div><p class="vertical-small">Esperan revisión del equipo</p></div><div class="vertical-card"><h3><i class="ph ph-check-circle"></i> Confirmadas</h3><div class="vertical-number" id="booking-confirmed-count">—</div><p class="vertical-small">Citas confirmadas</p></div></div>
+      <div class="panel glass-panel" style="padding:20px;margin-bottom:18px;"><div class="vertical-intro" style="flex-wrap:wrap;"><div><h3>${catalogHeading}</h3><p class="muted">Mantén actualizados los servicios y precios que puede consultar el asistente de tu negocio.</p></div><button class="btn-action" onclick="openCatalogModal()"><i class="ph ph-list-checks"></i> Gestionar servicios</button></div></div>
+      <div class="vertical-layout"><div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Próximas citas</h3><p class="muted">Actualizado desde los registros de ${escapeHtml(business.name || 'tu negocio')}.</p></div><button class="btn-secondary" onclick="loadBusinessBookings('appointment')"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div><div id="specialized-bookings-list" class="booking-list"><p class="muted">Cargando agenda...</p></div></div>
+      <div class="panel glass-panel" style="padding:22px;"><h3 style="margin-bottom:16px;">Registrar cita</h3><form class="vertical-form" onsubmit="createBusinessBooking(event,'appointment')"><label>Nombre del cliente<input name="customer_name" required maxlength="200" placeholder="Nombre completo"></label><label>Teléfono<input name="customer_phone" placeholder="+58..."></label><label>Servicio o motivo<input name="service_name" required maxlength="200" placeholder="Consulta, limpieza, asesoría..."></label><label>Fecha y hora<input type="datetime-local" name="starts_at" required></label><label>Notas<textarea name="notes" rows="2" placeholder="Observaciones internas"></textarea></label><button type="submit" class="btn-action"><i class="ph ph-calendar-plus"></i> Guardar cita</button><p class="vertical-small">Las citas nuevas se crean como pendientes hasta que el equipo las confirme.</p></form></div></div>`;
+}
+function restaurantWorkspaceHtml(business) {
+    return `<div class="section-header"><h2>Restaurante · Mesas y reservas</h2><p class="muted">Controla disponibilidad, reservas y capacidad del local desde un solo tablero.</p></div>
+      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-armchair"></i> Mesas configuradas</h3><div class="vertical-number" id="restaurant-table-count-display">12</div><p class="vertical-small">Capacidad de mesas de este establecimiento</p></div><div class="vertical-card"><h3><i class="ph ph-calendar-dots"></i> Reservas de hoy</h3><div class="vertical-number" id="booking-count">—</div><p class="vertical-small">Pendientes y confirmadas</p></div><div class="vertical-card"><h3><i class="ph ph-users"></i> Comensales previstos</h3><div class="vertical-number" id="booking-guests-count">—</div><p class="vertical-small">Personas en las reservas activas de hoy</p></div></div>
+      <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;"><div class="vertical-intro" style="align-items:flex-end;flex-wrap:wrap;"><div><h3>Disponibilidad de mesas</h3><p class="muted">El tablero se calcula a partir de las reservas registradas para hoy.</p><div class="muted" style="margin-top:8px;"><span style="color:#34d399;">● Disponible</span> &nbsp; <span style="color:#fbbf24;">● Reservada</span></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><label class="muted" for="restaurant-table-count-input" style="font-size:12px;">Mesas del local</label><input id="restaurant-table-count-input" type="number" min="1" max="100" value="12" style="width:86px;min-width:86px;"><button class="btn-secondary" onclick="saveRestaurantTableSettings()">Guardar</button></div></div><div id="restaurant-table-board" class="table-board"><p class="muted">Cargando mesas...</p></div></div>
+      <div class="vertical-layout"><div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Reservas recientes</h3><p class="muted">Confirmación y seguimiento de clientes.</p></div><button class="btn-secondary" onclick="loadBusinessBookings('reservation')"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div><div id="specialized-bookings-list" class="booking-list"><p class="muted">Cargando reservas...</p></div></div>
+      <div class="panel glass-panel" style="padding:22px;"><h3 style="margin-bottom:16px;">Crear reserva</h3><form class="vertical-form" onsubmit="createBusinessBooking(event,'reservation')"><label>Nombre de la reserva<input name="customer_name" required maxlength="200" placeholder="Nombre del cliente"></label><label>Teléfono<input name="customer_phone" placeholder="+58..."></label><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><label>Personas<input type="number" name="party_size" min="1" max="200" value="2" required></label><label>Mesa<select name="table_number">${Array.from({length:currentRestaurantTableCount},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">Mesa ${i+1}</option>`).join('')}</select></label></div><label>Fecha y hora<input type="datetime-local" name="starts_at" required></label><label>Nota<input name="notes" placeholder="Preferencia o detalle"></label><button type="submit" class="btn-action"><i class="ph ph-calendar-plus"></i> Registrar reserva</button><p class="vertical-small">Se crea pendiente y la mesa queda marcada como reservada cuando esté pendiente o confirmada para hoy.</p></form></div></div>`;
+}
+function retailWorkspaceHtml(business) {
+    return `<div class="section-header"><h2>Inventario y catálogo</h2><p class="muted">Control rápido de existencias, fotografías del catálogo y carga desde CSV para ${escapeHtml(business.name || 'tu comercio')}.</p></div>
+      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-package"></i> Productos activos</h3><div class="vertical-number" id="retail-product-count">—</div><p class="vertical-small">Registrados en el catálogo</p></div><div class="vertical-card"><h3><i class="ph ph-warning-circle"></i> Stock bajo</h3><div class="vertical-number" id="retail-low-stock">—</div><p class="vertical-small">Productos con 5 unidades o menos</p></div><div class="vertical-card"><h3><i class="ph ph-images"></i> Imágenes registradas</h3><div class="vertical-number" id="retail-images">—</div><p class="vertical-small">Utiliza el importador CSV para asociar imágenes por URL</p></div></div>
+      <div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Productos que requieren atención</h3><p class="muted">Catálogo e inventario vinculados a este negocio.</p></div><div style="display:flex;gap:9px;flex-wrap:wrap;"><button class="btn-secondary" onclick="openCatalogModal()"><i class="ph ph-package"></i> Abrir catálogo</button><button class="btn-secondary" onclick="loadRetailWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div></div><div id="retail-low-list" class="booking-list"><p class="muted">Cargando inventario...</p></div></div>`;
+}
+function enterpriseWorkspaceHtml(business) {
+    return `<div class="section-header"><h2>Operación de alto volumen</h2><p class="muted">Visión operativa para catálogos grandes, ventas frecuentes y equipos que necesitan seguimiento coordinado.</p></div>
+      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-package"></i> Productos</h3><div class="vertical-number" id="ent-products">—</div><p class="vertical-small">Dentro del límite de catálogo</p></div><div class="vertical-card"><h3><i class="ph ph-shopping-cart"></i> Pedidos pendientes</h3><div class="vertical-number" id="ent-orders-pending">—</div><p class="vertical-small">En proceso de seguimiento</p></div><div class="vertical-card"><h3><i class="ph ph-warning-circle"></i> Stock bajo</h3><div class="vertical-number" id="ent-low-stock">—</div><p class="vertical-small">Alertas para reposición</p></div></div>
+      <div class="vertical-layout"><div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Pedidos recientes</h3><p class="muted">Actividad comercial real de este negocio.</p></div><button class="btn-secondary" onclick="loadEnterpriseWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div><div id="ent-orders-list" class="booking-list"><p class="muted">Cargando pedidos...</p></div></div>
+      <div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Control del catálogo</h3><p class="muted">Importa lotes sin registrar producto por producto.</p></div><button class="btn-action" onclick="openCatalogModal()"><i class="ph ph-file-csv"></i> Abrir catálogo</button></div><div id="ent-stock-list" class="booking-list"><p class="muted">Cargando inventario...</p></div><p class="vertical-small" style="margin-top:12px;">Los controles de equipo y auditoría avanzada se muestran en Enterprise.</p></div></div>`;
+}
+async function loadRestaurantTableSettings() {
+    try {
+        const data = await api('/api/v1/dashboard/business-settings');
+        currentRestaurantTableCount = Math.max(1, Math.min(100, Number(data.restaurant_table_count || 12)));
+        const display = document.getElementById('restaurant-table-count-display'); if (display) display.textContent = String(currentRestaurantTableCount);
+        const input = document.getElementById('restaurant-table-count-input'); if (input) input.value = String(currentRestaurantTableCount);
+        const select = document.querySelector('#specialized-workspace select[name="table_number"]');
+        if (select) select.innerHTML = Array.from({length:currentRestaurantTableCount},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">Mesa ${i+1}</option>`).join('');
+        renderRestaurantTables(currentRestaurantBookings, currentRestaurantTableCount);
+    } catch (e) { console.warn('No se pudo cargar la configuración de mesas:', e); }
+}
+async function saveRestaurantTableSettings() {
+    const input = document.getElementById('restaurant-table-count-input');
+    const count = Number(input?.value || 12);
+    try {
+        const data = await api('/api/v1/dashboard/business-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_table_count:count})});
+        currentRestaurantTableCount = Number(data.restaurant_table_count || 12);
+        const display = document.getElementById('restaurant-table-count-display'); if (display) display.textContent = String(currentRestaurantTableCount);
+        const select = document.querySelector('#specialized-workspace select[name="table_number"]');
+        if (select) select.innerHTML = Array.from({length:currentRestaurantTableCount},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">Mesa ${i+1}</option>`).join('');
+        renderRestaurantTables(currentRestaurantBookings, currentRestaurantTableCount);
+        showToast(data.message || 'Configuración guardada.');
+    } catch(e) { showToast('No se pudo guardar la cantidad de mesas: ' + e.message, true); }
+}
+
+async function loadBusinessBookings(type) {
+    const list = document.getElementById('specialized-bookings-list');
+    if (!list) return;
+    list.innerHTML = '<p class="muted">Cargando registros...</p>';
+    try {
+        const data = await api(`/api/v1/dashboard/bookings?booking_type=${encodeURIComponent(type)}&limit=100`);
+        const items = data.bookings || [];
+        const todayItems = items.filter(b => b.starts_at && new Date(b.starts_at).toDateString() === new Date().toDateString() && ['pending','confirmed'].includes(b.status));
+        const setText = (id,value) => { const el=document.getElementById(id); if(el) el.textContent=value; };
+        setText('booking-count', type === 'reservation' ? todayItems.length : items.length);
+        setText('booking-pending-count', items.filter(b=>b.status==='pending').length);
+        setText('booking-confirmed-count', items.filter(b=>b.status==='confirmed').length);
+        setText('booking-guests-count', todayItems.reduce((sum,b)=>sum+Number(b.party_size||1),0));
+        if (!items.length) list.innerHTML = `<div class="upgrade-lock" style="padding:23px;"><h3 style="font-size:17px;">Todavía no hay ${type==='reservation'?'reservas':'citas'} registradas</h3><p class="muted">Usa el formulario para crear el primer registro. Cada entrada queda aislada dentro de este negocio.</p></div>`;
+        else list.innerHTML = items.map(b => {
+            const statusColor = b.status==='confirmed'?'#34d399':b.status==='cancelled'?'#fb7185':b.status==='completed'?'#93c5fd':'#fbbf24';
+            return `<div class="booking-row"><div><h4>${escapeHtml(b.customer_name)} · ${escapeHtml(b.service_name || (type==='reservation'?'Reserva':'Cita'))}</h4><p>${formatBookingDate(b.starts_at)} · ${escapeHtml(b.customer_phone||'Sin teléfono')}${type==='reservation' ? ` · Mesa ${escapeHtml(b.table_number||'por asignar')} · ${Number(b.party_size||1)} persona(s)` : ''}</p><p style="color:${statusColor};text-transform:uppercase;letter-spacing:.06em;font-size:10px;margin-top:4px;">${escapeHtml(b.status)}</p></div><div class="booking-row-actions">${b.status==='pending'?`<button class="btn-money" onclick="setBusinessBookingStatus('${b.id}','confirmed','${type}')">Confirmar</button>`:''}${b.status==='confirmed'?`<button class="btn-secondary" onclick="setBusinessBookingStatus('${b.id}','completed','${type}')">Completar</button>`:''}${!['completed','cancelled'].includes(b.status)?`<button class="btn-payment-reject" onclick="setBusinessBookingStatus('${b.id}','cancelled','${type}')">Cancelar</button>`:''}</div></div>`;
+        }).join('');
+        if (type === 'reservation') { currentRestaurantBookings = todayItems; renderRestaurantTables(todayItems, currentRestaurantTableCount); }
+    } catch (e) {
+        list.innerHTML = `<p class="muted">No se pudo cargar el panel: ${escapeHtml(e.message)}</p>`;
+    }
+}
+function renderRestaurantTables(todayBookings, tableCount = currentRestaurantTableCount) {
+    const board = document.getElementById('restaurant-table-board');
+    if (!board) return;
+    const occupied = new Map();
+    todayBookings.forEach(b => { if (b.table_number) occupied.set(String(b.table_number).replace(/^0+/,''),b); });
+    board.innerHTML = Array.from({length:Math.max(1, Math.min(100, Number(tableCount)||12))},(_,index)=>{
+        const n=String(index+1), booking=occupied.get(n), reserved=Boolean(booking);
+        return `<div class="table-tile ${reserved?'reserved':''}"><div class="table-num">${n.padStart(2,'0')}</div><strong>${reserved?'Reservada':'Disponible'}</strong><small>${reserved?`${escapeHtml(booking.customer_name)} · ${Number(booking.party_size||1)} pers.`:'Lista para asignar'}</small></div>`;
+    }).join('');
+}
+async function createBusinessBooking(event,type) {
+    event.preventDefault(); const form=event.currentTarget; const fd=new FormData(form); const localDate=fd.get('starts_at');
+    try {
+        const payload={booking_type:type,customer_name:fd.get('customer_name'),customer_phone:fd.get('customer_phone'),service_name:fd.get('service_name')||(type==='reservation'?'Reserva de mesa':'Cita'),starts_at:new Date(localDate).toISOString(),party_size:Number(fd.get('party_size')||1),table_number:fd.get('table_number')||null,notes:fd.get('notes')||''};
+        const data=await api('/api/v1/dashboard/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        showToast(data.message||'Registro creado.');form.reset();await loadBusinessBookings(type);
+    } catch(e) { showToast('No se pudo guardar: '+e.message,true); }
+}
+async function setBusinessBookingStatus(id,status,type) {
+    try { await api(`/api/v1/dashboard/bookings/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});showToast('Estado actualizado.');await loadBusinessBookings(type); }
+    catch(e){showToast('No se pudo actualizar: '+e.message,true);}
+}
+async function loadRetailWorkspace() {
+    try {
+        const data=await api('/api/v1/dashboard/catalog');const products=data.products||[];const low=products.filter(p=>Number(p.stock||0)<=5);const images=products.reduce((sum,p)=>sum+(Array.isArray(p.images)?p.images.length:0),0);
+        const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=String(v)};set('retail-product-count',products.length);set('retail-low-stock',low.length);set('retail-images',images);
+        const list=document.getElementById('retail-low-list');if(list) list.innerHTML=low.length?low.slice(0,15).map(p=>`<div class="booking-row"><div><h4>${escapeHtml(p.name)}</h4><p>${escapeHtml(p.category)} · Precio $${Number(p.price||0).toFixed(2)}</p></div><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} unidades</span></div>`).join(''):'<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:16px;">Sin alertas de inventario</h3><p class="muted">No se encontraron productos con 5 unidades o menos.</p></div>';
+    } catch(e){ const el=document.getElementById('retail-low-list');if(el)el.innerHTML=`<p class="muted">${escapeHtml(e.message)}</p>`; }
+}
+async function loadEnterpriseWorkspace() {
+    try {
+        const [catalog,ordersData]=await Promise.all([api('/api/v1/dashboard/catalog'),api(`/api/v1/sales/orders?business_id=${encodeURIComponent(currentBusinessId)}&limit=20`)]);
+        const products=catalog.products||[],orders=ordersData.orders||[],low=products.filter(p=>Number(p.stock||0)<=5),pending=orders.filter(o=>['pending','processing','created'].includes(String(o.status||'').toLowerCase()));
+        const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=String(v)};set('ent-products',products.length);set('ent-orders-pending',pending.length);set('ent-low-stock',low.length);
+        const orderList=document.getElementById('ent-orders-list');if(orderList)orderList.innerHTML=orders.length?orders.slice(0,12).map(o=>`<div class="booking-row"><div><h4>Pedido ${escapeHtml(o.order_number||String(o.id||'').slice(0,8))}</h4><p>${formatBookingDate(o.created_at)} · Pago: ${escapeHtml(o.payment_status||'sin estado')}</p></div><div style="text-align:right;"><strong style="color:#5be7f2;">$${Number(o.total_amount||0).toFixed(2)}</strong><p>${escapeHtml(o.status||'—')}</p></div></div>`).join(''):'<p class="muted">Todavía no hay pedidos registrados.</p>';
+        const stockList=document.getElementById('ent-stock-list');if(stockList)stockList.innerHTML=low.length?low.slice(0,10).map(p=>`<div class="booking-row"><div><h4>${escapeHtml(p.name)}</h4><p>${escapeHtml(p.category||'General')}</p></div><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} uds.</span></div>`).join(''):'<p class="muted">El inventario no muestra alertas de stock bajo.</p>';
+    } catch(e){ const el=document.getElementById('ent-orders-list');if(el)el.innerHTML=`<p class="muted">No se pudieron cargar las operaciones: ${escapeHtml(e.message)}</p>`; }
+}
+function parseCsv(text) {
+    const rows=[];let row=[],field='',quoted=false;
+    for(let i=0;i<text.length;i++) { const ch=text[i]; if(ch==='"' && quoted && text[i+1]==='"'){field+='"';i++;} else if(ch==='"'){quoted=!quoted;} else if(ch===','&&!quoted){row.push(field);field='';} else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);row=[];field='';} else field+=ch; }
+    row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);if(rows.length<2)throw new Error('El CSV debe incluir encabezados y al menos un producto.');
+    const headers=rows.shift().map(h=>String(h).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ /g,'_'));
+    const idx=(aliases)=>headers.findIndex(h=>aliases.includes(h));
+    const nameI=idx(['name','nombre','producto']),priceI=idx(['price','precio']),stockI=idx(['stock','cantidad','existencia']),categoryI=idx(['category','categoria','categoría']),imagesI=idx(['image_urls','imagenes','images','image_url','imagen']);
+    if(nameI<0||priceI<0)throw new Error('El CSV necesita columnas name/nombre y price/precio.');
+    return rows.map(r=>({name:r[nameI]||'',price:Number(r[priceI]||0),stock:stockI>=0?Number(r[stockI]||0):0,category:categoryI>=0?(r[categoryI]||'General'):'General',image_urls:imagesI>=0?String(r[imagesI]||'').split('|').map(x=>x.trim()).filter(Boolean):[]})).filter(r=>String(r.name).trim());
+}
+async function importCatalogCsv(event) {
+    const input=event.currentTarget, file=input.files?.[0];if(!file)return;
+    if(file.size>5*1024*1024){showToast('El CSV no puede superar 5 MB.',true);input.value='';return;}
+    try {
+        const rows=parseCsv(await file.text());
+        const appointmentMode = businessKind(currentBusiness || {}) === 'appointments';
+        const importLabel = appointmentMode ? 'servicios' : (businessKind(currentBusiness || {}) === 'restaurant' ? 'elementos del menú' : 'productos');
+        if(!confirm(`Se intentarán importar ${rows.length} ${importLabel}. Los límites de tu plan se validarán antes de guardar. ¿Continuar?`))return;
+        const result=await api('/api/v1/dashboard/catalog/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
+        showToast(appointmentMode ? `Se actualizaron los servicios y tarifas: ${result.created_products || rows.length}.` : (result.message||'Catálogo importado.'));
+        await loadStoreProducts(); await loadPlanUsage();
+        if (businessKind(currentBusiness || {}) === 'enterprise') await loadEnterpriseWorkspace();
+        else if (businessKind(currentBusiness || {}) === 'retail') await loadRetailWorkspace();
+    } catch(e){showToast('No se pudo importar el CSV: '+e.message,true);} finally {input.value='';}
+}
+
 window.setInterval(() => {
-    if (localStorage.getItem(tokenKey) && !document.hidden) loadPendingWebchatPayments();
+    if (!PREVIEW_MODE && localStorage.getItem(tokenKey) && !document.hidden) {
+        loadPendingWebchatPayments();
+        if (document.getElementById('view-settings')?.classList.contains('active')) loadTelegramChannel(false);
+    }
 }, 3500);
 </script>
 
@@ -1003,17 +1662,21 @@ window.setInterval(() => {
     <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
         <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="ph-bold ph-package" style="font-size: 1.5rem; color: #00f2fe;"></i>
-                <h3 style="margin: 0; font-size: 1.2rem; color: #fff;">Catálogo de Productos</h3>
+                <i id="catalogModalIcon" class="ph-bold ph-package" style="font-size: 1.5rem; color: #00f2fe;"></i>
+                <h3 id="catalogModalTitle" style="margin: 0; font-size: 1.2rem; color: #fff;">Catálogo de Productos</h3>
             </div>
             <button onclick="closeCatalogModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">&times;</button>
         </div>
         <div id="catalogList" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px;">
             <p style="color: #94a3b8; text-align: center;">Cargando catálogo...</p>
         </div>
+        <div style="padding:14px 24px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.18);display:grid;gap:8px;">
+            <label id="catalogCsvLabel" for="catalogCsvInput" style="font-size:12px;color:#cbd5e1;">Importar catálogo CSV · columnas: name, price, stock, category, image_urls (URLs separadas por |)</label>
+            <div class="catalog-actions"><input id="catalogCsvInput" type="file" accept=".csv,text/csv" style="max-width:330px;padding:8px;font-size:12px;" onchange="importCatalogCsv(event)"><span class="muted" style="font-size:11px;">Se validan los límites de tu plan antes de importar.</span></div>
+        </div>
         <div style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
-            <button onclick="seedSampleProducts()" style="background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.3); color: #00f2fe; padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                <i class="ph ph-lightning"></i> Cargar 10 productos de muestra
+            <button onclick="downloadCatalogCsvTemplate()" style="background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.3); color: #00f2fe; padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <i class="ph ph-download-simple"></i> Descargar plantilla CSV
             </button>
             <button onclick="closeCatalogModal()" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; cursor: pointer;">Cerrar</button>
         </div>
