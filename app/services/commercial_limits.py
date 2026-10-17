@@ -13,6 +13,7 @@ PLAN_LIMITS = {
         "images_per_product": 1,
         "ai_responses_month": 600,
         "channels": 1,
+        "whatsapp_bots": 1,
     },
     "smart_business": {
         "label": "Smart Business",
@@ -22,6 +23,7 @@ PLAN_LIMITS = {
         "images_per_product": 3,
         "ai_responses_month": 2500,
         "channels": 2,
+        "whatsapp_bots": 2,
     },
     "enterprise": {
         "label": "Enterprise",
@@ -31,6 +33,7 @@ PLAN_LIMITS = {
         "images_per_product": 5,
         "ai_responses_month": 10000,
         "channels": 3,
+        "whatsapp_bots": 5,
     },
 }
 

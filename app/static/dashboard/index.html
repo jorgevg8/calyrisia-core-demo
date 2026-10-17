@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/brand/calyrisia-mark.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CALYRISIA | Centro de Mando Premium</title>
     <!-- Fuentes Premium -->
@@ -127,13 +128,6 @@
         
         .view-section { display: none; padding: 20px 40px 60px; overflow-y: auto; height: calc(100vh - 75px); scroll-behavior: smooth; }
         .view-section.active { display: block; }
-        .preview-banner { flex: 0 0 auto; padding: 10px 20px; background: linear-gradient(90deg, rgba(8,47,73,.96), rgba(49,26,91,.96)); border-bottom: 1px solid rgba(103,232,249,.25); color: #e0f2fe; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; line-height: 1.5; }
-        .preview-banner strong { color: #67e8f9; letter-spacing: .04em; }
-        .preview-links { display: flex; flex-wrap: nowrap; gap: 6px; max-width: min(72vw, 1100px); overflow-x: auto; padding-bottom: 2px; }
-        .preview-links a { color: #e0e7ff; text-decoration: none; border: 1px solid rgba(199,210,254,.25); background: rgba(255,255,255,.06); padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
-        .preview-links a:hover { border-color: #67e8f9; background: rgba(103,232,249,.12); }
-        body.preview-mode .view-section { height: calc(100vh - 132px); }
-        @media (max-width: 720px) { .preview-banner { padding: 9px 12px; } .preview-links { flex-basis: 100%; max-width: 100%; } body.preview-mode .view-section { height: calc(100vh - 150px); padding: 18px 16px 40px; } }
         .section-header { margin-bottom: 35px; }
         .section-header h2 { font-size: 28px; font-weight: 500; margin-bottom: 6px; color: #fff; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
@@ -283,8 +277,8 @@
 <div id="loginView" class="login-wrap hidden">
     <div class="login-card glass-panel">
         <div class="brand-header" style="justify-content: center; margin-bottom: 35px;">
-            <svg style="width: 48px; height: 48px;"><use href="#atom-animated"></use></svg>
-            <span class="brand-text" style="font-size: 1.8rem; font-weight: 500; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CALYRISIA</span>
+            <img src="/brand/calyrisia-mark.svg" alt="" style="width:48px;height:48px;object-fit:contain">
+            <span class="brand-text calyrisia-wordmark" style="font-size:1.55rem;font-weight:800;letter-spacing:.12em;color:#f3f6ff">CALY<span class="calyrisia-wordmark-accent">RISIA</span></span>
         </div>
         <form id="loginForm">
             <div style="margin-bottom: 20px;">
@@ -305,8 +299,8 @@
     <!-- SIDEBAR SIMPLIFICADA Y ELEGANTE -->
     <div class="sidebar">
         <div class="brand-header sidebar-brand">
-            <svg style="width: 32px; height: 32px;"><use href="#atom-animated"></use></svg>
-            <span class="brand-text" style="font-size: 1.1rem; font-weight: 500; background: var(--silver-metallic); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">CALYRISIA</span>
+            <img src="/brand/calyrisia-mark.svg" alt="" style="width:36px;height:36px;object-fit:contain">
+            <span class="brand-text calyrisia-wordmark" style="font-size:1rem;font-weight:800;letter-spacing:.12em;color:#f3f6ff">CALY<span class="calyrisia-wordmark-accent">RISIA</span></span>
         </div>
         
         <div style="padding: 10px 0; flex: 1; display: flex; flex-direction: column; gap: 2px;">
@@ -596,32 +590,6 @@ const CALYRISIA_PLAN_LIMITS = {
     smart_business: { label:'Smart Business', price:49, products:1000, images:2000, imagesPerProduct:3, ai:2500, channels:2 },
     enterprise: { label:'Enterprise', price:99, products:10000, images:10000, imagesPerProduct:5, ai:10000, channels:3 }
 };
-// Las vistas previas usan los mismos componentes del dashboard, pero datos aislados en memoria.
-// Nunca llaman a la API real ni requieren crear un negocio o usuario.
-const PREVIEW_PROFILES = {
-    ventas: { label:'Ventas y catálogo', business_type:'sales_small', plan_code:'emprendedor', industry:'Comercio minorista', name:'Tienda Emprendedora' },
-    citas: { label:'Citas profesionales', business_type:'appointments_small', plan_code:'emprendedor', industry:'Servicios profesionales', name:'Agenda Profesional' },
-    local: { label:'Local comercial', business_type:'local_store', plan_code:'smart_business', industry:'Comercio local', name:'Local Comercial' },
-    bodegon: { label:'Bodegón', business_type:'bodega', plan_code:'smart_business', industry:'Bodegón y abarrotes', name:'Bodegón Central' },
-    minimarket: { label:'Minimarket', business_type:'minimarket', plan_code:'smart_business', industry:'Minimarket', name:'Minimarket Express' },
-    restaurante: { label:'Restaurante', business_type:'restaurant', plan_code:'smart_business', industry:'Restaurante', name:'Restaurante La Mesa' },
-    consultorio: { label:'Consultorio', business_type:'consultorio', plan_code:'smart_business', industry:'Salud y consultas médicas', name:'Consultorio Médico' },
-    clinica: { label:'Clínica', business_type:'clinic', plan_code:'smart_business', industry:'Clínica de salud', name:'Clínica Integral' },
-    supermercado: { label:'Supermercado', business_type:'supermarket', plan_code:'enterprise', industry:'Supermercado de alto volumen', name:'Supermercado Central' },
-    hipermercado: { label:'Hipermercado', business_type:'hypermarket', plan_code:'enterprise', industry:'Hipermercado y ventas masivas', name:'Hipermercado Nova' },
-    empresa: { label:'Empresa grande', business_type:'large_company', plan_code:'enterprise', industry:'Empresa con operaciones múltiples', name:'Grupo Empresarial' }
-};
-const PREVIEW_PROFILE_KEY = new URLSearchParams(window.location.search).get('preview') || '';
-const PREVIEW_PROFILE = PREVIEW_PROFILES[PREVIEW_PROFILE_KEY] || null;
-const PREVIEW_MODE = Boolean(PREVIEW_PROFILE);
-let previewBookings = [];
-let previewCatalog = [];
-let previewOrders = [];
-let previewTableCount = 12;
-let previewWebchatEnabled = true;
-let previewTelegramEnabled = true;
-let previewPaymentInstructions = { methods: { pago_movil: { enabled:false, instructions:'' }, binance: { enabled:false, instructions:'' } } };
-let previewRecordCounter = 100;
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -725,7 +693,6 @@ function showDashboard() {
 
 
 async function openBusinessWebchat() {
-    if (PREVIEW_MODE) { showToast('El Webchat conectado al negocio solo se prueba con una cuenta real. Esta vista previa está aislada.'); return; }
     try {
         const channels = await api('/api/v1/dashboard/channels');
         if (!channels.webchat_enabled) { showToast('Activa Webchat antes de abrir el enlace del negocio.', true); return; }
@@ -747,10 +714,6 @@ function switchView(viewId) {
 }
 
 function logout(silent = false) {
-    if (PREVIEW_MODE) {
-        if (!silent) showToast('Estás en modo de vista previa. Abre el enlace del dashboard para continuar.');
-        return;
-    }
     currentBusinessId = null;
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(roleKey);
@@ -758,7 +721,6 @@ function logout(silent = false) {
 }
 
 async function api(path, options = {}) {
-    if (PREVIEW_MODE) return previewApi(path, options);
     const token = localStorage.getItem(tokenKey);
     const headers = { ...(options.headers || {}) };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -1155,131 +1117,9 @@ async function sendCopilotMessage(forcedMessage = null) {
 }
 
 /* ---------------------------------------------------------
-   VISTAS PREVIAS DE DASHBOARD (SIN USUARIO NI ESCRITURAS REALES)
---------------------------------------------------------- */
-function previewIso(minutesFromNow) {
-    return new Date(Date.now() + minutesFromNow * 60000).toISOString();
-}
-function initialisePreviewData() {
-    const kind = businessKind(PREVIEW_PROFILE.business_type);
-    const bookingType = kind === 'restaurant' ? 'reservation' : 'appointment';
-    previewTableCount = kind === 'restaurant' ? 14 : 12;
-    previewBookings = (['appointments','restaurant'].includes(kind)) ? [
-        { id:'preview-booking-1', booking_type:bookingType, customer_name:'María González', customer_phone:'+58 412 555 0101', service_name:kind==='restaurant'?'Mesa familiar':'Consulta inicial', starts_at:previewIso(35), status:'confirmed', party_size:kind==='restaurant'?4:1, table_number:'02', notes:'Registro de ejemplo' },
-        { id:'preview-booking-2', booking_type:bookingType, customer_name:'Carlos Rodríguez', customer_phone:'+58 414 555 0132', service_name:kind==='restaurant'?'Almuerzo de trabajo':'Control / seguimiento', starts_at:previewIso(95), status:'pending', party_size:kind==='restaurant'?3:1, table_number:'05', notes:'Registro de ejemplo' },
-        { id:'preview-booking-3', booking_type:bookingType, customer_name:'Ana Pérez', customer_phone:'+58 424 555 0168', service_name:kind==='restaurant'?'Reserva para dos':'Evaluación / asesoría', starts_at:previewIso(180), status:'confirmed', party_size:2, table_number:'08', notes:'Registro de ejemplo' }
-    ] : [];
-    const rows = kind === 'appointments' ? [
-        ['Consulta inicial',35,'Consultas',0],['Control y seguimiento',20,'Consultas',0],['Evaluación especializada',45,'Evaluaciones',0],['Asesoría de 60 minutos',30,'Asesorías',0]
-    ] : kind === 'restaurant' ? [
-        ['Arepa reina pepiada',7.5,'Arepas',0],['Hamburguesa de la casa',10,'Platos principales',0],['Ensalada César',8,'Ensaladas',0],['Jugo natural',3,'Bebidas',0],['Menú infantil',6,'Menú infantil',0]
-    ] : [
-        ['Café premium 250 g',5.5,'Abarrotes',4],['Aceite vegetal 1 L',3.25,'Abarrotes',18],['Arroz 1 kg',1.8,'Granos',3],['Leche entera 1 L',2.1,'Lácteos',24],['Detergente 900 g',4.75,'Limpieza',6],['Agua mineral 1.5 L',1.2,'Bebidas',2]
-    ];
-    previewCatalog = rows.map((r,i)=>({id:`preview-product-${i+1}`,name:r[0],price:r[1],category:r[2],stock:r[3],images:[]}));
-    previewOrders = kind === 'enterprise' ? [
-        {id:'preview-order-1',order_number:'PED-10482',created_at:previewIso(-40),payment_status:'pendiente',total_amount:1284.5,status:'processing'},
-        {id:'preview-order-2',order_number:'PED-10481',created_at:previewIso(-130),payment_status:'confirmado',total_amount:876.25,status:'pending'},
-        {id:'preview-order-3',order_number:'PED-10480',created_at:previewIso(-250),payment_status:'confirmado',total_amount:2470,status:'created'}
-    ] : [];
-    previewWebchatEnabled = true;
-    previewTelegramEnabled = true;
-    previewPaymentInstructions = { methods: { pago_movil: { enabled:false, instructions:'' }, binance: { enabled:false, instructions:'' } } };
-    previewRecordCounter = 100;
-}
-function previewPlanPayload() {
-    const plan = CALYRISIA_PLAN_LIMITS[currentPlanCode] || CALYRISIA_PLAN_LIMITS.emprendedor;
-    return { label:plan.label, price_usd:plan.price, products:plan.products, images:plan.images, images_per_product:plan.imagesPerProduct, ai_responses_month:plan.ai, channels:plan.channels };
-}
-async function previewApi(path, options = {}) {
-    const method = String(options.method || 'GET').toUpperCase();
-    const url = new URL(path, window.location.origin);
-    let payload = {};
-    try { payload = options.body ? JSON.parse(options.body) : {}; } catch (_) { payload = {}; }
-    const kind = businessKind(PREVIEW_PROFILE.business_type);
-    const bookingTypeForProfile = kind === 'restaurant' ? 'reservation' : 'appointment';
-    if (url.pathname.endsWith('/auth/me')) return { user:{ role:'OWNER', business_id:currentBusinessId, business_name:currentBusiness?.name || PREVIEW_PROFILE.name } };
-    if (url.pathname.endsWith('/dashboard/overview')) return { business:currentBusiness, analytics:{orders:{sales_total:4832.7,sales_today:426.5},conversations_total:128,handoffs_total:7}, insights:[] };
-    if (url.pathname.endsWith('/dashboard/plan-usage')) return { plan:previewPlanPayload(), usage:{ai_responses:142,products:previewCatalog.length,images:previewCatalog.reduce((n,p)=>n+(p.images||[]).length,0),channels:(previewWebchatEnabled?1:0)+(previewTelegramEnabled?1:0)} };
-    if (url.pathname.endsWith('/dashboard/catalog') && method === 'GET') return { products:previewCatalog.map(p=>({...p,images:[...(p.images||[])]})), total:previewCatalog.length };
-    if (url.pathname.endsWith('/dashboard/catalog/import') && method === 'POST') {
-        const rows = Array.isArray(payload.rows)?payload.rows:[];
-        const remaining = Math.max(0, (CALYRISIA_PLAN_LIMITS[currentPlanCode]?.products || 0) - previewCatalog.length);
-        const accepted = rows.slice(0,remaining).map((r)=>({id:`preview-product-${++previewRecordCounter}`,name:String(r.name||'Producto de prueba'),price:Number(r.price||0),category:String(r.category||'General'),stock:Number(r.stock||0),images:Array.isArray(r.image_urls)?r.image_urls:[]}));
-        previewCatalog.push(...accepted);
-        return {success:true,created_products:accepted.length,message:`Vista previa: ${accepted.length} registro(s) añadidos solo en memoria. No se guardó nada en la base de datos.`};
-    }
-    if (url.pathname.endsWith('/dashboard/bookings') && method === 'GET') {
-        const type=url.searchParams.get('booking_type') || bookingTypeForProfile;
-        return {bookings:previewBookings.filter(b=>b.booking_type===type).map(b=>({...b}))};
-    }
-    if (url.pathname.endsWith('/dashboard/bookings') && method === 'POST') {
-        const type=payload.booking_type || bookingTypeForProfile;
-        const record={id:`preview-booking-${++previewRecordCounter}`,booking_type:type,customer_name:String(payload.customer_name||'Cliente de prueba'),customer_phone:String(payload.customer_phone||''),service_name:String(payload.service_name||(type==='reservation'?'Reserva de mesa':'Cita')),starts_at:payload.starts_at||previewIso(120),status:'pending',party_size:Number(payload.party_size||1),table_number:payload.table_number||null,notes:String(payload.notes||'')};
-        previewBookings.unshift(record);
-        return {success:true,message:'Vista previa: registro añadido en memoria, sin guardar datos reales.',booking:record};
-    }
-    const bookingMatch=url.pathname.match(/\/dashboard\/bookings\/([^/]+)$/);
-    if (bookingMatch && method === 'PATCH') {
-        const item=previewBookings.find(b=>b.id===decodeURIComponent(bookingMatch[1]));
-        if (item) item.status=String(payload.status||item.status);
-        return {success:Boolean(item),message:'Vista previa: estado actualizado en memoria.'};
-    }
-    if (url.pathname.endsWith('/dashboard/business-settings') && method === 'GET') return {restaurant_table_count:previewTableCount};
-    if (url.pathname.endsWith('/dashboard/business-settings') && method === 'PUT') { previewTableCount=Math.max(1,Math.min(100,Number(payload.restaurant_table_count||12))); return {restaurant_table_count:previewTableCount,message:'Vista previa: cantidad de mesas actualizada solo en memoria.'}; }
-    if (url.pathname.endsWith('/sales/orders')) return {orders:previewOrders.map(o=>({...o}))};
-    if (url.pathname.endsWith('/dashboard/channels/telegram') && method === 'GET') return {configured:true,enabled:previewTelegramEnabled,owner_chat_id:'preview-chat',token_hint:'(simulado)',message:'Vista previa de Telegram.'};
-    if (url.pathname.endsWith('/dashboard/channels/telegram/toggle') && method === 'POST') { previewTelegramEnabled=Boolean(payload.enabled); return {enabled:previewTelegramEnabled,message:'Vista previa: Telegram actualizado en memoria.'}; }
-    if (url.pathname.endsWith('/dashboard/channels/telegram/test')) return {success:true,message:'Vista previa: notificación simulada.'};
-    if (url.pathname.endsWith('/dashboard/channels/telegram') && method === 'POST') return {success:true,enabled:true,configured:true,message:'Vista previa: canal simulado.'};
-    if (url.pathname.endsWith('/dashboard/channels') && method === 'GET') return {webchat_enabled:previewWebchatEnabled,telegram_enabled:previewTelegramEnabled,active_channels:(previewWebchatEnabled?1:0)+(previewTelegramEnabled?1:0),max_channels:CALYRISIA_PLAN_LIMITS[currentPlanCode].channels};
-    if (url.pathname.endsWith('/dashboard/channels/webchat/toggle') && method === 'POST') { previewWebchatEnabled=Boolean(payload.enabled); return {webchat_enabled:previewWebchatEnabled,message:'Vista previa: Webchat actualizado en memoria.'}; }
-    if (url.pathname.endsWith('/dashboard/payment-instructions') && method === 'GET') return previewPaymentInstructions;
-    if (url.pathname.endsWith('/dashboard/payment-instructions') && method === 'PUT') { previewPaymentInstructions=payload; return {success:true,message:'Vista previa: método de cobro simulado; no se guardó nada real.'}; }
-    if (url.pathname.endsWith('/dashboard/webchat-payments')) return {payments:[]};
-    if (url.pathname.includes('/dashboard/webchat-payments/') && method === 'POST') return {success:true,message:'Vista previa: decisión simulada.'};
-    if (url.pathname.endsWith('/autonomy/audit')) return [];
-    if (url.pathname.endsWith('/owner/copilot')) return {response:'Esta es una vista previa de CALYRISIA. El Copiloto no se conecta a una cuenta ni a datos reales en este modo.'};
-    return {success:true,message:'Acción simulada en vista previa. No se llamó al backend real.'};
-}
-function installPreviewBanner() {
-    const host=document.querySelector('.main-content');
-    if (!host || document.getElementById('preview-mode-banner')) return;
-    const banner=document.createElement('div');
-    banner.id='preview-mode-banner';
-    banner.className='preview-banner';
-    const links=Object.entries(PREVIEW_PROFILES).map(([key,profile])=>`<a href="/dashboard/preview/${key}/"${key===PREVIEW_PROFILE_KEY?' aria-current="page" style="border-color:#67e8f9;background:rgba(103,232,249,.16)"':''}>${escapeHtml(profile.label)}</a>`).join('');
-    banner.innerHTML=`<div><strong><i class="ph ph-eye"></i> MODO PREVISUALIZACIÓN</strong><div>Datos de ejemplo. Puedes probar la interfaz; ningún cambio se guarda en una cuenta real.</div></div><nav class="preview-links" aria-label="Cambiar vista previa">${links}</nav>`;
-    host.prepend(banner);
-}
-function startDashboardPreview() {
-    initialisePreviewData();
-    let robotsMeta=document.querySelector('meta[name="robots"]');
-    if (!robotsMeta) { robotsMeta=document.createElement('meta'); robotsMeta.name='robots'; document.head.appendChild(robotsMeta); }
-    robotsMeta.content='noindex,nofollow';
-    currentBusinessId=`preview-${PREVIEW_PROFILE_KEY}`;
-    currentPlanCode=normalizePlanCode(PREVIEW_PROFILE.plan_code);
-    currentBusiness={id:currentBusinessId,name:`${PREVIEW_PROFILE.name} · Vista previa`,business_type:PREVIEW_PROFILE.business_type,industry:PREVIEW_PROFILE.industry,plan_code:PREVIEW_PROFILE.plan_code,timezone:'America/Caracas',currency:'USD'};
-    document.body.classList.add('preview-mode');
-    const businessName=document.getElementById('businessName'); if(businessName) businessName.textContent=currentBusiness.name;
-    const businessMeta=document.getElementById('businessMeta'); if(businessMeta) businessMeta.textContent=`${PREVIEW_PROFILE.label} · Plan ${CALYRISIA_PLAN_LIMITS[currentPlanCode].label} · Datos de ejemplo`;
-    const businessId=document.getElementById('display-business-id'); if(businessId) businessId.textContent='PREVIEW · SIN CUENTA';
-    const sales=document.getElementById('kpi-sales'); if(sales) sales.textContent=businessKind(currentBusiness)==='restaurant'?'—':'$4,832.70';
-    const today=document.getElementById('kpi-sales-today'); if(today) today.textContent=businessKind(currentBusiness)==='restaurant'?'—':'$426.50';
-    const chats=document.getElementById('kpi-chats'); if(chats) chats.textContent='128';
-    const handoffs=document.getElementById('kpi-handoffs'); if(handoffs) handoffs.textContent='7';
-    setupBusinessNavigation(currentBusiness);
-    installPreviewBanner();
-    showDashboard();
-    switchView('specialized');
-    applyBusinessOverview(currentBusiness);
-}
-/* ---------------------------------------------------------
    INICIALIZACIÓN
 --------------------------------------------------------- */
-if (PREVIEW_MODE) { startDashboardPreview(); }
-else if (localStorage.getItem(tokenKey)) { loadDashboard(); }
-else { showLogin(); }
+if (localStorage.getItem(tokenKey)) { loadDashboard(); } else { showLogin(); }
 // Mantiene las notificaciones de pago actualizadas aunque el dueño esté en otra vista.
 
 /* ---------------------------------------------------------
@@ -1650,7 +1490,7 @@ async function importCatalogCsv(event) {
 }
 
 window.setInterval(() => {
-    if (!PREVIEW_MODE && localStorage.getItem(tokenKey) && !document.hidden) {
+    if (localStorage.getItem(tokenKey) && !document.hidden) {
         loadPendingWebchatPayments();
         if (document.getElementById('view-settings')?.classList.contains('active')) loadTelegramChannel(false);
     }

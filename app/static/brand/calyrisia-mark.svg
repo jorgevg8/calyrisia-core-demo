@@ -1,20 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="title">
-  <title id="title">CALYRISIA</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-labelledby="calyrisiaTitle">
+  <title id="calyrisiaTitle">Símbolo CALYRISIA</title>
   <defs>
-    <linearGradient id="orbit" x1="9" y1="8" x2="55" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#83F2F1"/><stop offset=".48" stop-color="#7FB2FF"/><stop offset="1" stop-color="#B5A1FF"/>
+    <linearGradient id="calyrisiaEdge" x1="15" y1="10" x2="82" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A7F4F3"/><stop offset=".48" stop-color="#70B9F4"/><stop offset="1" stop-color="#BBA5FF"/>
     </linearGradient>
-    <linearGradient id="core" x1="23" y1="21" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F3FFFF"/><stop offset=".45" stop-color="#A5E8FF"/><stop offset="1" stop-color="#9E8FFF"/>
+    <linearGradient id="calyrisiaCore" x1="34" y1="30" x2="65" y2="69" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FEFF"/><stop offset=".54" stop-color="#A4E7F6"/><stop offset="1" stop-color="#B6A4FF"/>
     </linearGradient>
   </defs>
-  <path d="M45.6 12.8A25 25 0 1 0 53 40.9" stroke="url(#orbit)" stroke-width="2.7" stroke-linecap="round"/>
-  <path d="M15.3 19.2C24.6 9.9 40.7 10.2 49.7 20.1" stroke="url(#orbit)" stroke-width="1.5" stroke-linecap="round" opacity=".64"/>
-  <path d="M11 35.5C18.5 45.3 33.1 49.6 45.2 43.6" stroke="url(#orbit)" stroke-width="1.5" stroke-linecap="round" opacity=".55"/>
-  <path d="M32 20.5 42.8 26.7 42.8 38.9 32 45.1 21.2 38.9 21.2 26.7 32 20.5Z" stroke="url(#core)" stroke-width="1.7"/>
-  <path d="M32 25.7 38.3 29.3 38.3 36.4 32 40 25.7 36.4 25.7 29.3 32 25.7Z" fill="url(#core)" fill-opacity=".15" stroke="url(#core)" stroke-width="1.2"/>
-  <path d="M32 29.2 35.8 31.4 35.8 35.7 32 37.9 28.2 35.7 28.2 31.4 32 29.2Z" fill="url(#core)"/>
-  <circle cx="49.4" cy="15.1" r="2.4" fill="#AEEFFF"/>
-  <circle cx="11.4" cy="43.6" r="2.2" fill="#B8A5FF"/>
-  <circle cx="51.6" cy="47.2" r="1.8" fill="#A7C2FF"/>
+  <path d="M66.2 16.8A34 34 0 1 0 78.3 61.4" stroke="url(#calyrisiaEdge)" stroke-width="4.2" stroke-linecap="round"/>
+  <path d="M25.6 23.9C36.9 13.6 55.1 13.7 66.3 24.1" stroke="url(#calyrisiaEdge)" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>
+  <path d="M18.1 55.7C26.6 69.6 45.6 76.4 62.2 68.1" stroke="url(#calyrisiaEdge)" stroke-width="2.2" stroke-linecap="round" opacity=".64"/>
+  <path d="M48 27.3 65.2 37.2 65.2 57 48 66.9 30.8 57 30.8 37.2 48 27.3Z" stroke="url(#calyrisiaCore)" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M48 36.6 57.1 41.8 57.1 52.3 48 57.5 38.9 52.3 38.9 41.8 48 36.6Z" fill="url(#calyrisiaCore)" fill-opacity=".11" stroke="url(#calyrisiaCore)" stroke-width="2.1" stroke-linejoin="round"/>
+  <path d="M48 43.2 53.1 46.1 53.1 51.9 48 54.8 42.9 51.9 42.9 46.1 48 43.2Z" fill="url(#calyrisiaCore)"/>
+  <circle cx="69.7" cy="19.5" r="4.1" fill="#B9F7F4" stroke="#07111D" stroke-width="1.8"/>
+  <circle cx="17.2" cy="62.3" r="3.4" fill="#BDA9FF" stroke="#07111D" stroke-width="1.8"/>
+  <circle cx="76.2" cy="70.8" r="2.8" fill="#9DCBFF" stroke="#07111D" stroke-width="1.7"/>
 </svg>

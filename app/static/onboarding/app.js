@@ -24,7 +24,35 @@ const CONTACT_WHATSAPP = '584128418550';
 const CONTACT_EMAIL = 'jorge@calyrisia.com';
 const PLAN_BADGES = {emprendedor:'Para operaciones pequeñas',smart_business:'Para negocios en crecimiento',enterprise:'Para grandes operaciones'};
 let planCatalog = FALLBACK_PLANS;
-let planFilterCode = new URLSearchParams(window.location.search).get('plan') || '';
+const onboardingParams = new URLSearchParams(window.location.search);
+let planFilterCode = onboardingParams.get('plan') || '';
+const checkoutRef = onboardingParams.get('ref') || '';
+const checkoutMethod = onboardingParams.get('method') || '';
+const checkoutJourneyLocked = Boolean(checkoutRef && ['emprendedor','smart_business','enterprise'].includes(planFilterCode));
+const PAYMENT_LABELS = {transferencia:'Transferencia bancaria',pago_movil:'Pago Móvil',binance:'Binance Pay',zinli:'Zinli',tarjeta:'Tarjeta bancaria'};
+let checkoutPaymentVerified = false;
+async function refreshCheckoutPaymentStatus() {
+  if (!checkoutJourneyLocked || !checkoutRef) return;
+  try {
+    const response = await fetch(`/api/v1/public/checkout/status/${encodeURIComponent(checkoutRef)}`, {headers:{'Accept':'application/json'}});
+    if (!response.ok) return;
+    const record = await response.json();
+    checkoutPaymentVerified = record.status === 'paid' && record.plan_code === planFilterCode && record.payment_method === checkoutMethod;
+    if (checkoutPaymentVerified) {
+      const status = document.getElementById('checkout-payment-status');
+      if (status) status.textContent = 'Pago con tarjeta verificado por el proveedor.';
+      const context = document.getElementById('checkout-context');
+      if (context && selectedPlan && selectedProfile) renderSelectedPlanStrip();
+      const summaryStatus = document.getElementById('checkout-summary-payment-status');
+      if (summaryStatus) summaryStatus.textContent = 'Pago verificado';
+    }
+  } catch (_) {}
+}
+if (!checkoutJourneyLocked || !PAYMENT_LABELS[checkoutMethod]) {
+  const requestedPlan = ['emprendedor','smart_business','enterprise'].includes(planFilterCode) ? planFilterCode : 'emprendedor';
+  window.location.replace(`/contratar/?plan=${encodeURIComponent(requestedPlan)}`);
+  throw new Error('El onboarding debe abrirse desde un enlace de contratación válido.');
+}
 let selectedBusinessType = '';
 let selectedPlan = null;
 let selectedProfile = null;
@@ -52,7 +80,7 @@ function renderPlanOptions() {
     ? planCatalog.filter(plan => plan.code === planFilterCode)
     : planCatalog;
   const filterBanner = ['emprendedor','smart_business','enterprise'].includes(planFilterCode)
-    ? `<div class="plan-filter-banner"><span>Estás viendo perfiles compatibles con <strong>${escapeHtml((planCatalog.find(p => p.code === planFilterCode) || {}).label || planFilterCode)}</strong>.</span><button type="button" onclick="clearPlanFilter()">Comparar todos los planes</button></div>`
+    ? `<div class="plan-filter-banner"><span>Estás viendo perfiles compatibles con <strong>${escapeHtml((planCatalog.find(p => p.code === planFilterCode) || {}).label || planFilterCode)}</strong>${checkoutJourneyLocked ? ` · Referencia: <strong>${escapeHtml(checkoutRef)}</strong>` : ''}.</span>${checkoutJourneyLocked ? '<span class="plan-filter-lock">Plan asociado a tu proceso de contratación</span>' : '<button type="button" onclick="clearPlanFilter()">Comparar todos los planes</button>'}</div>`
     : '';
   root.innerHTML = filterBanner + visiblePlans.map(plan => {
     const featured = plan.code === 'smart_business';
@@ -86,6 +114,7 @@ function selectBusinessType(typeCode) {
 }
 
 function clearPlanFilter() {
+  if (checkoutJourneyLocked) return;
   planFilterCode = '';
   const cleanUrl = `${window.location.pathname}${window.location.hash || ''}`;
   window.history.replaceState({}, '', cleanUrl);
@@ -124,6 +153,12 @@ function renderSelectedPlanStrip() {
   const strip = document.getElementById('selected-plan-strip');
   if (!strip || !selectedProfile || !selectedPlan) return;
   strip.innerHTML = `<div class="strip-icon">✦</div><div><strong>${escapeHtml(selectedProfile.label)}</strong><small>${escapeHtml(selectedProfile.dashboard_label || 'Panel personalizado')}</small></div><div class="strip-price"><strong>$${Number(selectedPlan.price_usd).toFixed(0)}</strong><small>USD/mes</small></div>`;
+  const context = document.getElementById('checkout-context');
+  if (context && checkoutJourneyLocked) {
+    const method = PAYMENT_LABELS[checkoutMethod] || 'Por confirmar';
+    context.hidden = false;
+    context.innerHTML = `<strong>Proceso de contratación asociado.</strong><br>Referencia: <strong>${escapeHtml(checkoutRef)}</strong> · Método: <strong>${escapeHtml(method)}</strong>.<br><span id="checkout-payment-status">${checkoutPaymentVerified ? 'Pago con tarjeta verificado por el proveedor.' : (checkoutMethod === 'tarjeta' ? 'Consultando confirmación del pago…' : 'El comprobante de este método requiere revisión manual.')}</span>`;
+  }
 }
 
 function readRequest() {
@@ -159,6 +194,7 @@ function prepareRequest() {
       <div><small>Canales de interés</small><strong>${escapeHtml(channelText)}</strong></div>
       <div><small>Moneda</small><strong>${escapeHtml(request.currency)}</strong></div>
       <div><small>Zona horaria</small><strong>${escapeHtml(request.timezone)}</strong></div>
+      ${checkoutJourneyLocked ? `<div><small>Referencia de contratación</small><strong>${escapeHtml(checkoutRef)}</strong></div><div><small>Método de pago</small><strong id="checkout-summary-payment-status">${checkoutPaymentVerified ? 'Pago verificado' : `${escapeHtml(PAYMENT_LABELS[checkoutMethod] || 'Por confirmar')} · pendiente de validar`}</strong></div>` : ''}
       ${request.phone ? `<div class="summary-wide"><small>WhatsApp</small><strong>${escapeHtml(request.phone)}</strong></div>` : ''}
       ${request.needs ? `<div class="summary-wide"><small>Prioridad del negocio</small><strong>${escapeHtml(request.needs)}</strong></div>` : ''}
     </div>`;
@@ -181,6 +217,8 @@ function composeMessage() {
     `Canales de interés: ${channelText}`,
     `Moneda: ${r.currency}`,
     `Zona horaria: ${r.timezone}`,
+    checkoutJourneyLocked ? `Referencia de contratación: ${checkoutRef}` : '',
+    checkoutJourneyLocked ? `Método de pago indicado: ${PAYMENT_LABELS[checkoutMethod] || 'Por confirmar'} (${checkoutPaymentVerified ? 'pago de tarjeta verificado por el proveedor' : 'pendiente de revisión; no afirmar como pagado'})` : '',
     r.needs ? `Prioridad: ${r.needs}` : '',
     '',
     'Entiendo que la activación y la configuración se confirman con CALYRISIA antes de empezar.'
@@ -202,3 +240,4 @@ function sendEmailRequest() {
 }
 
 loadPlanOptions();
+refreshCheckoutPaymentStatus();

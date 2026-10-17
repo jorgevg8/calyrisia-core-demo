@@ -91,6 +91,8 @@ def _parse_custom_products(text: str) -> list[dict]:
 import asyncio
 import hmac
 import os
+import httpx
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
@@ -499,6 +501,59 @@ async def _ensure_commercial_dashboard_schema() -> None:
             raise
 
 
+async def _ensure_public_checkout_schema() -> None:
+    """Durable order tracking for manual checkout and verified PayPal subscriptions."""
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.calyrisia_checkout_orders (
+                        checkout_ref varchar(64) PRIMARY KEY,
+                        plan_code varchar(32) NOT NULL CHECK (plan_code IN ('emprendedor','smart_business','enterprise')),
+                        amount numeric(10,2) NOT NULL CHECK (amount > 0),
+                        currency varchar(3) NOT NULL DEFAULT 'USD',
+                        payment_method varchar(30) NOT NULL DEFAULT 'pending',
+                        status varchar(30) NOT NULL DEFAULT 'pending'
+                            CHECK (status IN ('pending','awaiting_payment','paid','failed','cancelled')),
+                        paypal_subscription_id varchar(128) UNIQUE,
+                        paypal_plan_id varchar(128),
+                        paypal_transaction_id varchar(128),
+                        subscription_status varchar(32),
+                        webhook_event_id varchar(128),
+                        created_at timestamptz NOT NULL DEFAULT now(),
+                        updated_at timestamptz NOT NULL DEFAULT now(),
+                        paid_at timestamptz
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_calyrisia_checkout_status_created ON public.calyrisia_checkout_orders(status, created_at DESC)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_calyrisia_checkout_paypal_subscription ON public.calyrisia_checkout_orders(paypal_subscription_id)")
+                # Webhooks may arrive before the browser's subscription-attach call. Keep unmatched
+                # verified sales briefly so attach can reconcile them rather than losing a payment.
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.calyrisia_paypal_pending_sales (
+                        subscription_id varchar(128) NOT NULL,
+                        transaction_id varchar(128) NOT NULL,
+                        event_id varchar(128),
+                        amount numeric(10,2) NOT NULL,
+                        currency varchar(3) NOT NULL,
+                        created_at timestamptz NOT NULL DEFAULT now(),
+                        PRIMARY KEY (subscription_id, transaction_id)
+                    )
+                """)
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            print(f"[CALYRISIA][WARN] No se pudo preparar el esquema de checkout: {exc}")
+            raise
+
+
+def _setup_public_checkout_schema_in_worker() -> None:
+    try:
+        asyncio.run(_ensure_public_checkout_schema())
+    except Exception as exc:
+        print(f"[CALYRISIA][WARN] Checkout comercial no disponible todavía: {exc}")
+
+
 def _setup_commercial_dashboard_schema_in_worker() -> None:
     try:
         asyncio.run(_ensure_commercial_dashboard_schema())
@@ -525,8 +580,9 @@ async def lifespan(app: FastAPI):
     # API process responsive and report database status through /health/ready.
     schema_task = asyncio.create_task(asyncio.to_thread(_setup_payment_schema_in_worker))
     commercial_schema_task = asyncio.create_task(asyncio.to_thread(_setup_commercial_dashboard_schema_in_worker))
+    checkout_schema_task = asyncio.create_task(asyncio.to_thread(_setup_public_checkout_schema_in_worker))
     # Wait for additive schemas before accepting tenant-aware features; failures are logged, not fatal.
-    await asyncio.gather(schema_task, commercial_schema_task, return_exceptions=True)
+    await asyncio.gather(schema_task, commercial_schema_task, checkout_schema_task, return_exceptions=True)
     heartbeat_task = asyncio.create_task(HeartbeatService.run_loop())
     await start_telegram_polling()
     try:
@@ -1132,12 +1188,14 @@ async def update_dashboard_booking(booking_id: UUID, payload: dict, current_user
 
 app.include_router(telegram_router, prefix="/api/v1")
 
+app.mount("/brand", StaticFiles(directory="app/static/brand"), name="brand")
 app.mount("/webchat", StaticFiles(directory="app/static/webchat", html=True), name="webchat")
 app.mount("/onboarding", StaticFiles(directory="app/static/onboarding", html=True), name="onboarding")
 app.mount("/dashboard", StaticFiles(directory="app/static/dashboard", html=True), name="dashboard")
 app.mount("/operations", StaticFiles(directory="app/static/operations", html=True), name="operations")
 app.mount("/landing", StaticFiles(directory="app/static/landing", html=True), name="landing")
 app.mount("/contacto", StaticFiles(directory="app/static/contacto", html=True), name="contacto")
+app.mount("/contratar", StaticFiles(directory="app/static/contratar", html=True), name="contratar")
 app.mount("/feedback", StaticFiles(directory="app/static/feedback", html=True), name="feedback")
 
 @app.get("/", include_in_schema=False)
@@ -2640,6 +2698,364 @@ async def recommendations_dashboard(
 @app.get("/api/v1/demo/overview")
 async def demo_overview_retired():
     raise HTTPException(status_code=410, detail="La demo pública fue retirada. Contacta con CALYRISIA para contratar el servicio.")
+
+
+CHECKOUT_PLANS = {
+    "emprendedor": {"label": "Emprendedor", "amount": Decimal("19.00"), "env_suffix": "EMPRENDEDOR"},
+    "smart_business": {"label": "Smart Business", "amount": Decimal("49.00"), "env_suffix": "SMART_BUSINESS"},
+    "enterprise": {"label": "Enterprise", "amount": Decimal("99.00"), "env_suffix": "ENTERPRISE"},
+}
+CHECKOUT_METHODS = {"transferencia", "pago_movil", "binance", "zinli", "tarjeta"}
+
+
+def _checkout_public_value(name: str) -> str:
+    return os.getenv(name, "").strip()[:300]
+
+
+def _paypal_mode() -> str:
+    # Safe default: never charge real cards unless production mode is explicitly selected.
+    return "live" if os.getenv("CALYRISIA_PAYPAL_MODE", "sandbox").strip().lower() == "live" else "sandbox"
+
+
+def _paypal_api_base() -> str:
+    return "https://api-m.sandbox.paypal.com" if _paypal_mode() == "sandbox" else "https://api-m.paypal.com"
+
+
+def _paypal_plan_id(plan_code: str) -> str:
+    suffix = CHECKOUT_PLANS[plan_code]["env_suffix"]
+    return _checkout_public_value(f"CALYRISIA_PAYPAL_PLAN_ID_{suffix}")
+
+
+def _paypal_ready() -> bool:
+    return bool(
+        _checkout_public_value("CALYRISIA_PAYPAL_CLIENT_ID")
+        and _checkout_public_value("CALYRISIA_PAYPAL_CLIENT_SECRET")
+        and _checkout_public_value("CALYRISIA_PAYPAL_WEBHOOK_ID")
+        and all(_paypal_plan_id(code) for code in CHECKOUT_PLANS)
+    )
+
+
+async def _paypal_access_token() -> str:
+    client_id = _checkout_public_value("CALYRISIA_PAYPAL_CLIENT_ID")
+    client_secret = os.getenv("CALYRISIA_PAYPAL_CLIENT_SECRET", "").strip()
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=503, detail="El pago con tarjeta aún no está configurado en CALYRISIA.")
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(
+                f"{_paypal_api_base()}/v1/oauth2/token",
+                auth=(client_id, client_secret),
+                data={"grant_type": "client_credentials"},
+                headers={"Accept": "application/json", "Accept-Language": "es-ES"},
+            )
+        if response.status_code != 200:
+            print(f"[CALYRISIA][PAYPAL] Token request failed: {response.status_code}")
+            raise HTTPException(status_code=502, detail="No se pudo conectar con el proveedor de pagos.")
+        token = response.json().get("access_token")
+        if not token:
+            raise HTTPException(status_code=502, detail="El proveedor de pagos no entregó un token válido.")
+        return str(token)
+    except httpx.HTTPError as exc:
+        print(f"[CALYRISIA][PAYPAL] Network error obtaining token: {type(exc).__name__}")
+        raise HTTPException(status_code=502, detail="No se pudo conectar con el proveedor de pagos.") from exc
+
+
+async def _paypal_request(method: str, endpoint: str, payload: dict | None = None, params: dict | None = None) -> dict:
+    token = await _paypal_access_token()
+    try:
+        async with httpx.AsyncClient(timeout=25.0) as client:
+            response = await client.request(
+                method, f"{_paypal_api_base()}{endpoint}",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "application/json"},
+                json=payload if payload is not None else None,
+                params=params,
+            )
+        if response.status_code >= 400:
+            print(f"[CALYRISIA][PAYPAL] API request failed: {method} {endpoint} -> {response.status_code}")
+            raise HTTPException(status_code=502, detail="El proveedor de pagos no pudo completar la operación.")
+        return response.json() if response.content else {}
+    except httpx.HTTPError as exc:
+        print(f"[CALYRISIA][PAYPAL] Network error: {type(exc).__name__}")
+        raise HTTPException(status_code=502, detail="No se pudo conectar con el proveedor de pagos.") from exc
+
+
+@app.get("/api/v1/public/checkout/config")
+async def public_checkout_config() -> dict:
+    """Expose safe checkout settings only; never return PayPal secrets or card data."""
+    contact = {
+        "whatsapp": _checkout_public_value("CALYRISIA_SALES_WHATSAPP") or "584128418550",
+        "email": _checkout_public_value("CALYRISIA_SALES_EMAIL") or "jorge@calyrisia.com",
+    }
+    binance = {
+        "Binance Pay ID": _checkout_public_value("CALYRISIA_BINANCE_PAY_ID"),
+        "Correo o identificador": _checkout_public_value("CALYRISIA_BINANCE_PAY_EMAIL"),
+        "Red / instrucción": _checkout_public_value("CALYRISIA_BINANCE_NETWORK"),
+    }
+    binance_url = _checkout_public_value("CALYRISIA_BINANCE_PAYMENT_URL")
+    if not binance_url.lower().startswith("https://"):
+        binance_url = ""
+    zinli = {
+        "Usuario / identificador Zinli": _checkout_public_value("CALYRISIA_ZINLI_ID"),
+        "Correo asociado": _checkout_public_value("CALYRISIA_ZINLI_EMAIL"),
+    }
+    zinli_url = _checkout_public_value("CALYRISIA_ZINLI_PAYMENT_URL")
+    if not zinli_url.lower().startswith("https://"):
+        zinli_url = ""
+    plan_ids = {code: _paypal_plan_id(code) for code in CHECKOUT_PLANS}
+    return {
+        "contact": contact,
+        "methods": {
+            "transferencia": {"label": "Transferencia bancaria", "request_via_whatsapp": True, "ready": bool(contact["whatsapp"])},
+            "pago_movil": {"label": "Pago Móvil", "request_via_whatsapp": True, "ready": bool(contact["whatsapp"])},
+            "binance": {"label": "Binance Pay", "details": binance, "payment_url": binance_url, "ready": bool(binance["Binance Pay ID"] or binance["Correo o identificador"] or binance_url)},
+            "zinli": {"label": "Zinli", "details": zinli, "payment_url": zinli_url, "ready": bool(zinli["Usuario / identificador Zinli"] or zinli["Correo asociado"] or zinli_url)},
+            "tarjeta": {"label": "Tarjeta bancaria", "provider": "PayPal", "ready": _paypal_ready(), "paypal": {
+                "enabled": _paypal_ready(),
+                "client_id": _checkout_public_value("CALYRISIA_PAYPAL_CLIENT_ID") if _paypal_ready() else "",
+                "mode": _paypal_mode(),
+                "plan_ids": plan_ids if _paypal_ready() else {},
+                "currency": "USD",
+            }},
+        },
+    }
+
+
+@app.post("/api/v1/public/checkout/start", status_code=201)
+async def start_public_checkout(payload: dict) -> dict:
+    """Create a server-side checkout reference; prices are derived only on the server."""
+    plan_code = str(payload.get("plan_code") or payload.get("plan") or "").strip().lower()
+    if plan_code not in CHECKOUT_PLANS:
+        raise HTTPException(status_code=422, detail="Selecciona un plan válido.")
+    checkout_ref = f"CY-{uuid4().hex[:24].upper()}"
+    plan = CHECKOUT_PLANS[plan_code]
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO public.calyrisia_checkout_orders
+                       (checkout_ref, plan_code, amount, currency, payment_method, status, paypal_plan_id)
+                       VALUES (%s,%s,%s,'USD','pending','pending',%s)""",
+                    (checkout_ref, plan_code, plan["amount"], _paypal_plan_id(plan_code) or None),
+                )
+            conn.commit()
+    except Exception as exc:
+        print(f"[CALYRISIA][CHECKOUT] Could not create order: {type(exc).__name__}")
+        raise HTTPException(status_code=503, detail="El portal de contratación está temporalmente ocupado. Inténtalo otra vez.") from exc
+    return {"checkout_ref": checkout_ref, "plan_code": plan_code, "amount": str(plan["amount"]), "currency": "USD", "status": "pending"}
+
+
+@app.post("/api/v1/public/checkout/method")
+async def set_public_checkout_method(payload: dict) -> dict:
+    checkout_ref = str(payload.get("checkout_ref") or "").strip().upper()
+    method = str(payload.get("method") or "").strip().lower()
+    if not checkout_ref or method not in CHECKOUT_METHODS:
+        raise HTTPException(status_code=422, detail="La referencia o el método de pago no son válidos.")
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""UPDATE public.calyrisia_checkout_orders SET payment_method=%s, status='awaiting_payment',
+                              updated_at=now()
+                              WHERE checkout_ref=%s AND status IN ('pending','awaiting_payment')
+                              RETURNING plan_code, amount, status""",
+                            (method, checkout_ref))
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="No encontramos la referencia de contratación o ya fue procesada.")
+                plan_code = str(row[0])
+                if method == "tarjeta":
+                    paypal_plan_id = _paypal_plan_id(plan_code)
+                    if not paypal_plan_id:
+                        raise HTTPException(status_code=503, detail="El plan de tarjeta todavía no está configurado en el proveedor.")
+                    cur.execute("UPDATE public.calyrisia_checkout_orders SET paypal_plan_id=%s WHERE checkout_ref=%s", (paypal_plan_id, checkout_ref))
+            conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[CALYRISIA][CHECKOUT] Method update failed: {type(exc).__name__}")
+        raise HTTPException(status_code=503, detail="No se pudo actualizar el método de pago.") from exc
+    return {"success": True, "checkout_ref": checkout_ref, "plan_code": plan_code, "payment_method": method}
+
+
+@app.post("/api/v1/public/checkout/paypal/attach")
+async def attach_paypal_subscription(payload: dict) -> dict:
+    checkout_ref = str(payload.get("checkout_ref") or "").strip().upper()
+    subscription_id = str(payload.get("subscription_id") or "").strip()[:128]
+    plan_code = str(payload.get("plan_code") or "").strip().lower()
+    if not checkout_ref or not subscription_id or plan_code not in CHECKOUT_PLANS:
+        raise HTTPException(status_code=422, detail="La referencia o la suscripción no son válidas.")
+    if not _paypal_ready():
+        raise HTTPException(status_code=503, detail="El pago con tarjeta no está completamente configurado.")
+    subscription = await _paypal_request("GET", f"/v1/billing/subscriptions/{subscription_id}")
+    expected_plan = _paypal_plan_id(plan_code)
+    if str(subscription.get("plan_id") or "") != expected_plan:
+        raise HTTPException(status_code=400, detail="La suscripción no corresponde al plan seleccionado.")
+    paypal_status = str(subscription.get("status") or "").upper()
+    if paypal_status not in {"ACTIVE", "APPROVAL_PENDING", "APPROVED"}:
+        raise HTTPException(status_code=409, detail="La suscripción no está aprobada por el proveedor.")
+    custom_id = str(subscription.get("custom_id") or "").strip().upper()
+    if custom_id != checkout_ref:
+        raise HTTPException(status_code=400, detail="La referencia de la suscripción no coincide con la contratación.")
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""UPDATE public.calyrisia_checkout_orders SET paypal_subscription_id=%s,
+                              subscription_status=%s, status=CASE WHEN status='paid' THEN 'paid' ELSE 'awaiting_payment' END,
+                              updated_at=now()
+                              WHERE checkout_ref=%s AND plan_code=%s AND payment_method='tarjeta'
+                                AND (paypal_subscription_id IS NULL OR paypal_subscription_id=%s)
+                              RETURNING checkout_ref, amount, currency, status""",
+                            (subscription_id, paypal_status.lower(), checkout_ref, plan_code, subscription_id))
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="No encontramos una contratación pendiente para esta suscripción.")
+                _, expected_amount, expected_currency, current_status = row
+                cur.execute("""SELECT transaction_id, event_id, amount, currency
+                              FROM public.calyrisia_paypal_pending_sales
+                              WHERE subscription_id=%s ORDER BY created_at DESC""", (subscription_id,))
+                pending_sales = cur.fetchall()
+                for pending_sale in pending_sales:
+                    tx_id, tx_event_id, tx_amount, tx_currency = pending_sale
+                    if Decimal(str(tx_amount)) == Decimal(str(expected_amount)) and str(tx_currency).upper() == str(expected_currency).upper():
+                        cur.execute("""UPDATE public.calyrisia_checkout_orders SET status='paid',
+                                      paypal_transaction_id=%s, subscription_status='active', webhook_event_id=%s,
+                                      paid_at=COALESCE(paid_at,now()), updated_at=now()
+                                      WHERE checkout_ref=%s AND paypal_subscription_id=%s
+                                        AND amount=%s AND currency=%s""",
+                                    (str(tx_id), tx_event_id, checkout_ref, subscription_id, expected_amount, expected_currency))
+                        current_status = 'paid'
+                        cur.execute("DELETE FROM public.calyrisia_paypal_pending_sales WHERE subscription_id=%s AND transaction_id=%s", (subscription_id, tx_id))
+                        break
+            conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[CALYRISIA][PAYPAL] Could not link subscription: {type(exc).__name__}")
+        raise HTTPException(status_code=503, detail="No se pudo asociar la suscripción con la contratación.") from exc
+    if current_status == "paid":
+        return {"success": True, "status": "paid", "message": "El primer pago quedó verificado."}
+    return {"success": True, "status": "awaiting_payment", "message": "Suscripción asociada; esperando confirmación del primer cobro."}
+
+
+@app.get("/api/v1/public/checkout/status/{checkout_ref}")
+async def public_checkout_status(checkout_ref: str) -> dict:
+    ref = str(checkout_ref or "").strip().upper()
+    if not ref or len(ref) > 64:
+        raise HTTPException(status_code=422, detail="La referencia no es válida.")
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT plan_code, payment_method, status, amount, currency, paid_at FROM public.calyrisia_checkout_orders WHERE checkout_ref=%s", (ref,))
+                row = cur.fetchone()
+    except Exception as exc:
+        print(f"[CALYRISIA][CHECKOUT] Status lookup failed: {type(exc).__name__}")
+        raise HTTPException(status_code=503, detail="No se pudo consultar el estado del pago.") from exc
+    if not row:
+        raise HTTPException(status_code=404, detail="No encontramos esa referencia de contratación.")
+    plan_code, method, status, amount, currency, paid_at = row
+    result = {"checkout_ref": ref, "plan_code": str(plan_code), "payment_method": str(method), "status": str(status), "amount": str(amount), "currency": str(currency), "paid_at": paid_at.isoformat() if paid_at else None}
+    if status == "paid":
+        result["onboarding_url"] = f"/onboarding/?plan={plan_code}&method=tarjeta&ref={ref}&payment=verified"
+    return result
+
+
+@app.post("/api/v1/public/checkout/paypal/webhook")
+async def paypal_subscription_webhook(request: Request) -> dict:
+    """Verify PayPal's webhook signature and mark a checkout paid only on a completed sale."""
+    if not _checkout_public_value("CALYRISIA_PAYPAL_WEBHOOK_ID") or not _checkout_public_value("CALYRISIA_PAYPAL_CLIENT_ID") or not os.getenv("CALYRISIA_PAYPAL_CLIENT_SECRET", "").strip():
+        raise HTTPException(status_code=503, detail="Webhook de PayPal no configurado.")
+    try:
+        event = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Evento de pago inválido.") from exc
+    hdr = request.headers
+    verify_body = {
+        "auth_algo": hdr.get("paypal-auth-algo", ""),
+        "cert_url": hdr.get("paypal-cert-url", ""),
+        "transmission_id": hdr.get("paypal-transmission-id", ""),
+        "transmission_sig": hdr.get("paypal-transmission-sig", ""),
+        "transmission_time": hdr.get("paypal-transmission-time", ""),
+        "webhook_id": _checkout_public_value("CALYRISIA_PAYPAL_WEBHOOK_ID"),
+        "webhook_event": event,
+    }
+    if not all(verify_body[k] for k in ("auth_algo", "cert_url", "transmission_id", "transmission_sig", "transmission_time")):
+        raise HTTPException(status_code=400, detail="Faltan cabeceras para verificar el evento de PayPal.")
+    token = await _paypal_access_token()
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            verification = await client.post(
+                f"{_paypal_api_base()}/v1/notifications/verify-webhook-signature",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json=verify_body,
+            )
+        if verification.status_code != 200 or verification.json().get("verification_status") != "SUCCESS":
+            raise HTTPException(status_code=400, detail="La firma del evento de pago no es válida.")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="No se pudo verificar el evento de pago.") from exc
+
+    event_type = str(event.get("event_type") or "")
+    event_id = str(event.get("id") or "")[:128]
+    resource = event.get("resource") or {}
+    subscription_id = str(resource.get("id") or "")[:128]
+    if event_type == "PAYMENT.SALE.COMPLETED":
+        subscription_id = str(resource.get("billing_agreement_id") or "")[:128]
+    custom_id = str(resource.get("custom_id") or "").strip().upper()
+    if event_type in {"BILLING.SUBSCRIPTION.CREATED", "BILLING.SUBSCRIPTION.ACTIVATED", "BILLING.SUBSCRIPTION.UPDATED"} and custom_id and subscription_id:
+        try:
+            async with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""UPDATE public.calyrisia_checkout_orders SET paypal_subscription_id=%s,
+                                  subscription_status=%s, status=CASE WHEN status='paid' THEN 'paid' ELSE 'awaiting_payment' END,
+                                  webhook_event_id=%s, updated_at=now()
+                                  WHERE checkout_ref=%s AND payment_method='tarjeta' AND paypal_plan_id=%s
+                                    AND (paypal_subscription_id IS NULL OR paypal_subscription_id=%s)""",
+                                (subscription_id, str(resource.get("status") or "").lower(), event_id, custom_id, str(resource.get("plan_id") or ""), subscription_id))
+                conn.commit()
+        except Exception as exc:
+            print(f"[CALYRISIA][PAYPAL] Subscription webhook update failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="No se pudo registrar la suscripción.") from exc
+    elif event_type == "PAYMENT.SALE.COMPLETED":
+        amount_obj = resource.get("amount") or {}
+        amount_value = amount_obj.get("total", amount_obj.get("value", "0"))
+        currency_value = str(amount_obj.get("currency", amount_obj.get("currency_code", "USD"))).upper()
+        try:
+            paid_amount = Decimal(str(amount_value))
+        except (InvalidOperation, TypeError):
+            paid_amount = Decimal("0")
+        try:
+            transaction_id = str(resource.get("id") or event_id or "")[:128]
+            async with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""UPDATE public.calyrisia_checkout_orders SET status='paid',
+                                  paypal_transaction_id=%s, subscription_status='active', webhook_event_id=%s,
+                                  paid_at=COALESCE(paid_at,now()), updated_at=now()
+                                  WHERE paypal_subscription_id=%s AND payment_method='tarjeta'
+                                    AND amount=%s AND currency=%s
+                                  RETURNING checkout_ref""",
+                                (transaction_id, event_id, subscription_id, paid_amount, currency_value))
+                    matched = cur.fetchone()
+                    if not matched and subscription_id and transaction_id:
+                        cur.execute("""INSERT INTO public.calyrisia_paypal_pending_sales
+                                      (subscription_id, transaction_id, event_id, amount, currency)
+                                      VALUES (%s,%s,%s,%s,%s)
+                                      ON CONFLICT (subscription_id, transaction_id) DO UPDATE SET
+                                        event_id=EXCLUDED.event_id, amount=EXCLUDED.amount, currency=EXCLUDED.currency""",
+                                    (subscription_id, transaction_id, event_id, paid_amount, currency_value))
+                conn.commit()
+            if not matched:
+                print(f"[CALYRISIA][PAYPAL] Verified sale queued for subscription association; subscription={subscription_id!r}, amount={paid_amount}, currency={currency_value}")
+        except Exception as exc:
+            print(f"[CALYRISIA][PAYPAL] Sale webhook update failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="No se pudo registrar el cobro.") from exc
+    elif event_type in {"BILLING.SUBSCRIPTION.CANCELLED", "BILLING.SUBSCRIPTION.SUSPENDED", "BILLING.SUBSCRIPTION.EXPIRED"} and subscription_id:
+        try:
+            async with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE public.calyrisia_checkout_orders SET subscription_status=%s, webhook_event_id=%s, updated_at=now() WHERE paypal_subscription_id=%s", (event_type.split(".")[-1].lower(), event_id, subscription_id))
+                conn.commit()
+        except Exception as exc:
+            print(f"[CALYRISIA][PAYPAL] Subscription status update failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="No se pudo actualizar la suscripción.") from exc
+    return {"received": True}
 
 
 @app.get("/api/v1/onboarding/catalog")
