@@ -111,3 +111,13 @@ La suscripción validada redirige al onboarding, pero el onboarding es todavía 
 - Backup de base de datos antes de la primera migración y despliegue en una copia controlada antes de sustituir producción.
 - La integración operativa de WhatsApp requiere configuración Meta/WhatsApp Business, aprobación/activos del cliente y validación de la implementación. La cantidad de bots indicada en planes es un cupo de plan y no reemplaza la conexión de credenciales y números.
 
+
+
+## Checkout y autorización comercial
+
+- Panel privado para revisión de pagos manuales: `/admin/contrataciones/` (requiere `CALYRISIA_CHECKOUT_ADMIN_KEY`).
+
+
+## Flujo de pagos y comprobantes
+
+Consulta `ADMIN_PAGOS_Y_ONBOARDING.md`. El checkout exige identidad de contacto vinculada a una referencia, envía al cliente a WhatsApp/correo para adjuntar el comprobante, mantiene una comprobación automática del estado y abre el onboarding solo después de la aprobación desde `/admin/contrataciones/` o de una confirmación de tarjeta verificada por webhook. Para Binance Pay, el QR debe ser el oficial descargado desde la app, no un QR genérico del ID.

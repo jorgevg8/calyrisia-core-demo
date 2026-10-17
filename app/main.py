@@ -90,6 +90,7 @@ def _parse_custom_products(text: str) -> list[dict]:
 
 import asyncio
 import hmac
+import re
 import os
 import httpx
 from datetime import datetime, timedelta, timezone
@@ -529,6 +530,19 @@ async def _ensure_public_checkout_schema() -> None:
                 cur.execute("CREATE INDEX IF NOT EXISTS idx_calyrisia_checkout_paypal_subscription ON public.calyrisia_checkout_orders(paypal_subscription_id)")
                 # Webhooks may arrive before the browser's subscription-attach call. Keep unmatched
                 # verified sales briefly so attach can reconcile them rather than losing a payment.
+                # Administrative review metadata for direct/manual payment methods.
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS reviewed_at timestamptz")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS reviewed_by varchar(160)")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS review_note text")
+                # Customer identity and payment-proof metadata, tied to a single opaque checkout reference.
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS customer_name varchar(160)")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS customer_email varchar(254)")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS customer_phone varchar(64)")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS business_name varchar(180)")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS contact_saved_at timestamptz")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS transaction_reference varchar(180)")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS proof_note text")
+                cur.execute("ALTER TABLE public.calyrisia_checkout_orders ADD COLUMN IF NOT EXISTS proof_submitted_at timestamptz")
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS public.calyrisia_paypal_pending_sales (
                         subscription_id varchar(128) NOT NULL,
@@ -1189,6 +1203,7 @@ async def update_dashboard_booking(booking_id: UUID, payload: dict, current_user
 app.include_router(telegram_router, prefix="/api/v1")
 
 app.mount("/brand", StaticFiles(directory="app/static/brand"), name="brand")
+app.mount("/payments", StaticFiles(directory="app/static/payments", check_dir=False), name="payments")
 app.mount("/webchat", StaticFiles(directory="app/static/webchat", html=True), name="webchat")
 app.mount("/onboarding", StaticFiles(directory="app/static/onboarding", html=True), name="onboarding")
 app.mount("/dashboard", StaticFiles(directory="app/static/dashboard", html=True), name="dashboard")
@@ -2787,13 +2802,22 @@ async def public_checkout_config() -> dict:
         "email": _checkout_public_value("CALYRISIA_SALES_EMAIL") or "jorge@calyrisia.com",
     }
     binance = {
-        "Binance Pay ID": _checkout_public_value("CALYRISIA_BINANCE_PAY_ID"),
+        "Binance Pay ID": _checkout_public_value("CALYRISIA_BINANCE_PAY_ID") or "193612923",
         "Correo o identificador": _checkout_public_value("CALYRISIA_BINANCE_PAY_EMAIL"),
         "Red / instrucción": _checkout_public_value("CALYRISIA_BINANCE_NETWORK"),
     }
     binance_url = _checkout_public_value("CALYRISIA_BINANCE_PAYMENT_URL")
     if not binance_url.lower().startswith("https://"):
         binance_url = ""
+    binance_qr = _checkout_public_value("CALYRISIA_BINANCE_QR_IMAGE_URL")
+    if binance_qr.startswith("/payments/"):
+        safe_relative = binance_qr[len("/"):]
+        candidate = os.path.realpath(os.path.join("app/static", safe_relative))
+        allowed_root = os.path.realpath(os.path.join("app/static", "payments")) + os.sep
+        if not candidate.startswith(allowed_root) or not os.path.isfile(candidate):
+            binance_qr = ""
+    elif not binance_qr.lower().startswith("https://"):
+        binance_qr = ""
     zinli = {
         "Usuario / identificador Zinli": _checkout_public_value("CALYRISIA_ZINLI_ID"),
         "Correo asociado": _checkout_public_value("CALYRISIA_ZINLI_EMAIL"),
@@ -2807,7 +2831,7 @@ async def public_checkout_config() -> dict:
         "methods": {
             "transferencia": {"label": "Transferencia bancaria", "request_via_whatsapp": True, "ready": bool(contact["whatsapp"])},
             "pago_movil": {"label": "Pago Móvil", "request_via_whatsapp": True, "ready": bool(contact["whatsapp"])},
-            "binance": {"label": "Binance Pay", "details": binance, "payment_url": binance_url, "ready": bool(binance["Binance Pay ID"] or binance["Correo o identificador"] or binance_url)},
+            "binance": {"label": "Binance Pay", "details": binance, "payment_url": binance_url, "qr_image_url": binance_qr, "ready": bool(binance["Binance Pay ID"] or binance["Correo o identificador"] or binance_url)},
             "zinli": {"label": "Zinli", "details": zinli, "payment_url": zinli_url, "ready": bool(zinli["Usuario / identificador Zinli"] or zinli["Correo asociado"] or zinli_url)},
             "tarjeta": {"label": "Tarjeta bancaria", "provider": "PayPal", "ready": _paypal_ready(), "paypal": {
                 "enabled": _paypal_ready(),
@@ -2844,6 +2868,89 @@ async def start_public_checkout(payload: dict) -> dict:
     return {"checkout_ref": checkout_ref, "plan_code": plan_code, "amount": str(plan["amount"]), "currency": "USD", "status": "pending"}
 
 
+@app.post("/api/v1/public/checkout/contact")
+async def save_public_checkout_contact(payload: dict) -> dict:
+    """Attach buyer identity to one checkout reference before any payment method can be selected."""
+    ref = str(payload.get("checkout_ref") or "").strip().upper()
+    name = " ".join(str(payload.get("customer_name") or "").split())[:160]
+    email = str(payload.get("customer_email") or "").strip().lower()[:254]
+    phone = str(payload.get("customer_phone") or "").strip()[:64]
+    business_name = " ".join(str(payload.get("business_name") or "").split())[:180]
+    if not ref or len(ref) > 64:
+        raise HTTPException(status_code=422, detail="La referencia de contratación no es válida.")
+    if len(name) < 2:
+        raise HTTPException(status_code=422, detail="Escribe el nombre de la persona responsable del pago.")
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise HTTPException(status_code=422, detail="Introduce un correo válido para identificar tu contratación.")
+    if len(re.sub(r"\D", "", phone)) < 7:
+        raise HTTPException(status_code=422, detail="Introduce un teléfono válido con código de país.")
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""UPDATE public.calyrisia_checkout_orders
+                               SET customer_name=%s, customer_email=%s, customer_phone=%s,
+                                   business_name=%s, contact_saved_at=now(), updated_at=now()
+                               WHERE checkout_ref=%s AND status IN ('pending','awaiting_payment') AND proof_submitted_at IS NULL
+                               RETURNING checkout_ref""",
+                            (name, email, phone, business_name or None, ref))
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="No encontramos una contratación activa con esa referencia.")
+            conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[CALYRISIA][CHECKOUT] Could not save buyer contact: {type(exc).__name__}")
+        raise HTTPException(status_code=503, detail="No se pudieron guardar tus datos. Inténtalo nuevamente.") from exc
+    return {"success": True, "checkout_ref": ref, "contact_saved": True}
+
+
+@app.post("/api/v1/public/checkout/proof")
+async def submit_public_checkout_proof(payload: dict) -> dict:
+    """Mark a manual proof as submitted; actual payment approval remains an admin action."""
+    ref = str(payload.get("checkout_ref") or "").strip().upper()
+    transaction_reference = " ".join(str(payload.get("transaction_reference") or "").split())[:180]
+    proof_note = str(payload.get("proof_note") or "").strip()[:1000]
+    if not ref or len(ref) > 64:
+        raise HTTPException(status_code=422, detail="La referencia de contratación no es válida.")
+    manual_methods = {"transferencia", "pago_movil", "binance", "zinli"}
+    try:
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""UPDATE public.calyrisia_checkout_orders
+                               SET transaction_reference=COALESCE(NULLIF(%s,''), transaction_reference),
+                                   proof_note=COALESCE(NULLIF(%s,''), proof_note),
+                                   proof_submitted_at=COALESCE(proof_submitted_at, now()),
+                                   updated_at=now()
+                               WHERE checkout_ref=%s AND status='awaiting_payment'
+                                 AND payment_method = ANY(%s)
+                                 AND customer_name IS NOT NULL AND customer_email IS NOT NULL AND customer_phone IS NOT NULL
+                               RETURNING status, proof_submitted_at""",
+                            (transaction_reference, proof_note, ref, list(manual_methods)))
+                row = cur.fetchone()
+                if not row:
+                    cur.execute("SELECT status, payment_method, customer_name, customer_email, customer_phone FROM public.calyrisia_checkout_orders WHERE checkout_ref=%s", (ref,))
+                    existing = cur.fetchone()
+                    if not existing:
+                        raise HTTPException(status_code=404, detail="No encontramos esa contratación.")
+                    if not all(existing[i] for i in (2,3,4)):
+                        raise HTTPException(status_code=409, detail="Completa primero los datos de contacto para esta contratación.")
+                    if str(existing[0]) == "paid":
+                        raise HTTPException(status_code=409, detail="El pago ya fue confirmado. Puedes continuar al onboarding.")
+                    if str(existing[0]) != "awaiting_payment" or str(existing[1]) not in manual_methods:
+                        raise HTTPException(status_code=409, detail="La contratación no está esperando un comprobante manual.")
+                    raise HTTPException(status_code=409, detail="No se pudo registrar el comprobante. Actualiza el estado e inténtalo otra vez.")
+            conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[CALYRISIA][CHECKOUT] Could not record manual proof: {type(exc).__name__}")
+        raise HTTPException(status_code=503, detail="No se pudo registrar el aviso de comprobante.") from exc
+    return {"success": True, "checkout_ref": ref, "status": "awaiting_payment", "proof_submitted": True,
+            "proof_submitted_at": row[1].isoformat() if row[1] else None,
+            "message": "Aviso registrado. CALYRISIA verificará el ingreso antes de habilitar el onboarding."}
+
+
 @app.post("/api/v1/public/checkout/method")
 async def set_public_checkout_method(payload: dict) -> dict:
     checkout_ref = str(payload.get("checkout_ref") or "").strip().upper()
@@ -2853,14 +2960,27 @@ async def set_public_checkout_method(payload: dict) -> dict:
     try:
         async with get_connection() as conn:
             with conn.cursor() as cur:
+                cur.execute("SELECT customer_name, customer_email, customer_phone, status, payment_method, proof_submitted_at, paypal_subscription_id FROM public.calyrisia_checkout_orders WHERE checkout_ref=%s FOR UPDATE", (checkout_ref,))
+                contact_row = cur.fetchone()
+                if not contact_row:
+                    raise HTTPException(status_code=404, detail="No encontramos la referencia de contratación.")
+                if not all(contact_row[i] for i in (0, 1, 2)):
+                    raise HTTPException(status_code=409, detail="Completa y guarda tus datos de contacto antes de elegir el método de pago.")
+                if str(contact_row[3]) not in {"pending", "awaiting_payment"}:
+                    raise HTTPException(status_code=409, detail="Esta contratación ya fue procesada y no puede cambiar de método.")
+                if contact_row[5] is not None and str(contact_row[4]) != method:
+                    raise HTTPException(status_code=409, detail="Ya reportaste el comprobante. No puedes cambiar el método de esta referencia.")
+                if contact_row[6] is not None and str(contact_row[4]) != method:
+                    raise HTTPException(status_code=409, detail="Ya se inició una suscripción con tarjeta para esta referencia. No cambies el método; contacta a CALYRISIA si necesitas ayuda.")
                 cur.execute("""UPDATE public.calyrisia_checkout_orders SET payment_method=%s, status='awaiting_payment',
                               updated_at=now()
                               WHERE checkout_ref=%s AND status IN ('pending','awaiting_payment')
+                                AND (proof_submitted_at IS NULL OR payment_method=%s)
                               RETURNING plan_code, amount, status""",
-                            (method, checkout_ref))
+                            (method, checkout_ref, method))
                 row = cur.fetchone()
                 if not row:
-                    raise HTTPException(status_code=404, detail="No encontramos la referencia de contratación o ya fue procesada.")
+                    raise HTTPException(status_code=409, detail="La contratación cambió de estado. Actualiza la página.")
                 plan_code = str(row[0])
                 if method == "tarjeta":
                     paypal_plan_id = _paypal_plan_id(plan_code)
@@ -2944,18 +3064,140 @@ async def public_checkout_status(checkout_ref: str) -> dict:
     try:
         async with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT plan_code, payment_method, status, amount, currency, paid_at FROM public.calyrisia_checkout_orders WHERE checkout_ref=%s", (ref,))
+                cur.execute("""SELECT plan_code, payment_method, status, amount, currency, paid_at,
+                                      customer_name, customer_email, customer_phone, business_name,
+                                      transaction_reference, proof_submitted_at, contact_saved_at
+                               FROM public.calyrisia_checkout_orders WHERE checkout_ref=%s""", (ref,))
                 row = cur.fetchone()
     except Exception as exc:
         print(f"[CALYRISIA][CHECKOUT] Status lookup failed: {type(exc).__name__}")
         raise HTTPException(status_code=503, detail="No se pudo consultar el estado del pago.") from exc
     if not row:
         raise HTTPException(status_code=404, detail="No encontramos esa referencia de contratación.")
-    plan_code, method, status, amount, currency, paid_at = row
-    result = {"checkout_ref": ref, "plan_code": str(plan_code), "payment_method": str(method), "status": str(status), "amount": str(amount), "currency": str(currency), "paid_at": paid_at.isoformat() if paid_at else None}
+    plan_code, method, status, amount, currency, paid_at, customer_name, customer_email, customer_phone, business_name, transaction_reference, proof_submitted_at, contact_saved_at = row
+    result = {"checkout_ref": ref, "plan_code": str(plan_code), "payment_method": str(method), "status": str(status), "amount": str(amount), "currency": str(currency), "paid_at": paid_at.isoformat() if paid_at else None,
+              "customer_name": customer_name or "", "customer_email": customer_email or "", "customer_phone": customer_phone or "", "business_name": business_name or "",
+              "contact_saved": bool(contact_saved_at), "transaction_reference": transaction_reference or "", "proof_submitted": bool(proof_submitted_at), "proof_submitted_at": proof_submitted_at.isoformat() if proof_submitted_at else None}
     if status == "paid":
-        result["onboarding_url"] = f"/onboarding/?plan={plan_code}&method=tarjeta&ref={ref}&payment=verified"
+        safe_plan = str(plan_code)
+        safe_method = str(method)
+        result["onboarding_url"] = _checkout_onboarding_url(ref, safe_plan, safe_method)
     return result
+
+
+def _checkout_onboarding_url(ref: str, plan_code: str, method: str) -> str:
+    from urllib.parse import urlencode
+    return "/onboarding/?" + urlencode({"plan": plan_code, "method": method, "ref": ref, "payment": "verified"})
+
+
+def _require_checkout_admin(request: Request) -> None:
+    expected = os.getenv("CALYRISIA_CHECKOUT_ADMIN_KEY", "").strip()
+    supplied = request.headers.get("x-calyrisia-admin-key", "").strip()
+    if len(expected) < 32:
+        raise HTTPException(status_code=503, detail="El panel de contrataciones no está configurado. Define CALYRISIA_CHECKOUT_ADMIN_KEY en el hosting con una clave aleatoria larga.")
+    if not supplied or not hmac.compare_digest(supplied, expected):
+        raise HTTPException(status_code=401, detail="Clave de administración no válida.")
+
+
+@app.get("/admin/contrataciones/", include_in_schema=False)
+async def checkout_admin_page() -> FileResponse:
+    return FileResponse("app/static/admin/contrataciones/index.html", headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/v1/admin/checkout/orders")
+async def admin_checkout_orders(request: Request, status: str = Query(default="awaiting_payment", pattern="^(pending|awaiting_payment|paid|failed|cancelled|all)$"), limit: int = Query(default=100, ge=1, le=200)) -> dict:
+    _require_checkout_admin(request)
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            if status == "all":
+                cur.execute("""SELECT checkout_ref, plan_code, amount, currency, payment_method, status, created_at, paid_at, reviewed_at, review_note,
+                                      customer_name, customer_email, customer_phone, business_name, transaction_reference, proof_submitted_at, proof_note
+                               FROM public.calyrisia_checkout_orders ORDER BY created_at DESC LIMIT %s""", (limit,))
+            else:
+                cur.execute("""SELECT checkout_ref, plan_code, amount, currency, payment_method, status, created_at, paid_at, reviewed_at, review_note,
+                                      customer_name, customer_email, customer_phone, business_name, transaction_reference, proof_submitted_at, proof_note
+                               FROM public.calyrisia_checkout_orders WHERE status=%s ORDER BY created_at DESC LIMIT %s""", (status, limit))
+            rows = cur.fetchall()
+    manual_methods = {"transferencia", "pago_movil", "binance", "zinli"}
+    orders = []
+    for row in rows:
+        ref, plan_code, amount, currency, method, order_status, created_at, paid_at, reviewed_at, review_note, customer_name, customer_email, customer_phone, business_name, transaction_reference, proof_submitted_at, proof_note = row
+        item = {
+            "checkout_ref": str(ref), "plan_code": str(plan_code), "plan_label": CHECKOUT_PLANS.get(str(plan_code), {}).get("label", str(plan_code)),
+            "amount": str(amount), "currency": str(currency), "payment_method": str(method), "status": str(order_status),
+            "created_at": created_at.isoformat() if created_at else None,
+            "paid_at": paid_at.isoformat() if paid_at else None,
+            "reviewed_at": reviewed_at.isoformat() if reviewed_at else None,
+            "review_note": review_note or "", "customer_name": customer_name or "", "customer_email": customer_email or "",
+            "customer_phone": customer_phone or "", "business_name": business_name or "",
+            "transaction_reference": transaction_reference or "", "proof_note": proof_note or "",
+            "proof_submitted_at": proof_submitted_at.isoformat() if proof_submitted_at else None,
+            "can_review_manually": str(method) in manual_methods and str(order_status) == "awaiting_payment" and proof_submitted_at is not None,
+        }
+        if str(order_status) == "paid":
+            item["onboarding_url"] = _checkout_onboarding_url(str(ref), str(plan_code), str(method))
+        orders.append(item)
+    return {"success": True, "orders": orders}
+
+
+@app.post("/api/v1/admin/checkout/orders/{checkout_ref}/decision")
+async def decide_manual_checkout_order(checkout_ref: str, request: Request, payload: dict) -> dict:
+    _require_checkout_admin(request)
+    ref = str(checkout_ref or "").strip().upper()
+    decision = str(payload.get("decision") or "").strip().lower()
+    note = str(payload.get("note") or "").strip()[:500]
+    if not ref or len(ref) > 64 or decision not in {"approve", "reject"}:
+        raise HTTPException(status_code=422, detail="Referencia o decisión inválida.")
+    manual_methods = {"transferencia", "pago_movil", "binance", "zinli"}
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""SELECT plan_code, payment_method, status, amount, currency, proof_submitted_at
+                               FROM public.calyrisia_checkout_orders WHERE checkout_ref=%s FOR UPDATE""", (ref,))
+                row = cur.fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="No existe esa referencia de contratación.")
+                plan_code, method, current_status, amount, currency, proof_submitted_at = row
+                method = str(method)
+                current_status = str(current_status)
+                if method not in manual_methods:
+                    raise HTTPException(status_code=409, detail="Esta contratación no admite aprobación manual. Los pagos con tarjeta solo se confirman mediante el webhook verificado.")
+                if current_status == "paid" and decision == "approve":
+                    conn.commit()
+                    return {"success": True, "status": "paid", "already_processed": True,
+                            "checkout_ref": ref, "onboarding_url": _checkout_onboarding_url(ref, str(plan_code), method)}
+                if current_status != "awaiting_payment":
+                    raise HTTPException(status_code=409, detail=f"La contratación no está pendiente de revisión: {current_status}.")
+                if decision == "approve" and proof_submitted_at is None:
+                    raise HTTPException(status_code=409, detail="El cliente aún no ha reportado el envío del comprobante en esta referencia.")
+                if decision == "approve":
+                    cur.execute("""UPDATE public.calyrisia_checkout_orders
+                                   SET status='paid', paid_at=COALESCE(paid_at, now()), reviewed_at=now(),
+                                       reviewed_by='CALYRISIA checkout admin', review_note=%s, updated_at=now()
+                                   WHERE checkout_ref=%s AND status='awaiting_payment'
+                                   RETURNING plan_code, payment_method""", (note or "Pago verificado manualmente por CALYRISIA.", ref))
+                    updated = cur.fetchone()
+                    if not updated:
+                        raise HTTPException(status_code=409, detail="La contratación cambió de estado. Actualiza la lista y vuelve a revisar.")
+                    conn.commit()
+                    return {"success": True, "status": "paid", "checkout_ref": ref,
+                            "onboarding_url": _checkout_onboarding_url(ref, str(updated[0]), str(updated[1]))}
+                cur.execute("""UPDATE public.calyrisia_checkout_orders
+                               SET status='failed', reviewed_at=now(), reviewed_by='CALYRISIA checkout admin',
+                                   review_note=%s, updated_at=now()
+                               WHERE checkout_ref=%s AND status='awaiting_payment'""",
+                            (note or "Pago no verificado; solicitar nuevo comprobante o referencia.", ref))
+                if cur.rowcount != 1:
+                    raise HTTPException(status_code=409, detail="La contratación cambió de estado. Actualiza la lista y vuelve a revisar.")
+            conn.commit()
+            return {"success": True, "status": "failed", "checkout_ref": ref}
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as exc:
+            conn.rollback()
+            print(f"[CALYRISIA][CHECKOUT ADMIN] Decision failed: {type(exc).__name__}")
+            raise HTTPException(status_code=503, detail="No se pudo guardar la revisión del pago.") from exc
 
 
 @app.post("/api/v1/public/checkout/paypal/webhook")

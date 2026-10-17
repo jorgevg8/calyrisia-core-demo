@@ -43,3 +43,23 @@ Una compra PayPal confirmada permite avanzar automáticamente al onboarding del 
 4. Probar el checkout en Sandbox y verificar las referencias de contratación, estados de pago y la ruta de onboarding.
 5. Verificar los canales y los límites de plan en dos negocios separados.
 6. Ejecutar prueba HTTP real en staging antes de sustituir la producción. La sintaxis local no sustituye esta prueba.
+
+
+## Autorizar pagos y onboarding
+
+El panel interno está en `/admin/contrataciones/`, protegido por `CALYRISIA_CHECKOUT_ADMIN_KEY`. Desde ahí se revisan las contrataciones pendientes y se aprueban únicamente los métodos manuales después de verificar la entrada de dinero real. Tras aprobar, el panel entrega el enlace específico para esa referencia. El cliente también puede pulsar «Comprobar pago y continuar» en la página de contratación.
+
+Genera una clave privada larga con `python -c "import secrets; print(secrets.token_urlsafe(48))"` y guárdala únicamente en Render → Environment como `CALYRISIA_CHECKOUT_ADMIN_KEY`; no la añadas a Git.
+
+El onboarding ya se bloquea en el navegador y consulta el estado real de esa referencia; la API solo devuelve el enlace de onboarding si el estado es `paid`. Los pagos de tarjeta no pueden aprobarse desde el panel y dependen del webhook verificado de PayPal.
+
+**Límite actual:** tras pagar, el formulario de onboarding recoge la configuración inicial y prepara el mensaje para enviarlo por WhatsApp o correo. La creación automática del negocio/usuario aún requiere provisión interna mediante la ruta protegida por `CALYRISIA_ONBOARDING_ADMIN_KEY`.
+
+
+## Identificación del pagador, Binance Pay y comprobantes
+
+El checkout exige nombre, correo y teléfono, los vincula a la referencia `CY-...` y al plan/método. Para pagos directos, el cliente adjunta la captura por WhatsApp o correo (el mensaje ya incluye la referencia única) y después marca que la envió. El portal registra el aviso y consulta el estado cada cinco segundos; el onboarding se desbloquea solo después de que el administrador apruebe el movimiento real. La captura de imagen no se sube a la web en esta versión: se envía por WhatsApp/correo; la referencia de operación y nota se guardan en la orden.
+
+Para configurar el QR de Binance Pay, descarga el QR oficial de recepción desde la app Binance Pay y colócalo como `app/static/payments/binance-pay-qr.png`. Configura `CALYRISIA_BINANCE_PAY_ID=193612923` y `CALYRISIA_BINANCE_QR_IMAGE_URL=/payments/binance-pay-qr.png`. La página muestra el QR solo si el fichero está presente. No generes un QR genérico que solo contenga el número; no equivale al payload oficial del pago. El QR estático requiere revisión manual; la confirmación automática exige una cuenta Binance Pay Merchant/API y webhooks firmados verificados.
+
+Los cobros de tarjeta procesados mediante PayPal se acreditan a la cuenta comercial de PayPal asociada a las credenciales REST configuradas en este servicio. La retirada/transferencia bancaria posterior se configura en PayPal. Para Zinli, utiliza solo una modalidad comercial autorizada por Zinli.
