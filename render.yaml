@@ -38,3 +38,19 @@ services:
         value: "1440"
       - key: GALAXY_JWT_ISSUER
         value: galaxy-core
+      - key: CALYRISIA_CHECKOUT_ADMIN_KEY
+        value: calyrisia_admin_2026_Jorgevg8_9f4b2c8e1d7a6f3b5c0e2a4d8f1b3c5e
+      - key: CALYRISIA_PAGO_MOVIL_BANK
+        value: BANCAMIGA
+      - key: CALYRISIA_PAGO_MOVIL_PHONE
+        value: "04128418550"
+      - key: CALYRISIA_PAGO_MOVIL_ID
+        value: "C.I 25352048"
+      - key: CALYRISIA_ZINLI_EMAIL
+        value: Jorgevg945@gmail.com
+      - key: CALYRISIA_BINANCE_USER
+        value: Jorgevg8
+      - key: CALYRISIA_BINANCE_PAY_ID
+        value: "193612923"
+      - key: CALYRISIA_BINANCE_QR_IMAGE_URL
+        value: /payments/binance-pay-qr.png

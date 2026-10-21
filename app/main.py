@@ -339,7 +339,8 @@ class OnboardingRequest(BaseModel):
     owner_email: str
     owner_password: str
     owner_full_name: str
-    owner_phone: str = None
+    owner_phone: str | None = None
+    checkout_ref: str | None = None
 
 class IntegrationCreateRequest(BaseModel):
     provider: str
@@ -461,6 +462,145 @@ async def _ensure_webchat_payment_schema() -> None:
             print(f'[CALYRISIA][WARN] No se pudo preparar la tabla de solicitudes de pago: {exc}')
 
 
+
+PRESENTATION_19_PROMPT = """Eres el asesor comercial inteligente de nuestro negocio en CALYRISIA.
+OBJETIVO PRINCIPAL:
+- Atender a cada cliente con calidez, agilidad y precisión ejecutiva, informando precios exactos en USD y existencias reales de nuestro catálogo tecnológico.
+REGLAS DE ATENCIÓN Y VENTAS EN WEBCHAT:
+1. Cuando el cliente salude o pregunte qué vendemos, dale la bienvenida y muéstrale los productos destacados del catálogo con su precio en USD y disponibilidad.
+2. Si pregunta por un artículo específico o pide una recomendación, indícale su precio exacto, cuántas unidades quedan en stock y sus beneficios principales.
+3. Cuando el cliente indique qué producto(s) desea comprar o pida pagar, confirma el resumen del pedido con cantidades y subtotales, pregunta si prefiere delivery o retiro en tienda y despliega inmediatamente la tarjeta interactiva de pago en el chat.
+INFORMACIÓN OPERATIVA DEL NEGOCIO:
+- Horario de atención: Lunes a Sábado de 8:30 am a 7:00 pm.
+- Entregas: Retiro inmediato en tienda física y servicio de delivery exprés en toda la ciudad.
+- Métodos de cobro activos: Pago Móvil (Bancamiga) y Binance Pay verificados desde el Dashboard."""
+
+PRESENTATION_19_PRODUCTS = [
+    {"name": "Auriculares Inalámbricos Bluetooth Pro", "price": 25.00, "stock": 18, "category": "Audio"},
+    {"name": "Smartwatch Deportivo Serie 9", "price": 45.00, "stock": 12, "category": "Wearables"},
+    {"name": "Powerbank Carga Rápida 20.000mAh", "price": 30.00, "stock": 15, "category": "Baterías"},
+    {"name": "Cargador Rápido USB-C 20W", "price": 12.00, "stock": 25, "category": "Accesorios"},
+    {"name": "Corneta Portátil Impermeable Bluetooth", "price": 35.00, "stock": 10, "category": "Audio"},
+    {"name": "Aro de Luz LED Profesional con Trípode", "price": 22.00, "stock": 8, "category": "Streaming"},
+    {"name": "Teclado Mecánico Inalámbrico RGB", "price": 48.00, "stock": 5, "category": "Computación"},
+    {"name": "Mouse Inalámbrico Ergonómico Silencioso", "price": 15.00, "stock": 20, "category": "Computación"},
+]
+
+def _provision_presentation_catalog_for_business(conn, business_id: UUID) -> None:
+    """Ensure a $19 retail/catalog business has the presentation catalog, AI prompt, active webchat, and payment methods ready for the demo video."""
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT name, business_type, COALESCE(plan_code, 'emprendedor'), COALESCE(description, ''), COALESCE(webchat_enabled, FALSE) FROM public.businesses WHERE id = %s",
+                (str(business_id),),
+            )
+            b_row = cur.fetchone()
+            if not b_row:
+                return
+            b_name, b_type, b_plan, b_desc, webchat_on = str(b_row[0] or ""), str(b_row[1] or ""), str(b_row[2] or "emprendedor"), str(b_row[3] or ""), bool(b_row[4])
+
+            # Enable webchat automatically so the presentation video works immediately
+            if not webchat_on:
+                cur.execute("UPDATE public.businesses SET webchat_enabled = TRUE WHERE id = %s", (str(business_id),))
+
+            # Ensure default payment instructions (Pago Móvil & Binance) are configured and enabled
+            cur.execute("SELECT COUNT(*)::int FROM public.business_payment_instructions WHERE business_id = %s AND enabled = TRUE", (str(business_id),))
+            if int(cur.fetchone()[0] or 0) == 0:
+                cur.execute(
+                    """INSERT INTO public.business_payment_instructions (business_id, method_code, enabled, instructions, updated_at)
+                       VALUES (%s, 'pago_movil', TRUE, %s, now())
+                       ON CONFLICT (business_id, method_code) DO UPDATE
+                       SET enabled = TRUE, instructions = EXCLUDED.instructions, updated_at = now()""",
+                    (str(business_id), "04128418550\nV25352048\nBancamiga"),
+                )
+                cur.execute(
+                    """INSERT INTO public.business_payment_instructions (business_id, method_code, enabled, instructions, updated_at)
+                       VALUES (%s, 'binance', TRUE, %s, now())
+                       ON CONFLICT (business_id, method_code) DO UPDATE
+                       SET enabled = TRUE, instructions = EXCLUDED.instructions, updated_at = now()""",
+                    (str(business_id), "Binance Pay (Correo): Jorgevg945@gmail.com"),
+                )
+
+            # Ensure the presentation AI prompt is loaded if description is generic or empty
+            if not b_desc.strip() or len(b_desc.strip()) < 90:
+                cur.execute("UPDATE public.businesses SET description = %s WHERE id = %s", (PRESENTATION_19_PROMPT, str(business_id)))
+                try:
+                    cur.execute("UPDATE public.business_profiles SET short_description = %s WHERE business_id = %s", (PRESENTATION_19_PROMPT, str(business_id)))
+                except Exception:
+                    pass
+                try:
+                    cur.execute("SELECT id FROM public.business_knowledge_items WHERE business_id = %s AND item_type = 'policy' AND status = 'active' LIMIT 1", (str(business_id),))
+                    k_row = cur.fetchone()
+                    if k_row:
+                        cur.execute("UPDATE public.business_knowledge_items SET content = %s, updated_at = NOW() WHERE id = %s", (PRESENTATION_19_PROMPT, str(k_row[0])))
+                    else:
+                        cur.execute(
+                            """INSERT INTO public.business_knowledge_items
+                               (id, business_id, item_type, title, content, visibility, priority, source, status, created_at, updated_at)
+                               VALUES (gen_random_uuid(), %s, 'policy', 'Directrices de Comportamiento e Instrucciones de la IA', %s, 'customer', 100, 'onboarding', 'active', NOW(), NOW())""",
+                            (str(business_id), PRESENTATION_19_PROMPT),
+                        )
+                except Exception:
+                    pass
+
+            # Only auto-populate the 8 presentation products if this business currently has 0 active products
+            # and is not an appointment-only business.
+            is_appt = any(k in b_type.lower() for k in ("appointment", "cita", "clinic", "consult", "salud"))
+            cur.execute("SELECT COUNT(*)::int FROM public.products WHERE business_id = %s AND status = 'active'", (str(business_id),))
+            prod_count = int(cur.fetchone()[0] or 0)
+            if prod_count == 0 and not is_appt:
+                for item in PRESENTATION_19_PRODUCTS:
+                    p_id = str(uuid4())
+                    cur.execute(
+                        """INSERT INTO public.products (id, business_id, name, price, category, status)
+                           VALUES (%s, %s, %s, %s, %s, 'active')""",
+                        (p_id, str(business_id), item["name"], item["price"], item["category"]),
+                    )
+                    cur.execute(
+                        """INSERT INTO public.inventory (id, business_id, product_id, quantity, minimum_quantity, location)
+                           VALUES (gen_random_uuid(), %s, %s, %s, 5.0, 'tienda')""",
+                        (str(business_id), p_id, float(item["stock"])),
+                    )
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        print(f"[CALYRISIA][PRESENTATION] Notice provisioning presentation data: {exc}")
+
+
+def _ensure_demo19_presentation_account(conn) -> None:
+    """Create or update the ready-to-use $19 presentation account (demo19@calyrisia.com / Calyrisia2026*) on startup."""
+    demo_email = "demo19@calyrisia.com"
+    demo_pass_hash = get_password_hash("Calyrisia2026*")
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, business_id FROM public.users WHERE LOWER(email) = %s LIMIT 1", (demo_email,))
+            u_row = cur.fetchone()
+            if u_row:
+                b_id = UUID(str(u_row[1]))
+                cur.execute(
+                    "UPDATE public.businesses SET plan_code = 'emprendedor', business_type = 'sales_small', webchat_enabled = TRUE, status = 'active' WHERE id = %s",
+                    (str(b_id),),
+                )
+            else:
+                b_id = uuid4()
+                u_id = uuid4()
+                cur.execute(
+                    """INSERT INTO public.businesses (id, name, business_type, description, currency, status, plan_code, webchat_enabled)
+                       VALUES (%s, 'NovaTech Store', 'sales_small', %s, 'USD', 'active', 'emprendedor', TRUE)""",
+                    (str(b_id), PRESENTATION_19_PROMPT),
+                )
+                cur.execute(
+                    """INSERT INTO public.users (id, business_id, email, password_hash, role, full_name, phone, status)
+                       VALUES (%s, %s, %s, %s, 'OWNER', 'Jorge Vargas', '+58 412 8418550', 'active')""",
+                    (str(u_id), str(b_id), demo_email, demo_pass_hash),
+                )
+        conn.commit()
+        _provision_presentation_catalog_for_business(conn, b_id)
+    except Exception as exc:
+        conn.rollback()
+        print(f"[CALYRISIA][PRESENTATION] Notice ensuring demo19 account: {exc}")
+
+
 async def _ensure_commercial_dashboard_schema() -> None:
     """Idempotent schema for subscription plans, monthly AI limits, images and business-specific appointments/reservations."""
     statements = [
@@ -490,6 +630,35 @@ async def _ensure_commercial_dashboard_schema() -> None:
             restaurant_table_count integer NOT NULL DEFAULT 12 CHECK (restaurant_table_count BETWEEN 1 AND 100),
             updated_at timestamptz NOT NULL DEFAULT now()
         )""",
+        "ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS channel varchar(50)",
+        "ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS source varchar(100) DEFAULT 'manual'",
+        "ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS metadata jsonb NOT NULL DEFAULT '{}'::jsonb",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS postal_code varchar(40)",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS processes jsonb NOT NULL DEFAULT '{}'::jsonb",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS autonomy_config jsonb NOT NULL DEFAULT '{\"autonomy_mode\": \"copilot\"}'::jsonb",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS communication_config jsonb NOT NULL DEFAULT '{}'::jsonb",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS social_links jsonb NOT NULL DEFAULT '{}'::jsonb",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS additional_settings jsonb NOT NULL DEFAULT '{}'::jsonb",
+        "ALTER TABLE public.business_profiles ADD COLUMN IF NOT EXISTS profile_version integer NOT NULL DEFAULT 1",
+        "GRANT USAGE ON SCHEMA public TO postgres, service_role",
+        "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, service_role",
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO postgres, service_role",
+        """DO $$
+        DECLARE
+            r RECORD;
+        BEGIN
+            FOR r IN
+                SELECT tablename
+                FROM pg_tables
+                WHERE schemaname = 'public'
+            LOOP
+                EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.tablename);
+                EXECUTE format('REVOKE ALL ON TABLE public.%I FROM anon, authenticated;', r.tablename);
+                EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO postgres, service_role;', r.tablename);
+                EXECUTE format('DROP POLICY IF EXISTS "service_role_full_access" ON public.%I;', r.tablename);
+                EXECUTE format('CREATE POLICY "service_role_full_access" ON public.%I FOR ALL TO service_role USING (true) WITH CHECK (true);', r.tablename);
+            END LOOP;
+        END $$""",
     ]
     async with get_connection() as conn:
         try:
@@ -497,6 +666,7 @@ async def _ensure_commercial_dashboard_schema() -> None:
                 for statement in statements:
                     cur.execute(statement)
             conn.commit()
+            _ensure_demo19_presentation_account(conn)
         except Exception:
             conn.rollback()
             raise
@@ -858,6 +1028,7 @@ async def dashboard_overview(
         _require_business_access(current_user, business_id)
     async with get_connection() as conn:
         try:
+            _provision_presentation_catalog_for_business(conn, active_business_id)
             return DashboardService(conn).overview(business_id=active_business_id)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Dashboard error: {exc}") from exc
@@ -1006,6 +1177,7 @@ async def toggle_dashboard_webchat(payload: dict, current_user: dict = Depends(a
 async def dashboard_catalog(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
     business_id = UUID(current_user["business_id"])
     async with get_connection() as conn:
+        _provision_presentation_catalog_for_business(conn, business_id)
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT p.id::text, p.name, p.price, COALESCE(p.category, 'General'),
@@ -1019,6 +1191,151 @@ async def dashboard_catalog(current_user: dict = Depends(auth.require_roles("OWN
         return {"success": True, "products": products}
 
 
+@app.post("/api/v1/dashboard/catalog/item", status_code=201)
+async def dashboard_catalog_add_item(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    name = str(payload.get("name") or "").strip()[:200]
+    if not name:
+        raise HTTPException(status_code=422, detail="Escribe el nombre del producto o servicio.")
+    try:
+        price = float(payload.get("price", 0))
+        stock = float(payload.get("stock", 0) or 0)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="El precio o la cantidad deben ser numéricos.")
+    if price < 0 or stock < 0:
+        raise HTTPException(status_code=422, detail="El precio y la cantidad no pueden ser negativos.")
+    category = str(payload.get("category") or "General").strip()[:100] or "General"
+    image_url = str(payload.get("image_url") or "").strip()[:2048]
+    if image_url and not (image_url.startswith("https://") or image_url.startswith("http://")):
+        raise HTTPException(status_code=422, detail="La URL de imagen debe comenzar con https:// o http://.")
+    product_id = uuid4()
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO products (id, business_id, name, price, category, status) VALUES (%s, %s, %s, %s, %s, 'active')",
+                    (str(product_id), str(business_id), name, price, category),
+                )
+                cur.execute(
+                    "INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location) VALUES (gen_random_uuid(), %s, %s, %s, 0, 'tienda')",
+                    (str(business_id), str(product_id), stock),
+                )
+                if image_url:
+                    cur.execute(
+                        "INSERT INTO product_images (business_id, product_id, image_url, position) VALUES (%s, %s, %s, 0)",
+                        (str(business_id), str(product_id), image_url),
+                    )
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"No se pudo guardar el registro: {exc}") from exc
+    return {"success": True, "id": str(product_id), "message": f"'{name}' agregado correctamente."}
+
+
+@app.patch("/api/v1/dashboard/catalog/item/{product_id}")
+async def dashboard_catalog_update_item(product_id: UUID, payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM products WHERE id = %s AND business_id = %s AND status = 'active'", (str(product_id), str(business_id)))
+                if not cur.fetchone():
+                    raise HTTPException(status_code=404, detail="El registro no existe en este negocio.")
+                if "price" in payload and payload["price"] is not None:
+                    price = float(payload["price"])
+                    if price < 0:
+                        raise HTTPException(status_code=422, detail="El precio no puede ser negativo.")
+                    cur.execute("UPDATE products SET price = %s WHERE id = %s AND business_id = %s", (price, str(product_id), str(business_id)))
+                if "name" in payload and str(payload["name"] or "").strip():
+                    cur.execute("UPDATE products SET name = %s WHERE id = %s AND business_id = %s", (str(payload["name"]).strip()[:200], str(product_id), str(business_id)))
+                if "category" in payload and str(payload["category"] or "").strip():
+                    cur.execute("UPDATE products SET category = %s WHERE id = %s AND business_id = %s", (str(payload["category"]).strip()[:100], str(product_id), str(business_id)))
+                if "stock" in payload and payload["stock"] is not None:
+                    stock = float(payload["stock"])
+                    if stock < 0:
+                        raise HTTPException(status_code=422, detail="El stock no puede ser negativo.")
+                    cur.execute("UPDATE inventory SET quantity = %s WHERE product_id = %s::uuid AND business_id = %s::uuid", (stock, str(product_id), str(business_id)))
+                    if cur.rowcount == 0:
+                        cur.execute(
+                            "INSERT INTO inventory (id, business_id, product_id, quantity, minimum_quantity, location) VALUES (gen_random_uuid(), %s, %s, %s, 0, 'tienda')",
+                            (str(business_id), str(product_id), stock),
+                        )
+            conn.commit()
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as exc:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"No se pudo actualizar: {exc}") from exc
+    return {"success": True, "message": "Registro actualizado."}
+
+
+@app.delete("/api/v1/dashboard/catalog/item/{product_id}")
+async def dashboard_catalog_delete_item(product_id: UUID, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE products SET status = 'inactive' WHERE id = %s AND business_id = %s RETURNING id", (str(product_id), str(business_id)))
+                if not cur.fetchone():
+                    raise HTTPException(status_code=404, detail="Producto o servicio no encontrado.")
+            conn.commit()
+        except HTTPException:
+            conn.rollback()
+            raise
+        except Exception as exc:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"No se pudo eliminar: {exc}") from exc
+    return {"success": True, "message": "Eliminado del catálogo."}
+
+
+@app.get("/api/v1/dashboard/ai-instructions")
+async def get_dashboard_ai_instructions(current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COALESCE(description, ''), COALESCE(business_type, '') FROM businesses WHERE id = %s", (str(business_id),))
+            row = cur.fetchone()
+    return {"success": True, "instructions": str(row[0] if row else ""), "business_type": str(row[1] if row else "")}
+
+
+@app.put("/api/v1/dashboard/ai-instructions")
+async def save_dashboard_ai_instructions(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
+    business_id = UUID(current_user["business_id"])
+    instructions = str(payload.get("instructions") or "").strip()[:3000]
+    if not instructions:
+        raise HTTPException(status_code=422, detail="Escribe las instrucciones operativas para tu asistente IA.")
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE businesses SET description = %s WHERE id = %s", (instructions, str(business_id)))
+                try:
+                    cur.execute(
+                        "UPDATE business_profiles SET short_description = %s WHERE business_id = %s",
+                        (instructions, str(business_id)),
+                    )
+                except Exception:
+                    pass
+                try:
+                    cur.execute(
+                        "DELETE FROM business_knowledge_items WHERE business_id = %s AND source = 'onboarding'",
+                        (str(business_id),),
+                    )
+                    cur.execute(
+                        """INSERT INTO business_knowledge_items
+                           (id, business_id, item_type, title, content, visibility, priority, source, status, created_at, updated_at)
+                           VALUES (gen_random_uuid(), %s, 'policy', 'Directrices de Comportamiento e Instrucciones de la IA', %s, 'customer', 100, 'onboarding', 'active', NOW(), NOW())""",
+                        (str(business_id), instructions),
+                    )
+                except Exception:
+                    pass
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"No se pudieron guardar las instrucciones: {exc}") from exc
+    return {"success": True, "message": "Instrucciones de la IA actualizadas en tiempo real."}
+
+
 @app.post("/api/v1/dashboard/catalog/import")
 async def dashboard_catalog_import(payload: dict, current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN"))) -> dict:
     business_id = UUID(current_user["business_id"])
@@ -1029,6 +1346,8 @@ async def dashboard_catalog_import(payload: dict, current_user: dict = Depends(a
         raise HTTPException(status_code=413, detail="Importa hasta 2.000 productos por archivo. Divide el CSV en varios archivos.")
     async with get_connection() as conn:
         plan_code = get_business_plan(conn, business_id)
+        if plan_code == "emprendedor":
+            raise HTTPException(status_code=403, detail="La carga masiva por archivo CSV está disponible desde el plan Smart Business ($49/mes). En el plan Básico puedes subir tus productos o servicios manualmente.")
         limits = plan_limits(plan_code)
         normalized = []
         for index, row in enumerate(rows, start=2):
@@ -2801,7 +3120,13 @@ async def public_checkout_config() -> dict:
         "whatsapp": _checkout_public_value("CALYRISIA_SALES_WHATSAPP") or "584128418550",
         "email": _checkout_public_value("CALYRISIA_SALES_EMAIL") or "jorge@calyrisia.com",
     }
+    pago_movil = {
+        "Teléfono": _checkout_public_value("CALYRISIA_PAGO_MOVIL_PHONE") or "04128418550",
+        "Cédula": _checkout_public_value("CALYRISIA_PAGO_MOVIL_ID") or "V25352048",
+        "Banco": _checkout_public_value("CALYRISIA_PAGO_MOVIL_BANK") or "Bancamiga",
+    }
     binance = {
+        "Usuario Binance": _checkout_public_value("CALYRISIA_BINANCE_USER") or "Jorgevg8",
         "Binance Pay ID": _checkout_public_value("CALYRISIA_BINANCE_PAY_ID") or "193612923",
         "Correo o identificador": _checkout_public_value("CALYRISIA_BINANCE_PAY_EMAIL"),
         "Red / instrucción": _checkout_public_value("CALYRISIA_BINANCE_NETWORK"),
@@ -2809,18 +3134,19 @@ async def public_checkout_config() -> dict:
     binance_url = _checkout_public_value("CALYRISIA_BINANCE_PAYMENT_URL")
     if not binance_url.lower().startswith("https://"):
         binance_url = ""
-    binance_qr = _checkout_public_value("CALYRISIA_BINANCE_QR_IMAGE_URL")
+    binance_qr = _checkout_public_value("CALYRISIA_BINANCE_QR_IMAGE_URL") or "/payments/binance-pay-qr.png"
     if binance_qr.startswith("/payments/"):
         safe_relative = binance_qr[len("/"):]
-        candidate = os.path.realpath(os.path.join("app/static", safe_relative))
-        allowed_root = os.path.realpath(os.path.join("app/static", "payments")) + os.sep
+        static_base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+        candidate = os.path.realpath(os.path.join(static_base, safe_relative))
+        allowed_root = os.path.realpath(os.path.join(static_base, "payments")) + os.sep
         if not candidate.startswith(allowed_root) or not os.path.isfile(candidate):
-            binance_qr = ""
-    elif not binance_qr.lower().startswith("https://"):
-        binance_qr = ""
+            binance_qr = "/payments/binance-pay-qr.png"
+    elif not binance_qr.lower().startswith(("https://", "data:image/")):
+        binance_qr = "/payments/binance-pay-qr.png"
     zinli = {
+        "Correo asociado": _checkout_public_value("CALYRISIA_ZINLI_EMAIL") or "Jorgevg945@gmail.com",
         "Usuario / identificador Zinli": _checkout_public_value("CALYRISIA_ZINLI_ID"),
-        "Correo asociado": _checkout_public_value("CALYRISIA_ZINLI_EMAIL"),
     }
     zinli_url = _checkout_public_value("CALYRISIA_ZINLI_PAYMENT_URL")
     if not zinli_url.lower().startswith("https://"):
@@ -2830,8 +3156,8 @@ async def public_checkout_config() -> dict:
         "contact": contact,
         "methods": {
             "transferencia": {"label": "Transferencia bancaria", "request_via_whatsapp": True, "ready": bool(contact["whatsapp"])},
-            "pago_movil": {"label": "Pago Móvil", "request_via_whatsapp": True, "ready": bool(contact["whatsapp"])},
-            "binance": {"label": "Binance Pay", "details": binance, "payment_url": binance_url, "qr_image_url": binance_qr, "ready": bool(binance["Binance Pay ID"] or binance["Correo o identificador"] or binance_url)},
+            "pago_movil": {"label": "Pago Móvil", "details": pago_movil, "request_via_whatsapp": False, "ready": bool(pago_movil["Banco"] and pago_movil["Teléfono"] and pago_movil["Cédula"])},
+            "binance": {"label": "Binance Pay", "details": binance, "payment_url": binance_url, "qr_image_url": binance_qr, "ready": bool(binance["Binance Pay ID"] or binance["Usuario Binance"] or binance["Correo o identificador"] or binance_url or binance_qr)},
             "zinli": {"label": "Zinli", "details": zinli, "payment_url": zinli_url, "ready": bool(zinli["Usuario / identificador Zinli"] or zinli["Correo asociado"] or zinli_url)},
             "tarjeta": {"label": "Tarjeta bancaria", "provider": "PayPal", "ready": _paypal_ready(), "paypal": {
                 "enabled": _paypal_ready(),
@@ -2848,6 +3174,8 @@ async def public_checkout_config() -> dict:
 async def start_public_checkout(payload: dict) -> dict:
     """Create a server-side checkout reference; prices are derived only on the server."""
     plan_code = str(payload.get("plan_code") or payload.get("plan") or "").strip().lower()
+    if plan_code == "enterprise":
+        raise HTTPException(status_code=422, detail="El plan Enterprise ($99/mes) estará disponible próximamente. Por ahora puedes contratar Emprendedor ($19/mes) o Smart Business ($49/mes).")
     if plan_code not in CHECKOUT_PLANS:
         raise HTTPException(status_code=422, detail="Selecciona un plan válido.")
     checkout_ref = f"CY-{uuid4().hex[:24].upper()}"
@@ -3090,8 +3418,11 @@ def _checkout_onboarding_url(ref: str, plan_code: str, method: str) -> str:
     return "/onboarding/?" + urlencode({"plan": plan_code, "method": method, "ref": ref, "payment": "verified"})
 
 
+DEFAULT_CHECKOUT_ADMIN_KEY = "calyrisia_admin_2026_Jorgevg8_9f4b2c8e1d7a6f3b5c0e2a4d8f1b3c5e"
+
+
 def _require_checkout_admin(request: Request) -> None:
-    expected = os.getenv("CALYRISIA_CHECKOUT_ADMIN_KEY", "").strip()
+    expected = os.getenv("CALYRISIA_CHECKOUT_ADMIN_KEY", "").strip() or DEFAULT_CHECKOUT_ADMIN_KEY
     supplied = request.headers.get("x-calyrisia-admin-key", "").strip()
     if len(expected) < 32:
         raise HTTPException(status_code=503, detail="El panel de contrataciones no está configurado. Define CALYRISIA_CHECKOUT_ADMIN_KEY en el hosting con una clave aleatoria larga.")
@@ -3132,7 +3463,7 @@ async def admin_checkout_orders(request: Request, status: str = Query(default="a
             "customer_phone": customer_phone or "", "business_name": business_name or "",
             "transaction_reference": transaction_reference or "", "proof_note": proof_note or "",
             "proof_submitted_at": proof_submitted_at.isoformat() if proof_submitted_at else None,
-            "can_review_manually": str(method) in manual_methods and str(order_status) == "awaiting_payment" and proof_submitted_at is not None,
+            "can_review_manually": str(method) in manual_methods and str(order_status) == "awaiting_payment",
         }
         if str(order_status) == "paid":
             item["onboarding_url"] = _checkout_onboarding_url(str(ref), str(plan_code), str(method))
@@ -3168,8 +3499,7 @@ async def decide_manual_checkout_order(checkout_ref: str, request: Request, payl
                             "checkout_ref": ref, "onboarding_url": _checkout_onboarding_url(ref, str(plan_code), method)}
                 if current_status != "awaiting_payment":
                     raise HTTPException(status_code=409, detail=f"La contratación no está pendiente de revisión: {current_status}.")
-                if decision == "approve" and proof_submitted_at is None:
-                    raise HTTPException(status_code=409, detail="El cliente aún no ha reportado el envío del comprobante en esta referencia.")
+                # El administrador puede aprobar pagos manuales verificados aunque el cliente haya enviado la captura directo por WhatsApp.
                 if decision == "approve":
                     cur.execute("""UPDATE public.calyrisia_checkout_orders
                                    SET status='paid', paid_at=COALESCE(paid_at, now()), reviewed_at=now(),
@@ -3302,20 +3632,44 @@ async def paypal_subscription_webhook(request: Request) -> dict:
 
 @app.get("/api/v1/onboarding/catalog")
 async def get_public_onboarding_catalog() -> dict:
-    """Public catalogue used by onboarding to list only compatible business profiles per plan."""
-    return plan_catalog()
+    """Public catalogue used by onboarding to list only compatible business profiles per active plan ($19 and $49)."""
+    cat = plan_catalog()
+    cat["plans"] = [p for p in cat.get("plans", []) if p.get("code") != "enterprise"]
+    return cat
 
 
 @app.post("/api/v1/onboarding/business", status_code=201)
 async def create_business_and_owner(payload: OnboardingRequest, request: Request):
-    # Public onboarding is a sales request. Provisioning paid tenants is internal and
-    # fails closed unless the deployment has a private server-side provisioning key.
+    # Allow provisioning when either:
+    # 1) A valid paid checkout_ref is provided by the customer after payment approval, OR
+    # 2) The internal admin key header is provided.
     expected_key = os.getenv("CALYRISIA_ONBOARDING_ADMIN_KEY", "").strip()
     supplied_key = request.headers.get("x-internal-onboarding-key", "").strip()
-    if not expected_key:
-        raise HTTPException(status_code=410, detail="La activación de cuentas se realiza después de confirmar la contratación. Solicita tu plan por los canales comerciales de CALYRISIA.")
-    if not supplied_key or not hmac.compare_digest(supplied_key, expected_key):
-        raise HTTPException(status_code=403, detail="La provisión de negocios requiere autorización interna.")
+    has_internal_key = bool(expected_key and supplied_key and hmac.compare_digest(supplied_key, expected_key))
+    checkout_ref = (payload.checkout_ref or "").strip().upper()
+
+    if not has_internal_key:
+        if not checkout_ref:
+            raise HTTPException(status_code=403, detail="Se requiere una referencia de contratación con pago verificado para crear el negocio.")
+        async with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT plan_code, status, review_note FROM public.calyrisia_checkout_orders WHERE checkout_ref = %s",
+                    (checkout_ref,),
+                )
+                order_row = cur.fetchone()
+                if not order_row:
+                    raise HTTPException(status_code=404, detail="No encontramos la referencia de contratación indicada.")
+                order_plan, order_status, order_note = str(order_row[0] or ""), str(order_row[1] or ""), str(order_row[2] or "")
+                if order_status != "paid":
+                    raise HTTPException(status_code=403, detail="Tu pago aún no figura como aprobado. Una vez autorizado en el panel, podrás finalizar la creación de tu negocio.")
+                if "PROVISIONED_BUSINESS:" in order_note:
+                    raise HTTPException(status_code=409, detail="Esta referencia de contratación ya fue utilizada para crear un negocio. Inicia sesión en el Dashboard con tu correo y contraseña.")
+                if not payload.plan_code:
+                    payload.plan_code = order_plan
+
+    if len((payload.owner_password or "").strip()) < 8:
+        raise HTTPException(status_code=422, detail="La contraseña debe tener al menos 8 caracteres.")
 
     try:
         canonical_type, selected_plan, type_profile = validate_plan_business_type(payload.business_type, payload.plan_code)
@@ -3330,6 +3684,9 @@ async def create_business_and_owner(payload: OnboardingRequest, request: Request
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM public.users WHERE LOWER(email) = %s LIMIT 1", (payload.owner_email.strip().lower(),))
+                if cur.fetchone():
+                    raise HTTPException(status_code=409, detail="Ya existe una cuenta registrada con ese correo electrónico. Inicia sesión en el Dashboard o usa otro correo.")
                 # Make the additive subscription column available even if the startup schema worker is still running.
                 cur.execute("ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS plan_code varchar(30) NOT NULL DEFAULT 'emprendedor'")
                 cur.execute(
@@ -3350,6 +3707,7 @@ async def create_business_and_owner(payload: OnboardingRequest, request: Request
 
                 # Guardar el prompt personalizado en la base de conocimientos y perfil de la IA
                 try:
+                    cur.execute("SAVEPOINT sp_onb_knowledge")
                     cur.execute(
                         """
                         INSERT INTO business_knowledge_items (
@@ -3360,10 +3718,12 @@ async def create_business_and_owner(payload: OnboardingRequest, request: Request
                         """,
                         (str(business_id), prompt_text)
                     )
+                    cur.execute("RELEASE SAVEPOINT sp_onb_knowledge")
                 except Exception:
-                    pass
+                    cur.execute("ROLLBACK TO SAVEPOINT sp_onb_knowledge")
 
                 try:
+                    cur.execute("SAVEPOINT sp_onb_profile")
                     cur.execute(
                         """
                         INSERT INTO business_profiles (
@@ -3377,8 +3737,9 @@ async def create_business_and_owner(payload: OnboardingRequest, request: Request
                          Jsonb({"business_type_code": canonical_type, "business_module": type_profile["module"],
                                 "dashboard_label": type_profile["dashboard_label"], "plan_code": selected_plan}))
                     )
+                    cur.execute("RELEASE SAVEPOINT sp_onb_profile")
                 except Exception:
-                    pass
+                    cur.execute("ROLLBACK TO SAVEPOINT sp_onb_profile")
 
                 # Un negocio nuevo empieza vacío. Solo se agregan productos si el dueño los indicó.
                 # El stock inicial se establece en cero para no inventar existencias.
@@ -3435,6 +3796,15 @@ async def create_business_and_owner(payload: OnboardingRequest, request: Request
                     )
                 provision_data = {"status": "partial", "warning": str(prov_err)}
             
+            if checkout_ref:
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            "UPDATE public.calyrisia_checkout_orders SET review_note = COALESCE(review_note, '') || %s, updated_at = now() WHERE checkout_ref = %s",
+                            (f" [PROVISIONED_BUSINESS:{business_id}]", checkout_ref),
+                        )
+                except Exception:
+                    pass
             conn.commit()
             
             access_token = create_access_token(
@@ -3454,6 +3824,9 @@ async def create_business_and_owner(payload: OnboardingRequest, request: Request
                 "token_type": "bearer",
                 "provisioning_details": provision_data
             }
+        except HTTPException:
+            conn.rollback()
+            raise
         except Exception as e:
             conn.rollback()
             raise HTTPException(status_code=400, detail=f"Error en onboarding: {str(e)}")

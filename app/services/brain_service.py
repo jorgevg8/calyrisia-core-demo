@@ -396,30 +396,63 @@ class BrainService:
         else:
             cat_str = "No hay productos registrados en el sistema."
 
+        bt_lower = str(biz_type or "").lower()
+        is_appointment_biz = any(k in bt_lower for k in ("appointment", "cita", "clinic", "clínic", "consult", "salud", "medic", "odont", "service_team", "servici"))
+        is_restaurant_biz = any(k in bt_lower for k in ("restaurant", "restaur", "caf", "comida", "gastron"))
+        today_iso = datetime.now().strftime("%Y-%m-%d")
+
+        booking_rules = ""
+        if is_appointment_biz:
+            booking_rules = f"""
+5. AGENDAMIENTO AUTOMÁTICO DE CITAS Y CONSULTAS (HOY ES {today_iso}):
+- Tu objetivo principal es informar sobre los servicios/consultas del catálogo y agendar la cita del cliente sin perderte.
+- Para agendar una cita o consulta, asegúrate de tener: 1) Nombre y apellido del cliente/paciente, 2) Teléfono de contacto, 3) Servicio o motivo de la consulta, y 4) Fecha y hora deseada.
+- Si al cliente le falta alguno de esos datos, pídeselo amablemente en un solo mensaje corto.
+- En cuanto el cliente te dé o confirme los datos de su cita, confírmale que su solicitud de cita quedó registrada en el sistema pendiente de aprobación por el especialista/dueño, y AGREGA OBLIGATORIAMENTE al final de tu respuesta esta etiqueta exacta en una sola línea:
+[REGISTRAR_CITA: nombre="Nombre del Cliente" | telefono="Teléfono" | servicio="Nombre del Servicio o Consulta" | fecha="YYYY-MM-DD HH:MM" | notas="Cualquier detalle adicional"]
+"""
+        elif is_restaurant_biz:
+            booking_rules = f"""
+5. PEDIDOS DE MENÚ Y RESERVA AUTOMÁTICA DE MESAS (HOY ES {today_iso}):
+- Si el cliente desea pedir platos/comida del menú: confirma las cantidades, calcula el total exacto y agrega al final [BOTON_PAGO: monto].
+- Si el cliente desea reservar una mesa: solicita 1) Nombre y apellido, 2) Teléfono, 3) Cantidad de personas, y 4) Fecha y hora de la reserva.
+- En cuanto el cliente confirme los datos de la reserva de mesa, infórmale que su reserva fue enviada al panel del restaurante para su aprobación y AGREGA OBLIGATORIAMENTE al final de tu respuesta esta etiqueta exacta:
+[REGISTRAR_RESERVA: nombre="Nombre del Cliente" | telefono="Teléfono" | personas="2" | fecha="YYYY-MM-DD HH:MM" | notas="Preferencia o detalle"]
+"""
+        else:
+            booking_rules = f"""
+5. FLUJO DE COMPRA Y TARJETA INTERACTIVA DE PAGO EN WEBCHAT:
+- Cuando el cliente salude o pregunte qué vendemos, dale la bienvenida y menciona los productos disponibles en el catálogo con su precio en {currency} y unidades en stock.
+- Cuando el cliente indique que quiere comprar, llevarse o pedir uno o más productos del catálogo (o confirme delivery / retiro en tienda / pagar):
+  1) Confirma las unidades y el nombre exacto de cada producto solicitado con su subtotal, por ejemplo: "- 1x Nombre del Producto: {currency} 25.00".
+  2) Indica el Total a pagar en {currency} y pregúntale si prefiere delivery o retiro en tienda.
+  3) AGREGA OBLIGATORIAMENTE al final de tu respuesta la etiqueta exacta con el monto numérico total (sin símbolo $) y los artículos en JSON para desplegar la tarjeta de pago en el chat:
+[BOTON_PAGO: 25.00|ITEMS: [{{"name": "Nombre Exacto del Producto", "qty": 1}}]]
+"""
+
         return f"""
-Eres el Asesor de Ventas oficial de {biz_name} ({biz_type}).
+Eres el Asistente Inteligente oficial de {biz_name} ({biz_type}).
 Atiendes clientes en tiempo real por chat de manera humana, directa, ágil y simpática.
 
-CATÁLOGO REAL CON PRECIOS OFICIALES EN {currency}:
+CATÁLOGO / SERVICIOS REALES CON PRECIOS OFICIALES EN {currency}:
 {cat_str}
 
 REGLAS ESTRICTAS DE RESPUESTA:
 1. BREVEDAD Y AGILIDAD (NO HABLES DE MÁS):
-- Respuestas cortas, rápidas y al grano (máximo 1 o 2 oraciones para preguntas de precio o disponibilidad).
-- Si te preguntan por un precio (ej. "cuánto vale la harina pan"), responde DIRECTAMENTE con el precio del catálogo en la primera oración. Ejemplo: "La Harina de Maíz PAN 1kg está en {currency} 1.30 y la tenemos disponible. ¿Cuántos paquetes te anoto?".
-- PROHIBIDO dar discursos largos, alabanzas poéticas ("un básico infaltable que nunca puede faltar...") o inventar que "estás sincronizando tarifas con caja". Ya tienes los precios oficiales en tu catálogo arriba.
+- Respuestas cortas, rápidas y al grano (máximo 1 a 3 oraciones claras).
+- Si te preguntan por un precio o servicio, responde DIRECTAMENTE con el precio oficial del catálogo en la primera oración.
+- PROHIBIDO inventar productos, servicios o precios que no estén en el catálogo o en las directrices del dueño.
 
 2. CERO ASTERISCOS (TEXTO LIMPIO DE CHAT):
-- ESTÁ TERMINANTEMENTE PROHIBIDO usar asteriscos (** o *). No uses negritas de markdown. Escribe únicamente texto limpio y natural como un mensaje real de WhatsApp. Escribe {biz_name}, NUNCA **{biz_name}**.
+- ESTÁ TERMINANTEMENTE PROHIBIDO usar asteriscos (** o *). No uses negritas de markdown. Escribe únicamente texto limpio y natural.
 
-3. CONSULTAS DE CATÁLOGO Y CANTIDAD DE UNIDADES:
-- Si el cliente pregunta qué productos tienen, qué venden o cuántas unidades tienen/quedan, menciona los productos principales con su precio exacto Y la cantidad exacta de unidades disponibles de cada uno según el catálogo.
-- Ejemplo: "En {biz_name} tenemos disponible: Harina de Maíz PAN 1kg (USD 1.30 - 22 unidades), Aceite Vegetal 1 Litro (USD 2.80 - 23 unidades)... ¿Cuántas unidades te gustaría llevar?".
-- Si te preguntan por un producto específico (ej. "cuántas unidades de harina pan les quedan?"), responde directamente: "La Harina de Maíz PAN 1kg cuesta USD 1.30 y nos quedan 22 unidades disponibles. ¿Cuántas te anoto?".
+3. CONSULTAS DE CATÁLOGO / SERVICIOS:
+- Si el negocio es de productos físicos, menciona el precio y las unidades disponibles.
+- Si el negocio es de citas, consultas o servicios profesionales, menciona el nombre del servicio/consulta y su tarifa sin hablar de "unidades en stock", e invita al cliente a agendar su cita.
 
-4. DIRECTRICES DEL DUEÑO:
-- Si el dueño dejó instrucciones ("{description}"), aplícalas con prioridad.
-
+4. DIRECTRICES DEL DUEÑO (PRIORIDAD MÁXIMA):
+- Instrucciones configuradas para este negocio: "{description}"
+{booking_rules}
 CONTEXTO OPERATIVO:
 {context_json}
 """.strip()
@@ -683,10 +716,11 @@ CONTEXTO OPERATIVO:
                 total += st
                 lines.append(f"- {q}x {p['name']}: {currency} {st:.2f} ({currency} {p['price']:.2f} c/u)")
 
+            items_payload = json.dumps([{"product_id": str(fi["product"].get("id") or ""), "name": fi["product"]["name"], "qty": fi["qty"], "price": float(fi["product"].get("price") or 0)} for fi in found_items], ensure_ascii=False)
             return (
                 "¡Excelente elección! Te anoto el siguiente pedido:\n"
                 + "\n".join(lines)
-                + f"\n\nTotal a pagar: {currency} {total:.2f}. ¿Deseas servicio de delivery o pasarás a retirar por tienda?\n[BOTON_PAGO: {total:.2f}]"
+                + f"\n\nTotal a pagar: {currency} {total:.2f}. ¿Deseas servicio de delivery o pasarás a retirar por tienda?\n[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
             )
         return None
 
@@ -703,6 +737,30 @@ CONTEXTO OPERATIVO:
         curr = biz.get("currency") or "USD"
         catalog = context.get("product_catalog") or []
         normalized = self._normalize(user_message)
+
+        bt_lower = str(biz.get("business_type") or "").lower()
+        is_appointment_biz = any(k in bt_lower for k in ("appointment", "cita", "clinic", "clínic", "consult", "salud", "medic", "odont", "service_team", "servici"))
+        is_restaurant_biz = any(k in bt_lower for k in ("restaurant", "restaur", "caf", "comida", "gastron"))
+
+        if is_appointment_biz and any(w in normalized for w in ("cita", "consulta", "agendar", "turno", "reservar", "hora", "manana", "mañana", "hoy")):
+            has_time = bool(re.search(r"\b(\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)|manana|mañana|hoy)\b", user_message.lower()))
+            if has_time:
+                phone_m = re.search(r"(\+?\d[\d\s\-]{6,14}\d)", user_message)
+                phone_val = phone_m.group(1).strip() if phone_m else ""
+                name_m = re.search(r"(?:soy|me llamo|nombre es|a nombre de)\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]{3,40})", user_message, re.IGNORECASE)
+                name_val = name_m.group(1).strip() if name_m else ((context.get("customer") or {}).get("full_name") or "Cliente")
+                svc_val = catalog[0]["name"] if catalog else "Consulta General"
+                for it in catalog:
+                    if it.get("name") and it["name"].lower() in user_message.lower():
+                        svc_val = it["name"]
+                        break
+                return (
+                    f"Perfecto {name_val}, he registrado tu solicitud de cita para {svc_val}. "
+                    f"Ya aparece en el panel de {biz_name} pendiente de aprobación. "
+                    f'[REGISTRAR_CITA: nombre="{name_val}" | telefono="{phone_val}" | servicio="{svc_val}" | fecha="{user_message}" | notas="Solicitud por chat"]'
+                )
+            svc_list = ", ".join(f"{it['name']} ({curr} {it['price']:.2f})" for it in catalog[:5]) if catalog else "nuestras consultas y servicios"
+            return f"Con gusto te ayudamos a agendar tu cita en {biz_name}. Contamos con: {svc_list}. Indícame tu nombre completo, teléfono, el servicio que deseas y para qué fecha y hora la prefieres."
 
         # 1. Si el cliente está pidiendo varios productos, calcular pedido completo con total
         order_quote = self._parse_multi_item_order(user_message, catalog, curr)
@@ -1035,6 +1093,163 @@ CONTEXTO OPERATIVO:
 
         return None
 
+    @staticmethod
+    def _parse_flexible_datetime(raw_str: str) -> datetime:
+        from datetime import timedelta
+        now = datetime.now().astimezone()
+        s = (raw_str or "").strip().lower()
+        # 1. Try ISO / YYYY-MM-DD HH:MM
+        m_iso = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})(?:[t\s]+(\d{1,2}):(\d{2}))?", s)
+        if m_iso:
+            try:
+                yr, mo, dy = int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))
+                hr = int(m_iso.group(4)) if m_iso.group(4) is not None else 10
+                mi = int(m_iso.group(5)) if m_iso.group(5) is not None else 0
+                return datetime(yr, mo, dy, hr, mi, tzinfo=now.tzinfo)
+            except Exception:
+                pass
+        # 2. Try DD/MM/YYYY or DD-MM-YYYY
+        m_dmy = re.search(r"(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{2,4}))?", s)
+        base_date = now.date()
+        if "pasado manana" in s or "pasado mañana" in s:
+            base_date = (now + timedelta(days=2)).date()
+        elif "manana" in s or "mañana" in s:
+            base_date = (now + timedelta(days=1)).date()
+        elif m_dmy:
+            try:
+                dy, mo = int(m_dmy.group(1)), int(m_dmy.group(2))
+                yr = int(m_dmy.group(3)) if m_dmy.group(3) else now.year
+                if yr < 100:
+                    yr += 2000
+                base_date = date(yr, mo, dy)
+            except Exception:
+                base_date = (now + timedelta(days=1)).date()
+        else:
+            base_date = (now + timedelta(days=1)).date()
+
+        # Extract hour (e.g. "3pm", "3:30 pm", "15:00", "a las 4")
+        hr, mi = 10, 0
+        m_time = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)", s)
+        if m_time:
+            hr = int(m_time.group(1))
+            mi = int(m_time.group(2) or 0)
+            mer = m_time.group(3).replace(".", "")
+            if mer == "pm" and hr < 12:
+                hr += 12
+            elif mer == "am" and hr == 12:
+                hr = 0
+        else:
+            m_24 = re.search(r"(?:a las\s+|hora\s+)?(\d{1,2}):(\d{2})", s)
+            if m_24:
+                hr = min(23, int(m_24.group(1)))
+                mi = min(59, int(m_24.group(2)))
+            else:
+                m_alas = re.search(r"a las\s+(\d{1,2})", s)
+                if m_alas:
+                    hr = int(m_alas.group(1))
+                    if 1 <= hr <= 7 and ("tarde" in s or "noche" in s or hr <= 6):
+                        hr += 12
+        try:
+            return datetime(base_date.year, base_date.month, base_date.day, hr, mi, tzinfo=now.tzinfo)
+        except Exception:
+            return now + timedelta(days=1)
+
+    def _process_and_store_chat_bookings(
+        self,
+        *,
+        business_id: UUID,
+        customer_id: UUID | None,
+        conversation_id: UUID,
+        user_message: str,
+        ai_response: str,
+        context: dict[str, Any],
+    ) -> str:
+        """Detect [REGISTRAR_CITA: ...] or [REGISTRAR_RESERVA: ...] (or natural appointment details)
+        and automatically persist them into public.business_bookings with status='pending'."""
+        if not ai_response:
+            return ai_response
+
+        biz = context.get("business") or {}
+        bt_lower = str(biz.get("business_type") or "").lower()
+        is_appointment_biz = any(k in bt_lower for k in ("appointment", "cita", "clinic", "clínic", "consult", "salud", "medic", "odont", "service_team", "servici"))
+        is_restaurant_biz = any(k in bt_lower for k in ("restaurant", "restaur", "caf", "comida", "gastron"))
+
+        cust = context.get("customer") or {}
+        default_name = str(cust.get("full_name") or "").strip()
+        if not default_name or default_name.lower() in {"cliente webchat", "visitante", "cliente"}:
+            default_name = "Cliente de Chat"
+        default_phone = str(cust.get("phone") or "").strip()
+
+        tag_match = re.search(r"\[(REGISTRAR_CITA|REGISTRAR_RESERVA)\s*:\s*([^\]]+)\]", ai_response, re.IGNORECASE)
+        clean_response = re.sub(r"\[(?:REGISTRAR_CITA|REGISTRAR_RESERVA)\s*:[^\]]+\]", "", ai_response, flags=re.IGNORECASE).strip()
+
+        if tag_match:
+            tag_kind = tag_match.group(1).upper()
+            raw_fields = tag_match.group(2)
+            booking_type = "reservation" if "RESERVA" in tag_kind else "appointment"
+            kv = {}
+            for part in raw_fields.split("|"):
+                if "=" in part:
+                    k, v = part.split("=", 1)
+                    kv[k.strip().lower()] = v.strip().strip('"').strip("'")
+            c_name = (kv.get("nombre") or kv.get("cliente") or default_name)[:200]
+            c_phone = (kv.get("telefono") or kv.get("teléfono") or default_phone)[:80]
+            s_name = (kv.get("servicio") or kv.get("motivo") or ("Reserva de mesa" if booking_type == "reservation" else "Consulta / Cita"))[:200]
+            raw_date = kv.get("fecha") or kv.get("hora") or user_message
+            starts_at = self._parse_flexible_datetime(raw_date)
+            try:
+                party_size = max(1, min(200, int(re.sub(r"\D", "", str(kv.get("personas") or "1")) or "1")))
+            except Exception:
+                party_size = 1
+            notes = (kv.get("notas") or f"Agendado automáticamente por IA en el chat.")[:1000]
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO public.business_bookings
+                           (business_id, booking_type, customer_name, customer_phone, party_size, starts_at, service_name, status, notes)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending', %s)""",
+                        (str(business_id), booking_type, c_name, c_phone or None, party_size, starts_at, s_name, notes),
+                    )
+                self.conn.commit()
+            except Exception as b_err:
+                self.conn.rollback()
+                print(f"[Brain][Booking] Error saving booking from tag: {b_err}")
+            return clean_response
+
+        # Fallback: if appointment or restaurant business and the user message explicitly provides booking details
+        # while the AI response confirms registration ("registrad", "agendad", "pendiente de aprobacion")
+        if is_appointment_biz or is_restaurant_biz:
+            resp_norm = self._normalize(clean_response)
+            user_norm = self._normalize(user_message)
+            confirmed_in_reply = any(w in resp_norm for w in ("registrad", "agendad", "anotad", "pendiente de aprobacion", "pendiente de confirmacion", "solicitud de cita", "solicitud de reserva"))
+            has_time_in_user = bool(re.search(r"(\d{1,2}:\d{2}|\d{1,2}\s*(?:am|pm)|manana|mañana|hoy|lunes|martes|miercoles|jueves|viernes|sabado)", user_message.lower()))
+            if confirmed_in_reply and has_time_in_user:
+                booking_type = "reservation" if is_restaurant_biz and ("mesa" in user_norm or "reserva" in user_norm or "personas" in user_norm) else ("appointment" if is_appointment_biz else "reservation")
+                phone_m = re.search(r"(\+?\d[\d\s\-]{6,14}\d)", user_message)
+                c_phone = (phone_m.group(1).strip() if phone_m else default_phone)[:80]
+                name_m = re.search(r"(?:soy|me llamo|nombre es|a nombre de)\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]{3,40})", user_message, re.IGNORECASE)
+                c_name = (name_m.group(1).strip() if name_m else default_name)[:200]
+                starts_at = self._parse_flexible_datetime(user_message)
+                s_name = "Reserva de mesa" if booking_type == "reservation" else "Cita / Consulta"
+                for item in (context.get("product_catalog") or []):
+                    if item.get("name") and item["name"].lower() in user_message.lower():
+                        s_name = str(item["name"])[:200]
+                        break
+                try:
+                    with self.conn.cursor() as cur:
+                        cur.execute(
+                            """INSERT INTO public.business_bookings
+                               (business_id, booking_type, customer_name, customer_phone, party_size, starts_at, service_name, status, notes)
+                               VALUES (%s, %s, %s, %s, 1, %s, %s, 'pending', %s)""",
+                            (str(business_id), booking_type, c_name, c_phone or None, starts_at, s_name, f"Mensaje del cliente: {user_message[:300]}"),
+                        )
+                    self.conn.commit()
+                except Exception as fb_err:
+                    self.conn.rollback()
+                    print(f"[Brain][Booking] Fallback booking insert error: {fb_err}")
+
+        return clean_response
+
     def respond(
         self,
         *,
@@ -1115,20 +1330,43 @@ CONTEXTO OPERATIVO:
             system_instruction = self._brain_system_instruction(context)
             provider_errors: list[str] = []
 
-            # MOTOR PRINCIPAL DE ALTA VELOCIDAD GEMINI FLASH (Sub-segundo, 1M Tokens)
-            # Conecta directamente sin intermediarios ni demoras para respuestas instantáneas
-            fast_models = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash", "gemini-2.5-flash"]
+            # Fetch recent conversation turns so Gemini has full multi-turn context
+            recent_turns_text = ""
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT direction, content FROM conversation_messages
+                           WHERE conversation_id = %s AND business_id = %s
+                           ORDER BY created_at DESC LIMIT 6""",
+                        (conversation_id, business_id),
+                    )
+                    t_rows = list(reversed(cur.fetchall()))
+                    if t_rows:
+                        recent_turns_text = "\n".join(
+                            f"{'Cliente' if r[0] == 'inbound' else 'Asistente'}: {str(r[1])[:300]}"
+                            for r in t_rows
+                        )
+            except Exception:
+                recent_turns_text = ""
+
+            prompt_with_history = (
+                f"HISTORIAL RECIENTE DE LA CONVERSACIÓN:\n{recent_turns_text}\n\nMENSAJE ACTUAL DEL CLIENTE:\n{user_message}"
+                if recent_turns_text else user_message
+            )
+
+            # MOTOR PRINCIPAL DE ALTA VELOCIDAD GEMINI FLASH
+            fast_models = ["gemini-2.5-flash", "gemini-2.0-flash"]
             for model in fast_models:
                 metadata["models_tried"].append(model)
                 try:
                     print(f"⚡ Calyrisia Fast Brain: respondiendo con {model}...")
                     resp = self.client.models.generate_content(
                         model=model,
-                        contents=user_message,
+                        contents=prompt_with_history,
                         config=types.GenerateContentConfig(
                             system_instruction=system_instruction,
-                            temperature=0.6,
-                            max_output_tokens=250,
+                            temperature=0.4,
+                            max_output_tokens=320,
                         ),
                     )
                     if resp and resp.text:
@@ -1178,6 +1416,30 @@ CONTEXTO OPERATIVO:
                     "provider_error": " | ".join(provider_errors),
                     "models_tried": list(dict.fromkeys(self.model_candidates)),
                 }
+
+        final_text = self._process_and_store_chat_bookings(
+            business_id=business_id,
+            customer_id=customer_id,
+            conversation_id=conversation_id,
+            user_message=user_message,
+            ai_response=final_text,
+            context=context,
+        )
+
+        # Ensure [BOTON_PAGO: ...] is always present when a customer orders catalog items in a sales business
+        try:
+            biz_info = context.get("business") or {}
+            bt_low = str(biz_info.get("business_type") or "").lower()
+            is_appt_only = any(k in bt_low for k in ("appointment", "cita", "clinic", "consult", "salud"))
+            if not is_appt_only and final_text and "[BOTON_PAGO:" not in final_text:
+                catalog_list = context.get("product_catalog") or []
+                parsed_quote = self._parse_multi_item_order(user_message, catalog_list, biz_info.get("currency") or "USD")
+                if parsed_quote:
+                    tag_m = re.search(r"(\[BOTON_PAGO:[^\]]+\])", parsed_quote)
+                    if tag_m:
+                        final_text = f"{final_text.strip()}\n{tag_m.group(1)}"
+        except Exception:
+            pass
 
         message_id = self._save_galaxy_message(
             business_id=business_id,

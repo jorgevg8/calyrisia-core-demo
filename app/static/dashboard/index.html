@@ -102,7 +102,10 @@
 
         /* Sidebar Simplificada y Animada */
         .sidebar { width: 270px; display: flex; flex-direction: column; background: rgba(2, 4, 10, 0.6); backdrop-filter: blur(40px); z-index: 10; border-right: 1px solid var(--glass-border);}
-        .sidebar-brand { padding: 35px 25px; margin: 0; display: flex; align-items: center; gap: 12px;}
+        .brand-header { display: flex; align-items: center; gap: 14px; }
+        .calyrisia-wordmark { display: inline-flex; align-items: center; line-height: 1; font-family: 'Outfit', sans-serif; }
+        .calyrisia-wordmark-accent { color: transparent; background: linear-gradient(95deg, #00f0ff, #c48aff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .sidebar-brand { padding: 30px 24px; margin: 0; display: flex; align-items: center; gap: 12px;}
         .sidebar-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); margin: 10px 20px; }
         .sidebar-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin: 15px 25px 5px; font-weight: 600; }
         
@@ -276,8 +279,8 @@
 <!-- PANTALLA DE LOGIN -->
 <div id="loginView" class="login-wrap hidden">
     <div class="login-card glass-panel">
-        <div class="brand-header" style="justify-content: center; margin-bottom: 35px;">
-            <img src="/brand/calyrisia-mark.svg" alt="" style="width:48px;height:48px;object-fit:contain">
+        <div class="brand-header" style="display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 35px;">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAMAAAD04JH5AAABgFBMVEUmX69e2/H09vROcKcmqdVhWt1zcnNjqNxgjLCj6O9x8fSioqKYnqiM4/UtVsljZ6hacJU0z+6W3uiO3uwmirRxjatop6yWptUK+/uMnOBlNviiqt+eqdIXHncAAf9gcY7t4K8Rdnd8fPxu2+Uhaq1x1uVyjKKMm7JqruyGbt7TsqT//wKjk24Jd/NtLAoVH7EfHy0gpq5cY3SHmbT/AP/ItOHU1teKbtD/9ntwpMqScFttWCNvo8fTqGn/AAA5YZkMqPdRYHymb62mcOAA/wCmYgnneADysB97dMyMaND/f389U3Ir06d/P39/2bSfPwDFuKbGqvE/fz86bqYAqlUA/39/P79//3+FfLCIdr60hzyLh3+xx7G3w7v/f/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADnCCQaAAAAYHRSTlP8+Qzp/fsM9eQYDhhd6v4Hnf1cnP2fCqQH8P0WYQMBaRMDAmIFn2KcCvMXARoDBwMIDGfLAShQogVjGg+zEgGjBpUKFwEJAwSndwJWBgQHCENKBH8DAgQCWJIRQhdAAgC059icAAASpklEQVR42sVbCXvbSI6VQIunJDKkJVGhSN2H5duxE+fsdNLHTM+1s/fuHPj//2KBOkiKVGy3s3Hzm+nYsi28AlAPD6hSA3/jp/FVfw2Jk5i/GQBTm07d3wSATw7wwlGYAOI0fnIAMMVJ224YttGwV4B984kBgIdtsq0eu43oPi2AKa7sRvEYPXgsgscBSHFsNMqPMQCEpwNgwmrXPj1r9LKnAjDFkd2oPSvcPBGAOPaK9LPzVLRDXDwNgCn2tM2V4zht7Q07mcVPAcDDlbYo0w7Wh/LbAWH79gBgMTFy+1MzNhcIvfyF2bcH4GNb7bwE++KVGTochcPG4QD63xwATEGmnbFCbc2HkBAcHrILvG8OwHQuRmub/Z1C4ZXeISOgLNh8awBThJdEegHRv1lyS2KTfULg1Bk55ufXAoDT4uvMLGcWrALb7h1jCCUARADkAgaw4iotzLr0lP8O3IcDMCm48PNZmqZnZz8LP09TT/zblxzMtacaGOmCdw6K1cr0cGP84c/sAJdTw3EfCOA4xclYE5zxomf+Y0KvXpjHtGbFgUa7v5vvLvTY/qElY+AiOPO5g3AZdehpdjrL0CEIDwJgkvmdUmPYwdokDL7p45X6SVDhHBdD+/Dw4MCaMxW46EZNeub0b6cpn04nctB8AAA/+zGoVxrD7rX5p39o7AdAUSAXHBzaNsQkDSBqPnv2rNkMMWwWTyfcIxoatfXvs690jwdtQ5e+aZWf2AUWmUTzEh22TwiWP7hk+FkOYV6PQgXA8ULz6p7HaGvWtT2okG4fPNu2aG848yiEeVMgaDbduKm/FD5waggaNaI1vgzAA8CeTeHwsMq5tCtHtHqXky7CufJA03Xz1QsQkdOP78mB3L5hfBcEwXdGoT1sbA+JbE1vH+NOXWmebTmOWnaEG3c+n0fN3A+1NGhUMqBd+BvOPhzT1mmbPR14GBvGGoBJwO/vUAGUzD/j7BeLXrof5G+5oYLQXFalY6MSgaBU608Xi4/C1ZMwsDkCE/aGba23ibfbD9GXjtpwYqEhOuFySRkRo0M0RD+e6yjAnTlgQqDDjWqJ5kzk+8QPemhKV7QpEcZhwSsx0V+ozB8cHNA/IwVOx9vdoPJB884k9BBUxHuwwxleX9C5jI9x4RAQm+hYOCGm/4Ry+Wye7IcuzsBx+yVbMTgqBm5lA1cAvJQAjBFJ/53nl5REt3SPPUlsKcFAsr6kPWGe02wv5/7iLDWA04d4oP/Br2lBV/1wDEoU2r2EWT9slldPvzjdI8wSjGQI7gQA2gONtE7bJr7RUijXwT1Ovty8xWlHybiPcWUSEID4rhAQj6sd16+GgHeIXLg9QlvJ4N6Fyi1h3pq7ovgQEdVCEJu41B6I79gFU/z+CzlAnoUX4mffEZ32FBIRWGWfih26IheXiHGNKF2VA3dvwz6spQfG9S5Hc0TvmIL4d9teA9MNvadcPgV/A2oz1oWZi06Hf/ngHgAzHKlyO6mlQAa6EF7AhpQhYmRZB8I8LZ9nFBtdfPcBUClwDxNSOVSSp1+tt6YuUybnJ1Pf0mLbrASXDl5yADCWANw9tUpsggPaJcmdAGaTsVxn+3hRCD5T6M4/6Jrssf1Qmz+0yP6/8sgK4I+SEaKqB2hzCPtMhHdXw75eZ3CsiABSsXw41VLgJXok9l7bh2r5JAOdiDIQ3Os+SgCdqgccGYGDZgQ/3B0CEoRqI3qpKbEjvKcmEHBi6SpFfBWxAqRe6NB+DRiy7AxjZnwJoBlTA7Xj2LgjNivVyf49kuxU18NA/CotfW3b9grS+I1yDbnEERKY+0FKfjeypN8p02XR4yS4RG/jQsUBBxSB/r2aUMXAmAgylPRrjDE+kzwYIKu/hqAim9oACq4oAUJzis3WZEKWTUBfYKCyFAn71rLOkTUAU02GayrOPoyL8ixZYFvMZ+yITITNZ6oKNTtzhKUCEDaXocuESGLAzR3g1nvHxpcYl12Q5MWpMcARATPWt04+n7Nfo+Oora+cMI8d1RDIWMy5NGZuIh1wsIQ+3AsAcqNt9AuFusY1fT24LUQzjwY7nS0BiMIcQRQL00tUnNiM5s61AMl0Vc+AvZ0R6AnEZFII0jaOmaChKIQJhz9yGACXREshcNn2EjdKo1Bpit2OdkD2sOZU78Q25uNAewKBQVvC0t+PcDoFen+PFhz1ed0KQYcRRHjLQjVcitTUDnD3TVP3tuftvA8YrESfSI0ArM1i/caKuA2BKqEzFx5AXreQgwJB5JqJUCVOGE0c6QCLXowfBmChuWDNKeNdjVecGxP0cvs+VQrSQk3K66UE4Mja8Extwj+rGQH/EykHgNl/UHfMRUBPIse+KXTBuUmozDweHn4SFbYEgP7nagQsidRaXdd0lf051euHeABO8Y2Hxfb3+4vFNKb0LexT6b1cMACrBKDsA0LggB6U5Bm4cPCX2b0AgMuRcfZGzwEm012CbDQswGwfAKDqVUagdMAy34Jzpsp7mfCjyPy17sMNOfRJ0c8JAeDl5N8/+lRg3BIA6g5i6geiAoH5gwyTCgB4VLKi+7rj46l0PlnRhMP6Y1GsvwewNuwRZNSUzHlrLZl2NhsWKNQLQtSUvZGQxq7oEZ+JDMw8JoYIqgh2AJiLYxalxlUxDWoYUG5Zif4EN/CUCqxDAYBrHDIhHRCU4zICBxQHW268keOajlMpB43SbMxPxf4jybEpBd14W+Qf2TWTntTNzjsqyU2YExksmXJkU3YppZKoybI6C8lISUyQ5wJB4rizPQAyzUC05JR1mBbIjfGbfP1CoGBb0ISYD3cglJOHJpunOgKOyIODMgUevHN4ejDbCARRjGXZngOA7ZrP4BrBGzVr3HjVWckLIYaoUd0O1I+ac5d4jjtycr+D/0GxgA1IBBEoCsyLECXqXJYHpxirN7RsVlU+QN2UedVpDdn30zRdnC/O0RNOaHbimJsRYY+suP2+G1MUCAFpj7ipAhDqsMeJFo2hnqgqAFlm5jkX1wbzuf187EpNpMUB6MzjLa1KRLn8hJbl/FFT8CCf0kICUT6tgjKA83wyQi74k36b0qvMfyerHj0D+Qy7REmdzjKO43nHYg/MS48TOjoBDt/B1Mxb5JGs0VYnMhclAJCpvo9bv6Ip82d5+WNSrh3VNTuEYDkXAA6s0kSSm3S1AQ6tUpfSJwCWeJoD8noZwGQfgKJLaLAWqA0QO/qxZHu4MxLV9sPiFIU6ukgBsAa7IVjkB1EUArNIgpyNfPr9i/GgeHqNLodAPkwIy0g/y6UjGfhQJCAW3eAGR0NpfzjYCQFOU119jGICaKb/G+QjUpMPqPVb8aCOABjKfpPy0d1pOoU6596BdGu4yZcESaIBjPRGbFTbAcwnA9Pc6cEZ/ZRQLLL0PL1YpOfI07TcBerYEv3L/sfFZT+R9g+oeXiHVAEi0Ie6tAsGQ2XfrBBRBltpLvjpo6cwXeVREclICPombUE/45sDZL/baA0pAbRKpdahDxC7yj73TQA8MdG1OXY4BMPBcLAp/LVbDQOxXOEDP5+MG9s00JHgaxN4Ikan9P9u14iEfUtMMB01iuC9fiiVQzSk1Owkwt+zhbA/wv1UTMVosbgQCLZkx8/eF1nxNyO/qOBnqE5t3g9aja6B3wmOCBmTvXImG9kcHUpAI7nniHYEhtFwOBxQ7fZmXyjHf8pAlUNqYXQCjtHfrosDauAGpRF4xB20Ewzz3+TSgancJrVGXGdZyr6zkTnXjJL/oioyYPvgwt2aMFCqW9NOT5wP5iPkl9yiGSuxSU0C8HbMDfPUf4vOO4Ne50pkHfBvkgBwmJNF0oU+JgOOv1M93a3OBz6KuxHGe92iGh+EUFHTM/o+xPfjES4uqV6/MbrGGQNg7qJ6syL7TEq8fmPDBOggZ/1wOAJMaPnD13VRuE+UsiToNYqBDCE4//B9EQUy9fqUPHCSA+DStpjy/tf2V4JQwQN2eyLdPwz33LbZJ8vNvBIb459k2bw+/RAUBwmn/deXAkCjBCDdSPtKy+qBbJKbpy/2XDCoNyYfzhG3eXHOfHlkaebtEqclLliW7wDIPJLpZL/Lv+Lrcv8p4fwcCvtQHZB9sTXLr0goXvYlL6E+OWmM+cqMuQvgIyZsn9iJ138pV09/5I0GwyMyP8L912wa++x7eXt8FYzb/HdU0skTayNvDtCTAP4iAMzojza2Lf1v97mOJgI8kHm2T+adkYkPa8+z/IqE2Iu0uU54btp+0cd1S4fhBC/AzD0wS/G1wcnXFZ2jE7F1cIT1I7EJYGQNNwAPAZBzMO0A/ZU9btP+t7eo1SinYpYD8HwcCOnC9qkWDdfZpxG7/qjF3r/BRJThwYOObol3cgqaQTsw5HDsBQtE+4T+21UI1vhWhoCAOiI9upL/qeSuiHWP6BkeDUaUef562Gq1LCvZg2DPkGqcUwCLWcZA332PUymM8ial0Wvz+dH4hT5n6XZF50K5aL3GEZsX1jFJTgYtfva6oFG/I5IfkJMM8mhP4km/F/R4vQLBSaETmYrN8uBifCzrz4g8QNYp5F7yT3qfm6FAMAS4d0qWn90a7VjAnfmp1EAnelg+KYnDgLTiqny2HEnqR2kpYQyYUYocCRe00b8PwHkxqi2Ny/nLSd656OmlaKNOekVeoqq/Vkat+eckH4r5FBEGYBiOad4NYKZHZIaXvdm5ApKq3DBgeq68ZBAhFd0TOSPFgWXRQkmJ7fiavhlIAHUXfHFcP3GrQ+SrvDylojULKEfyuxat9Qn6PgwsEevMr25t4QI+eU7vBjCd6AFZFapXPjFJcbJeE1wjX/+KuXkmF9p6XT1dn2WJBNA7ye7JgTMVgU+1OxqpUF/qPIsdPOntXCol+5AI+y2/dqfss0xDLvTTBx3fB9vaxbh+aqghwQIycmRBCAYfcc1Mbv1kBOrXO00ctQSAdnVevv/4nnuA+jW+tcIm7hkFpfukVCjIBQsfAuGA30Gt6sxQxEBsojsAwAJyAP360e1YjYlTcaW4UYwtiRkMagtIeEgA9cI/wxsG0NV3EO89vL7Yd3YshHpA5dkLSu6n7JOnKiTnpaMHdQDXkLw6YgDG+7sB/Iutm+E6awORNGebtzbKF2vMdcFEE6p7R0ZS5zt65fcSwNu7AWgePtsHAM32bXn1ooc5PzHKF32oGLUv9gifmQZgPgyAt0uZnsl1hVO/Vzbf5tNmLF8yNowRX/ryb6shwJtXrYcA0CHY2QUge0WqzOUZBbEa8nZkaEEZQptZKDX3J+HdALZ5ErIczue3xDkkyuJ22flG4GHq6fjCzkCNfgZyxJOrvE8yPQnAj3cBiPOOkGeS2cI3/dS8xvd8e6pdnJewRhthKdPoq+3ODTzD7m1/Zj+cLnx+MhQcSZLFmODD7hGR0DtWr50ESoLlAxuDktH3dgiEqaly333swU/qPSaSo6VkunNajsV41OitTHr6+QlSWxYqrqn1Fi8mL7TXZQi0WiMYjOgt/MHvtP3SXdz9xSjGnct8BhXQ/JX18RU7l3ba1qtdJrsWGeGtd73QpQJIjzTPmtHY3lMNZ1llQtxd54OCwfH3Ir3ISq9yOs73IBPjiPS/V/ngAZnttroy/qKru0cPlEaD+YCoGJV5tEifQt21tnhSZbrR0fOjI8pNr12oBGFfPqpnTe+V5VSRdz48YNwq0Ru85Qo9FqOh1qhSVTOEV8+fP6c6QJ6Z6G6ieh9xDfCA9tzDbbB7jfIlLdoI3lKDaGLQ5VW1AjitEM3n1nNG8ArAn7IbejUMol4+pDe8wFufGNdQo7D1hJZktsVF5g9IBYkdSn3zzlo+3b4SAI7+ykfuTNqUqasXRkM2k6REXvTfM5s+qD33aHW3Xrt9dUWtsXmhGMfUNy5FXo12AMxMOBIOONpeZ8KNKXto8iO8HF/Rs4afAPfUyC9e7TZ3N0s2m84k+EvOUYEAymxPnYeOgH+ddxNpZYP9ysvtHlVEr9pKTbl3FxurrPC96xvhgOdHNxUtAknf9H0zgf/H2/XCBbSxb7PS9f5XuQO+9fV+bzZRAF7lV4s3+Fdh/3nrM35zALJ7ZQAUhM8quNsj5QD8z+NvDgA84mbhgtYNVfxr85zFsHRAkj3Bh1ykPBcIKOUEJLUDWv+D1/gEAAhBj+tci0z+/ubzzUgkIFWb1s0MngRAKmYVjICIh/wglk8u+e/HfM7pUR92k1OUrgz8c23/3cSHJwJwbP48FqW2lZsX1eExDnjkBx7PUSLoKqlD9s1fTwFfAWAmb1gUaoNvu+ATAqBqNZHSRC4/8PCxz2M/9kv10mNC4sM7bkoXTw0AqdgejwPLsgIyX5d63x6ALPAw4YKdPd7+13343eONl/pf8xZf+el7Kk0efN07/B9a1EqWne8HlAAAAABJRU5ErkJggg==" alt="" style="width:46px;height:46px;object-fit:contain;display:block;flex-shrink:0">
             <span class="brand-text calyrisia-wordmark" style="font-size:1.55rem;font-weight:800;letter-spacing:.12em;color:#f3f6ff">CALY<span class="calyrisia-wordmark-accent">RISIA</span></span>
         </div>
         <form id="loginForm">
@@ -299,7 +302,7 @@
     <!-- SIDEBAR SIMPLIFICADA Y ELEGANTE -->
     <div class="sidebar">
         <div class="brand-header sidebar-brand">
-            <img src="/brand/calyrisia-mark.svg" alt="" style="width:36px;height:36px;object-fit:contain">
+            <img src="data:image/png;base64,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" alt="" style="width:36px;height:36px;object-fit:contain;display:block;flex-shrink:0">
             <span class="brand-text calyrisia-wordmark" style="font-size:1rem;font-weight:800;letter-spacing:.12em;color:#f3f6ff">CALY<span class="calyrisia-wordmark-accent">RISIA</span></span>
         </div>
         
@@ -307,7 +310,7 @@
             <div class="sidebar-label">Vista de Negocio</div>
             <div class="nav-item active" onclick="switchView('overview')"><i class="ph ph-chart-line-up"></i> Panel Ejecutivo</div>
             <div class="nav-item" onclick="switchView('crm')"><i class="ph ph-users"></i> Clientes & Riesgo</div>
-            <div class="nav-item" onclick="openCatalogModal()"><i class="ph ph-package"></i> Catálogo de Productos</div>
+            <div class="nav-item" id="catalog-nav-item" onclick="switchView('catalog')"><i class="ph ph-package"></i> <span>Catálogo de Productos</span></div>
             <div class="nav-item" id="specialized-nav-item" onclick="switchView('specialized')"><i id="specialized-nav-icon" class="ph ph-storefront"></i> <span id="specialized-nav-label">Gestión del Negocio</span></div>
             <div class="nav-item" onclick="switchView('operations')"><i class="ph ph-check-square-offset"></i> Aprobaciones <span id="pending-payments-nav-badge" class="badge danger hidden" style="margin-left:auto;">0</span></div>
             
@@ -335,80 +338,72 @@
                 <strong id="display-business-id" style="font-family: monospace; font-weight: normal; color: var(--text-muted);">Cargando...</strong>
             </div>
             <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="btn-action" onclick="openBusinessWebchat()" style="padding: 8px 16px; font-size: 11px;"><i class="ph ph-chat-circle-dots"></i> Probar Webchat IA</button>
                 <span class="badge success" id="roleBadge" style="background: rgba(16, 185, 129, 0.1); border: none; color: #34d399;"><i class="ph ph-circle-fill" style="font-size: 8px;"></i> ONLINE</span>
-                <button class="btn-secondary" onclick="loadDashboard()" style="padding: 8px 16px;"><i class="ph ph-arrows-clockwise"></i></button>
-                <button class="btn-logout" onclick="logout()" style="padding: 8px 16px;"><i class="ph ph-sign-out"></i></button>
+                <button class="btn-secondary" onclick="loadDashboard()" style="padding: 8px 16px;" title="Actualizar datos"><i class="ph ph-arrows-clockwise"></i></button>
+                <button class="btn-logout" onclick="logout()" style="padding: 8px 16px;" title="Cerrar sesión"><i class="ph ph-sign-out"></i></button>
             </div>
         </div>
 
-        <!-- VISTA 1: OVERVIEW (Limpia y Ejecutiva) -->
+        <!-- VISTA 1: PANEL EJECUTIVO (100% ANÁLISIS PURO Y TELEMETRÍA SIN BOTONES) -->
         <div id="view-overview" class="view-section active">
-            <div class="section-header animate-fade-up">
-                <h2 id="businessName">Panel de Control</h2>
-                <p id="businessMeta" class="muted">Inteligencia y telemetría de negocio simplificada.</p>
+            <div class="section-header animate-fade-up" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+                <div>
+                    <span id="overview-plan-kicker" style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#00f2fe;font-weight:700;display:block;margin-bottom:6px;">TELEMETRÍA EJECUTIVA EN TIEMPO REAL</span>
+                    <h2 id="businessName">Panel Ejecutivo</h2>
+                    <p id="businessMeta" class="muted">Inteligencia analítica y métricas operativas de tu negocio.</p>
+                </div>
+                <div id="overview-period-pill" style="padding:8px 14px;border-radius:999px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.03);font-size:11px;color:#cbd5e1;">
+                    Sincronización automática activa · Datos reales del negocio
+                </div>
             </div>
 
-            <!-- KPIs Rápidos -->
+            <!-- KPIs Principales (4 indicadores clave adaptados al giro) -->
             <div class="kpi-grid">
                 <div class="kpi-card animate-fade-up delay-1">
-                    <div class="kpi-card-header"><h3 id="kpi-sales-title">Ingresos Generados</h3><i class="ph ph-trend-up" style="color: var(--success);"></i></div>
+                    <div class="kpi-card-header"><h3 id="kpi-sales-title">Ingresos Confirmados</h3><i id="kpi-sales-icon" class="ph ph-trend-up" style="color: var(--success);"></i></div>
                     <div class="value" id="kpi-sales">$0.00</div>
+                    <p id="kpi-sales-sub" class="muted" style="font-size:11px;margin-top:6px;">Acumulado histórico</p>
                 </div>
                 <div class="kpi-card animate-fade-up delay-1">
-                    <div class="kpi-card-header"><h3 id="kpi-chats-title">Interacciones IA</h3><i class="ph ph-chats" style="color: var(--primary-color);"></i></div>
-                    <div class="value" id="kpi-chats">0</div>
-                </div>
-                <div class="kpi-card animate-fade-up delay-2">
-                    <div class="kpi-card-header"><h3 id="kpi-handoffs-title">Requieren Atención</h3><i class="ph ph-bell-ringing" style="color: var(--warning);"></i></div>
-                    <div class="value" id="kpi-handoffs">0</div>
-                </div>
-                <div class="kpi-card animate-fade-up delay-2">
-                    <div class="kpi-card-header"><h3 id="kpi-sales-today-title">Ingresos de Hoy</h3><i class="ph ph-calendar-check" style="color: var(--success);"></i></div>
+                    <div class="kpi-card-header"><h3 id="kpi-sales-today-title">Ingresos de Hoy</h3><i id="kpi-today-icon" class="ph ph-calendar-check" style="color: var(--success);"></i></div>
                     <div class="value" id="kpi-sales-today">$0.00</div>
+                    <p id="kpi-today-sub" class="muted" style="font-size:11px;margin-top:6px;">Jornada actual</p>
+                </div>
+                <div class="kpi-card animate-fade-up delay-2">
+                    <div class="kpi-card-header"><h3 id="kpi-chats-title">Conversaciones IA</h3><i class="ph ph-chats" style="color: var(--primary-color);"></i></div>
+                    <div class="value" id="kpi-chats">0</div>
+                    <p id="kpi-chats-sub" class="muted" style="font-size:11px;margin-top:6px;">Atención automatizada</p>
+                </div>
+                <div class="kpi-card animate-fade-up delay-2">
+                    <div class="kpi-card-header"><h3 id="kpi-handoffs-title">En Revisión / Pendientes</h3><i class="ph ph-clock-countdown" style="color: var(--warning);"></i></div>
+                    <div class="value" id="kpi-handoffs">0</div>
+                    <p id="kpi-handoffs-sub" class="muted" style="font-size:11px;margin-top:6px;">Esperando validación</p>
                 </div>
             </div>
 
-            <div id="plan-usage-panel" class="panel glass-panel" style="margin:22px 0 24px;padding:22px;">
-                <div class="vertical-intro" style="margin-bottom:14px;"><div><h3 style="margin:0 0 5px;">Tu plan CALYRISIA</h3><p class="muted" id="plan-usage-subtitle">Consumo del mes y capacidad incluida.</p></div><span class="badge" id="current-plan-badge">Emprendedor · $19/mes</span></div>
-                <div class="plan-usage-grid" id="plan-usage-grid"><p class="muted">Consultando uso del plan...</p></div>
+            <!-- CONTENEDOR DINÁMICO DE ANÁLISIS PURO (Sencillo para $19 / Avanzado para $49 y $99) -->
+            <div id="overview-analytics-root" class="animate-fade-up delay-2">
+                <div class="panel glass-panel"><p class="muted">Calculando analítica del negocio...</p></div>
             </div>
 
-            <div id="pending-payments-alert" class="payment-alert hidden">
-                <div>
-                    <h3><i class="ph ph-bell-ringing"></i> Pagos pendientes de revisión</h3>
-                    <p class="muted" id="pending-payments-summary">Hay pagos de Telegram o Webchat esperando tu aprobación.</p>
-                </div>
-                <button class="btn-payment-approve" onclick="switchView('operations')"><i class="ph ph-check-circle"></i> Revisar pagos</button>
-            </div>
-
-            <div class="panel-grid animate-fade-up delay-2">
-                <div class="panel glass-panel opp-card">
-                    <h3><i class="ph ph-sparkle"></i> Oportunidades del negocio</h3>
-                    <div class="list-item" style="display:block;background:transparent;border-color:rgba(91,231,242,.16);">
-                        <p class="muted" style="line-height:1.8;">Las oportunidades se mostrarán cuando CALYRISIA detecte señales reales en las conversaciones, pedidos y datos de este negocio. No se muestran operaciones ficticias.</p>
-                        <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="switchView('specialized')"><i class="ph ph-arrow-right"></i> Ver panel de mi negocio</button>
-                    </div>
-                </div>
+            <!-- INSIGHTS ESTRATÉGICOS DEL SISTEMA -->
+            <div class="panel-grid animate-fade-up delay-3" style="margin-top:20px;">
                 <div class="panel glass-panel">
-                    <h3><i class="ph ph-shield-check" style="color:var(--success);"></i> Alertas operativas</h3>
-                    <div class="list-item" style="display:block;background:transparent;border-color:rgba(148,163,184,.16);">
-                        <p class="muted" style="line-height:1.8;">Aquí aparecerán alertas reales de inventario, pedidos o solicitudes pendientes. Cuando aún no existan datos suficientes, este espacio permanecerá sin alertas.</p>
-                        <button class="btn-secondary" style="width:100%;margin-top:12px;" onclick="switchView('operations')"><i class="ph ph-receipt"></i> Revisar operaciones</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="panel-grid animate-fade-up delay-3">
-                <div class="panel glass-panel">
-                    <h3><i class="ph ph-brain"></i> Insights Estratégicos</h3>
-                    <div id="insights-container"><div class="list-item"><p class="muted">Analizando datos...</p></div></div>
+                    <h3><i class="ph ph-brain"></i> Diagnóstico e Insights Operativos</h3>
+                    <div id="insights-container"><div class="list-item"><p class="muted">Analizando señales del negocio...</p></div></div>
                 </div>
             </div>
         </div>
 
-        <!-- VISTA 2: NÚCLEO AUTÓNOMO (La vista Developer oculta de la jerga) -->
+        <!-- VISTA 2: MÓDULO OPERATIVO ESPECIALIZADO (Agenda de Citas / Mesas y Reservas / Logística e Inventario) -->
         <div id="view-specialized" class="view-section">
-            <div id="specialized-workspace"><div class="panel glass-panel"><p class="muted">Preparando el espacio especializado del negocio...</p></div></div>
+            <div id="specialized-workspace"><div class="panel glass-panel"><p class="muted">Preparando el centro operativo del negocio...</p></div></div>
+        </div>
+
+        <!-- VISTA 3: GESTIÓN EXCLUSIVA DE CATÁLOGO / SERVICIOS Y TARIFAS / MENÚ DIGITAL -->
+        <div id="view-catalog" class="view-section">
+            <div id="catalog-workspace"><div class="panel glass-panel"><p class="muted">Cargando catálogo oficial del negocio...</p></div></div>
         </div>
 
         <div id="view-autonomy" class="view-section">
@@ -458,8 +453,37 @@
 
         <!-- LAS DEMÁS VISTAS MANTIENEN SU ESTRUCTURA BÁSICA -->
         <div id="view-crm" class="view-section">
-            <div class="section-header"><h2>Clientes & Riesgo</h2><p class="muted">Métricas de satisfacción y prevención de fugas.</p></div>
-            <div class="panel glass-panel"><p class="muted">Analizando base de clientes...</p></div>
+            <div class="section-header">
+                <h2 id="crm-view-title">Directorio de Clientes & Retención</h2>
+                <p id="crm-view-subtitle" class="muted">Base consolidada de clientes y pacientes atendidos por los canales automatizados de tu negocio.</p>
+            </div>
+            <div class="vertical-grid">
+                <div class="vertical-card">
+                    <h3><i class="ph ph-users"></i> Clientes / Pacientes Únicos</h3>
+                    <div class="vertical-number" id="crm-total-customers">0</div>
+                    <p class="vertical-small">Identificados en transacciones o citas</p>
+                </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-repeat"></i> Clientes Recurrentes</h3>
+                    <div class="vertical-number" id="crm-repeat-customers" style="color:#34d399;">0</div>
+                    <p class="vertical-small">Con 2 o más registros en el negocio</p>
+                </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-shield-Warning"></i> Solicitudes Canceladas / Rechazadas</h3>
+                    <div class="vertical-number" id="crm-risk-count" style="color:#fbbf24;">0</div>
+                    <p class="vertical-small">Casos para seguimiento preventivo</p>
+                </div>
+            </div>
+            <div class="panel glass-panel" style="padding:22px;">
+                <div class="vertical-intro">
+                    <div>
+                        <h3><i class="ph ph-address-book"></i> Base Consolidada de Clientes / Pacientes</h3>
+                        <p class="muted">Registro automático unificado a partir de pagos y citas del negocio.</p>
+                    </div>
+                    <button class="btn-secondary" onclick="loadCrmWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+                </div>
+                <div id="crm-customers-list" class="booking-list"><p class="muted">Sincronizando cartera de clientes...</p></div>
+            </div>
         </div>
         
         <div id="view-operations" class="view-section">
@@ -540,6 +564,26 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;"><button class="btn-action" onclick="savePaymentInstructions()"><i class="ph ph-floppy-disk"></i> Guardar métodos de cobro</button><span class="muted" id="payment-instructions-message" role="status" style="font-size:12px;"></span></div>
+            </div>
+            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(0,242,254,.12);display:flex;align-items:center;justify-content:center;color:#00f2fe;font-size:25px;"><i class="ph ph-sparkle"></i></div>
+                        <div>
+                            <h3 style="margin:0 0 4px;">Comportamiento e Instrucciones del Asistente IA</h3>
+                            <p class="muted" style="margin:0;font-size:12px;">Define las políticas, horarios y reglas de atención que seguirá tu asistente en Webchat y Telegram.</p>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" class="btn-secondary" style="padding:9px 14px;font-size:11px;" onclick="fillWorkspaceDefaultAiPrompt(false)"><i class="ph ph-magic-wand"></i> Generar plantilla según mi giro</button>
+                        <button type="button" class="btn-action" style="padding:9px 16px;font-size:11px;" onclick="saveWorkspaceAiInstructions()"><i class="ph ph-floppy-disk"></i> Guardar instrucciones IA</button>
+                    </div>
+                </div>
+                <textarea id="workspace-ai-prompt" rows="6" maxlength="3000" placeholder="Escribe o genera las instrucciones operativas para el asistente IA de tu negocio..." style="width:100%;border-radius:12px;padding:14px;background:rgba(0,0,0,0.35);border:1px solid var(--glass-border);color:#f8fafc;font-size:13px;line-height:1.55;resize:vertical;"></textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px;">
+                    <span class="muted" style="font-size:11px;">El motor autónomo combina estas reglas con tu catálogo/tarifario activo y la captura automática de citas o pagos.</span>
+                    <span id="workspace-ai-prompt-status" style="font-size:12px;font-weight:600;color:#94a3b8;">Sincronizado con todos los canales</span>
+                </div>
             </div>
             <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
                 <div style="display:flex;align-items:center;gap:12px;">
@@ -659,21 +703,33 @@ function setupBusinessNavigation(business) {
     const kind = businessKind(business);
     const navLabel = document.getElementById('specialized-nav-label');
     const navIcon = document.getElementById('specialized-nav-icon');
-    if (navLabel) navLabel.textContent = kind === 'restaurant' ? 'Mesas y Reservas' : kind === 'appointments' ? 'Agenda de Citas' : kind === 'enterprise' ? 'Operación de Alto Volumen' : 'Inventario y Catálogo';
-    if (navIcon) navIcon.className = 'ph ' + (kind === 'restaurant' ? 'ph-fork-knife' : kind === 'appointments' ? 'ph-calendar-check' : kind === 'enterprise' ? 'ph-buildings' : 'ph-storefront');
+    if (navLabel) {
+        navLabel.textContent = kind === 'restaurant'
+            ? 'Mesas y Reservas'
+            : (kind === 'appointments'
+                ? 'Agenda de Citas'
+                : (kind === 'enterprise' ? 'Logística y Pedidos' : 'Inventario y Pedidos'));
+    }
+    if (navIcon) {
+        navIcon.className = 'ph ' + (kind === 'restaurant'
+            ? 'ph-fork-knife'
+            : (kind === 'appointments'
+                ? 'ph-calendar-check'
+                : (kind === 'enterprise' ? 'ph-buildings' : 'ph-boxes')));
+    }
     document.querySelectorAll('.plan-enterprise-only').forEach(el => el.classList.toggle('hidden', currentPlanCode !== 'enterprise'));
     const teamNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'team'"));
     if (teamNav) teamNav.classList.toggle('hidden', currentPlanCode !== 'enterprise');
     const copilotNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'copilot'"));
     if (copilotNav) copilotNav.classList.toggle('hidden', currentPlanCode === 'emprendedor');
-    const catalogNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes('openCatalogModal'));
+    const catalogNav = document.getElementById('catalog-nav-item') || Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'catalog'"));
     if (catalogNav) {
         if (kind === 'appointments') {
-            catalogNav.innerHTML = '<i class="ph ph-stethoscope"></i> <span>Servicios y tarifas</span>';
+            catalogNav.innerHTML = '<i class="ph ph-stethoscope"></i> <span>Servicios y Tarifas</span>';
         } else if (kind === 'restaurant') {
-            catalogNav.innerHTML = '<i class="ph ph-bowl-food"></i> <span>Menú y precios</span>';
+            catalogNav.innerHTML = '<i class="ph ph-bowl-food"></i> <span>Menú y Precios</span>';
         } else if (kind === 'enterprise') {
-            catalogNav.innerHTML = '<i class="ph ph-package"></i> <span>Catálogo masivo</span>';
+            catalogNav.innerHTML = '<i class="ph ph-package"></i> <span>Catálogo Corporativo</span>';
         } else {
             catalogNav.innerHTML = '<i class="ph ph-package"></i> <span>Catálogo de Productos</span>';
         }
@@ -691,12 +747,18 @@ function showDashboard() {
     document.getElementById('dashboardView').classList.remove('hidden');
 }
 
-
 async function openBusinessWebchat() {
     try {
-        const channels = await api('/api/v1/dashboard/channels');
-        if (!channels.webchat_enabled) { showToast('Activa Webchat antes de abrir el enlace del negocio.', true); return; }
         if (!currentBusinessId) { showToast('No se encontró el identificador del negocio.', true); return; }
+        const channels = await api('/api/v1/dashboard/channels');
+        if (!channels.webchat_enabled) {
+            await api('/api/v1/dashboard/channels/webchat/toggle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: true })
+            }).catch(() => {});
+            await loadDashboardChannels();
+        }
         window.open(`/webchat?business_id=${encodeURIComponent(currentBusinessId)}`, '_blank', 'noopener');
     } catch (e) { showToast('No se pudo abrir Webchat: ' + e.message, true); }
 }
@@ -708,9 +770,12 @@ function switchView(viewId) {
     if (targetView) targetView.classList.add('active');
     const navItem = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'" + viewId + "'"));
     if (navItem) navItem.classList.add('active');
+    if (viewId === 'overview') applyBusinessOverview(currentBusiness);
+    if (viewId === 'crm') loadCrmWorkspace();
     if (viewId === 'operations') loadPendingWebchatPayments();
-    if (viewId === 'settings') { loadTelegramChannel(true); loadDashboardChannels(); loadPaymentInstructions(); }
+    if (viewId === 'settings') { loadTelegramChannel(true); loadDashboardChannels(); loadPaymentInstructions(); loadWorkspaceAiInstructions(); }
     if (viewId === 'specialized') renderSpecializedWorkspace(currentBusiness);
+    if (viewId === 'catalog') renderCatalogWorkspace(currentBusiness);
 }
 
 function logout(silent = false) {
@@ -1039,8 +1104,8 @@ async function loadDashboard() {
         await loadPendingWebchatPayments();
         await loadTelegramChannel(true);
         await loadDashboardChannels();
-        await loadPlanUsage();
         await renderSpecializedWorkspace(currentBusiness);
+        await renderCatalogWorkspace(currentBusiness);
         await applyBusinessOverview(currentBusiness);
         showDashboard();
 
@@ -1123,79 +1188,1255 @@ if (localStorage.getItem(tokenKey)) { loadDashboard(); } else { showLogin(); }
 // Mantiene las notificaciones de pago actualizadas aunque el dueño esté en otra vista.
 
 /* ---------------------------------------------------------
-   CATÁLOGO RÁPIDO DE PRODUCTOS (MODAL)
+   PLANTILLAS CORPORATIVAS DE INSTRUCCIONES IA POR GIRO
 --------------------------------------------------------- */
-function openCatalogModal() {
-    const modal = document.getElementById('catalogModal');
-    const business = currentBusiness || {};
-    const kind = businessKind(business);
-    const title = document.getElementById('catalogModalTitle');
-    const csvLabel = document.getElementById('catalogCsvLabel');
-    const appointmentMode = kind === 'appointments';
-    const restaurantMode = kind === 'restaurant';
-    if (title) title.textContent = appointmentMode ? 'Servicios y tarifas' : (restaurantMode ? 'Menú y precios' : (kind === 'enterprise' ? 'Catálogo de alto volumen' : 'Catálogo de Productos'));
-    if (csvLabel) csvLabel.textContent = appointmentMode
-        ? 'Importar lista de servicios CSV · columnas: name, price, category, image_urls (stock se deja en 0; URLs separadas por |)'
-        : (restaurantMode ? 'Importar menú CSV · columnas: name, price, stock, category, image_urls (URLs separadas por |)'
-            : 'Importar catálogo CSV · columnas: name, price, stock, category, image_urls (URLs separadas por |)');
-    const modalIcon = document.getElementById('catalogModalIcon');
-    if (modalIcon) modalIcon.className = 'ph-bold ' + (appointmentMode ? 'ph-stethoscope' : restaurantMode ? 'ph-bowl-food' : 'ph-package');
-    if (modal) modal.style.display = 'flex';
-    loadStoreProducts();
+const DASHBOARD_AI_PROMPTS = {
+    sales_small: (name) => `Eres el asesor comercial inteligente de ${name} en CALYRISIA.
+OBJETIVO PRINCIPAL:
+- Atender a cada cliente con calidez, agilidad y precisión ejecutiva, informando precios exactos en USD y existencias reales de nuestro catálogo tecnológico.
+REGLAS DE ATENCIÓN Y VENTAS EN WEBCHAT:
+1. Cuando el cliente salude o pregunte qué vendemos, dale la bienvenida y muéstrale los productos destacados del catálogo con su precio en USD y disponibilidad.
+2. Si pregunta por un artículo específico o pide una recomendación, indícale su precio exacto, cuántas unidades quedan en stock y sus beneficios principales.
+3. Cuando el cliente indique qué producto(s) desea comprar o pida pagar, confirma el resumen del pedido con cantidades y subtotales, pregunta si prefiere delivery o retiro en tienda y despliega inmediatamente la tarjeta interactiva de pago en el chat.
+INFORMACIÓN OPERATIVA DEL NEGOCIO:
+- Horario de atención: Lunes a Sábado de 8:30 am a 7:00 pm.
+- Entregas: Retiro inmediato en tienda física y servicio de delivery exprés en toda la ciudad.
+- Métodos de cobro activos: Pago Móvil (Bancamiga) y Binance Pay verificados desde el Dashboard.`,
+    appointments_small: (name) => `Eres el asistente oficial de agenda y citas de ${name}.
+- Informa los servicios disponibles y sus tarifas según el catálogo oficial del negocio.
+- Para agendar una cita o consulta, solicita amablemente: Nombre completo, Teléfono, Servicio deseado y Fecha/Hora preferida.
+- Apenas el cliente confirme esos datos, registra la cita automáticamente para que aparezca pendiente de aprobación en la Agenda del Dashboard.`,
+    local_store: (name) => `Eres el asesor comercial automatizado de ${name} (Tienda Comercial).
+- Verifica stock y precios en tiempo real antes de confirmar cada producto.
+- Arma el pedido completo del cliente, confirma modalidad de entrega (retiro en tienda o delivery) y muestra las instrucciones de cobro.
+- Registra los datos del pago en el Centro de Aprobaciones del Dashboard.`,
+    bodega: (name) => `Eres el asistente de ventas rápidas de ${name} (Bodegón / Abasto).
+- Responde al instante sobre disponibilidad de víveres, bebidas, snacks y combos.
+- Totaliza el carrito del cliente, solicita dirección si requiere delivery y comparte los métodos de pago (Pago Móvil / Binance).
+- Registra la referencia del cliente para aprobación rápida en el Dashboard.`,
+    minimarket: (name) => `Eres el asistente digital de ${name} (Minimarket).
+- Ayuda a los clientes a armar su compra rápida verificando existencias reales en el catálogo.
+- Calcula el monto total, coordina retiro o entrega y registra la referencia de pago como pendiente en el Dashboard.`,
+    restaurant: (name) => `Eres el anfitrión y tomador de pedidos automatizado de ${name} (Restaurante / Cafetería).
+- Si el cliente desea RESERVAR MESA: solicita Nombre completo, Teléfono, Cantidad de personas, Fecha/Hora y nota especial. Regístrala automáticamente en el Dashboard para que el dueño la apruebe o rechace.
+- Si el cliente desea PEDIR DEL MENÚ: confirma platos y bebidas disponibles, calcula el total, envía los métodos de pago y registra la referencia para aprobación.`,
+    consultorio: (name) => `Eres el asistente de recepción y agenda de ${name} (Consultorio Profesional).
+- Informa con claridad los tipos de consulta, honorarios y preparación previa según el tarifario activo.
+- Para agendar una consulta, solicita: Nombre completo del paciente, Teléfono, Tipo de consulta y Fecha/Hora solicitada.
+- Registra la consulta automáticamente en la Agenda del Dashboard en estado pendiente para aprobación del profesional.`,
+    clinic: (name) => `Eres la central inteligente de citas y orientación de ${name} (Clínica / Centro de Salud).
+- Orienta sobre especialidades médicas, estudios y tarifas disponibles (sin emitir diagnósticos médicos).
+- Para agendar una cita o estudio, solicita: Nombre del paciente, Teléfono, Especialidad o estudio requerido y Fecha/Hora deseada.
+- Guarda la cita automáticamente en la bandeja del Dashboard para que recepción la apruebe o rechace con un clic.`,
+    service_team: (name) => `Eres el coordinador inteligente de citas y servicios de ${name}.
+- Cotiza los servicios profesionales activos y coordina el agendamiento automático con los clientes.
+- Solicita: Nombre completo, Teléfono, Servicio requerido, Fecha/Hora preferida y detalles relevantes.
+- Registra la solicitud automáticamente en la Agenda del Dashboard para aprobación del equipo.`,
+    supermarket: (name) => `Eres el asistente omnicanal de ventas e inventario de ${name} (Supermercado).
+- Consulta el catálogo masivo por categoría, confirma existencias y precios exactos, arma pedidos completos y registra pagos pendientes para aprobación en el Dashboard.`,
+    hypermarket: (name) => `Eres el asistente corporativo de ventas masivas de ${name} (Hipermercado).
+- Atiende consultas simultáneas de inventario, ofrece alternativas en stock, totaliza órdenes y registra referencias de pago para validación ejecutiva.`,
+    large_store: (name) => `Eres el asistente comercial de ${name} (Cadena / Gran Tienda).
+- Verifica disponibilidad en el catálogo, asesora al comprador, calcula el total del pedido y registra el pago en el Dashboard.`,
+    large_company: (name) => `Eres el asistente comercial y operativo de ${name} (Empresa / Distribuidor).
+- Gestiona cotizaciones y pedidos de alto volumen validando stock real y registrando las solicitudes de pago en el Dashboard.`
+};
+
+function canCurrentPlanUseCsv() {
+    return currentPlanCode === 'smart_business' || currentPlanCode === 'enterprise';
 }
 
+function getBusinessProfileMeta(business) {
+    const bType = canonicalBusinessType(business?.business_type || '');
+    const isBasic = currentPlanCode === 'emprendedor';
+    const profiles = {
+        sales_small: {
+            planBadge: 'PLAN EMPRENDEDOR · $19/MES',
+            overviewSub: 'Análisis comercial esencial · Ventas, conversión de chats y estado de catálogo',
+            opTitle: 'Control Operativo de Inventario y Pedidos',
+            opSubtitle: 'Supervisa existencias reales, ajusta unidades vendidas en mostrador y monitorea la reposición.',
+            catTitle: 'Catálogo de Productos y Precios',
+            catSubtitle: 'Administra manualmente los artículos que tu Asistente IA cotiza y vende por chat.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
+            showStock: true, allowCsv: false, defaultCategory: 'General'
+        },
+        appointments_small: {
+            planBadge: 'PLAN EMPRENDEDOR · $19/MES',
+            overviewSub: 'Análisis de agenda profesional · Flujo de citas capturadas por IA y demanda de servicios',
+            opTitle: 'Central de Agenda y Aprobación de Citas',
+            opSubtitle: 'El Chat IA agenda automáticamente a tus clientes. Aprueba, rechaza o marca como atendida cada cita.',
+            catTitle: 'Servicios, Consultas y Tarifas',
+            catSubtitle: 'Configura manualmente las tarifas y servicios que tu Asistente IA informa al agendar.',
+            itemNoun: 'servicio o consulta', itemNounPlural: 'servicios y tarifas', priceLabel: 'Tarifa (USD)', stockLabel: '',
+            showStock: false, allowCsv: false, defaultCategory: 'Consulta / Servicio'
+        },
+        local_store: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Inteligencia comercial avanzada · Valorización de inventario, conversión y rotación por categoría',
+            opTitle: 'Centro de Control de Stock, Rotación y Despacho',
+            opSubtitle: 'Prevención de quiebres de inventario, recarga rápida de mercancía y seguimiento de pedidos del chat.',
+            catTitle: 'Catálogo Comercial e Importación Masiva CSV',
+            catSubtitle: 'Gestiona tu inventario completo o importa lotes desde CSV con precios, categorías e imágenes.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Unidades en stock',
+            showStock: true, allowCsv: true, defaultCategory: 'Tienda'
+        },
+        bodega: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Telemetría de alta rotación · Combos, víveres, flujo de caja diario y alertas de anaquel',
+            opTitle: 'Operación de Bodegón · Reposición Rápida y Pedidos',
+            opSubtitle: 'Control ágil de productos de alta demanda, alertas de agotados y despacho de órdenes de chat.',
+            catTitle: 'Catálogo de Bodegón, Combos y Carga CSV',
+            catSubtitle: 'Actualiza precios y existencias al instante o sube tu inventario completo mediante archivo CSV.',
+            itemNoun: 'producto o combo', itemNounPlural: 'productos y combos', priceLabel: 'Precio (USD)', stockLabel: 'Existencia',
+            showStock: true, allowCsv: true, defaultCategory: 'Bodegón'
+        },
+        minimarket: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Analítica por departamentos · Valor en anaquel, ticket promedio y continuidad de stock',
+            opTitle: 'Gestión de Anaqueles, Stock Crítico y Pedidos',
+            opSubtitle: 'Monitorea departamentos con stock bajo, repón inventario en un clic y supervisa órdenes activas.',
+            catTitle: 'Catálogo por Departamentos e Importador CSV',
+            catSubtitle: 'Registra artículos por pasillo/categoría o carga lotes masivos en formato CSV.',
+            itemNoun: 'artículo', itemNounPlural: 'artículos', priceLabel: 'Precio (USD)', stockLabel: 'Stock actual',
+            showStock: true, allowCsv: true, defaultCategory: 'Minimarket'
+        },
+        restaurant: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Inteligencia gastronómica · Ocupación de salón, comensales del día e ingresos de menú',
+            opTitle: 'Control de Salón, Mesas en Vivo y Reservas IA',
+            opSubtitle: 'Mapa de disponibilidad de mesas en tiempo real y bandeja de reservas capturadas automáticamente por el chat.',
+            catTitle: 'Menú Digital, Platos y Carga por CSV',
+            catSubtitle: 'Administra los platos, bebidas, precios y porciones disponibles o importa tu carta vía CSV.',
+            itemNoun: 'plato o bebida', itemNounPlural: 'platos del menú', priceLabel: 'Precio (USD)', stockLabel: 'Porciones disp.',
+            showStock: true, allowCsv: true, defaultCategory: 'Menú Principal'
+        },
+        consultorio: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Analítica de consultorio · Ocupación de agenda, honorarios proyectados y conversión de pacientes',
+            opTitle: 'Agenda Profesional, Triaje IA y Padrón de Pacientes',
+            opSubtitle: 'Aprueba o reprograma consultas agendadas por el Chat IA, revisa el cronograma de hoy y el historial de pacientes.',
+            catTitle: 'Aranceles, Tipos de Consulta e Importación CSV',
+            catSubtitle: 'Define el listado oficial de consultas, evaluaciones y honorarios que cotiza el asistente IA.',
+            itemNoun: 'consulta o evaluación', itemNounPlural: 'consultas y honorarios', priceLabel: 'Honorario (USD)', stockLabel: '',
+            showStock: false, allowCsv: true, defaultCategory: 'Consulta Profesional'
+        },
+        clinic: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Telemetría clínica ejecutiva · Demanda por especialidad, flujo de pacientes y facturación estimada',
+            opTitle: 'Central Clínica de Citas, Especialidades y Pacientes',
+            opSubtitle: 'Controla el flujo de citas médicas capturadas por IA, detecta horas pico y gestiona el directorio de pacientes.',
+            catTitle: 'Especialidades Médicas, Estudios y Tarifario CSV',
+            catSubtitle: 'Administra individualmente o por lote CSV las especialidades, exámenes y tarifas del centro de salud.',
+            itemNoun: 'especialidad o estudio', itemNounPlural: 'especialidades y estudios', priceLabel: 'Tarifa (USD)', stockLabel: '',
+            showStock: false, allowCsv: true, defaultCategory: 'Especialidad Médica'
+        },
+        service_team: {
+            planBadge: 'PLAN SMART BUSINESS · $49/MES',
+            overviewSub: 'Inteligencia de servicios · Ocupación de agenda del equipo, servicios cotizados y tasa de cierre',
+            opTitle: 'Coordinación de Agenda, Citas IA y Directorio de Clientes',
+            opSubtitle: 'Aprueba solicitudes agendadas por el Chat IA, supervisa el cronograma diario y el historial por cliente.',
+            catTitle: 'Catálogo de Servicios Profesionales y Carga CSV',
+            catSubtitle: 'Configura las tarifas y categorías de servicio o impórtalas masivamente desde un archivo CSV.',
+            itemNoun: 'servicio profesional', itemNounPlural: 'servicios profesionales', priceLabel: 'Tarifa (USD)', stockLabel: '',
+            showStock: false, allowCsv: true, defaultCategory: 'Servicio'
+        },
+        supermarket: {
+            planBadge: 'PLAN ENTERPRISE · $99/MES',
+            overviewSub: 'Inteligencia corporativa de alto volumen · Valorización masiva de inventario, órdenes y rotación',
+            opTitle: 'Centro Corporativo de Logística, Stock Masivo y Órdenes',
+            opSubtitle: 'Monitoreo en tiempo real de pedidos omnicanal, reposición prioritaria y control de inventario por departamento.',
+            catTitle: 'Maestro de Productos e Importación Masiva CSV',
+            catSubtitle: 'Sincroniza miles de SKUs mediante archivos CSV o edita precios y existencias en tiempo real.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
+            showStock: true, allowCsv: true, defaultCategory: 'Supermercado'
+        },
+        hypermarket: {
+            planBadge: 'PLAN ENTERPRISE · $99/MES',
+            overviewSub: 'Telemetría corporativa multidepartamento · Volumen de órdenes, capital en stock y conversión IA',
+            opTitle: 'Centro de Operaciones Masivas y Control de Abastecimiento',
+            opSubtitle: 'Supervisión ejecutiva de órdenes en curso, alertas críticas de inventario y rotación.',
+            catTitle: 'Catálogo Maestro Multidepartamento (CSV)',
+            catSubtitle: 'Carga por lotes CSV y administración centralizada de precios y existencias.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
+            showStock: true, allowCsv: true, defaultCategory: 'Gran Superficie'
+        },
+        large_store: {
+            planBadge: 'PLAN ENTERPRISE · $99/MES',
+            overviewSub: 'Analítica ejecutiva de gran superficie · Rendimiento financiero, inventario y flujo de órdenes',
+            opTitle: 'Operaciones Comerciales, Despacho y Reposición',
+            opSubtitle: 'Seguimiento de órdenes generadas por IA y control de puntos de reorden.',
+            catTitle: 'Catálogo Corporativo e Importación CSV',
+            catSubtitle: 'Gestión centralizada del catálogo comercial con soporte de carga masiva CSV.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
+            showStock: true, allowCsv: true, defaultCategory: 'Catálogo General'
+        },
+        large_company: {
+            planBadge: 'PLAN ENTERPRISE · $99/MES',
+            overviewSub: 'Inteligencia empresarial y distribución · Volumen transaccional, valor de almacén y eficiencia IA',
+            opTitle: 'Centro de Distribución, Pedidos Corporativos y Stock',
+            opSubtitle: 'Control integral de órdenes mayoristas/detal y disponibilidad en almacén.',
+            catTitle: 'Catálogo Maestro de Distribución (CSV)',
+            catSubtitle: 'Administración de líneas de producto, precios y lotes CSV.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Unidades en almacén',
+            showStock: true, allowCsv: true, defaultCategory: 'Distribución'
+        }
+    };
+    if (profiles[bType]) {
+        const meta = { ...profiles[bType] };
+        if (isBasic) meta.allowCsv = false;
+        return meta;
+    }
+    const kind = businessKind(business);
+    if (kind === 'appointments') return isBasic ? profiles.appointments_small : profiles.consultorio;
+    if (kind === 'restaurant') return { ...profiles.restaurant, allowCsv: !isBasic };
+    if (kind === 'enterprise') return profiles.supermarket;
+    return isBasic ? profiles.sales_small : profiles.local_store;
+}
+
+/* ---------------------------------------------------------
+   REDIRECCIÓN LIMPIA DEL CATÁLOGO A SU VISTA EXCLUSIVA
+--------------------------------------------------------- */
+function openCatalogModal() {
+    switchView('catalog');
+}
 function closeCatalogModal() {
     const modal = document.getElementById('catalogModal');
     if (modal) modal.style.display = 'none';
 }
 
+/* ---------------------------------------------------------
+   VISTA 1: PANEL EJECUTIVO — 100% ANÁLISIS PURO Y TELEMETRÍA
+   (Sencillo para Plan $19 · Avanzado para Plan $49 y $99)
+--------------------------------------------------------- */
+async function applyBusinessOverview(business) {
+    if (!business) return;
+    const kind = businessKind(business);
+    const isBasic = currentPlanCode === 'emprendedor';
+    const meta = getBusinessProfileMeta(business);
+
+    const kicker = document.getElementById('overview-plan-kicker');
+    if (kicker) kicker.textContent = `${meta.planBadge} · PANEL DE ANÁLISIS EJECUTIVO`;
+    const metaEl = document.getElementById('businessMeta');
+    if (metaEl) metaEl.textContent = meta.overviewSub;
+
+    const titleSales = document.getElementById('kpi-sales-title');
+    const titleToday = document.getElementById('kpi-sales-today-title');
+    const titleChats = document.getElementById('kpi-chats-title');
+    const titleHandoffs = document.getElementById('kpi-handoffs-title');
+    const subSales = document.getElementById('kpi-sales-sub');
+    const subToday = document.getElementById('kpi-today-sub');
+    const subChats = document.getElementById('kpi-chats-sub');
+    const subHandoffs = document.getElementById('kpi-handoffs-sub');
+    const valueSales = document.getElementById('kpi-sales');
+    const valueToday = document.getElementById('kpi-sales-today');
+    const root = document.getElementById('overview-analytics-root');
+
+    try {
+        const [catalogRes, paymentsRes] = await Promise.all([
+            api('/api/v1/dashboard/catalog', { cache: 'no-store' }).catch(() => ({ products: [] })),
+            api('/api/v1/dashboard/webchat-payments?status=all&limit=100').catch(() => ({ payments: [] }))
+        ]);
+        const products = Array.isArray(catalogRes.products) ? catalogRes.products : [];
+        const payments = Array.isArray(paymentsRes.payments) ? paymentsRes.payments : [];
+        const pendingPayments = payments.filter(p => p.status === 'pending');
+        const approvedPayments = payments.filter(p => p.status === 'approved');
+        const rejectedPayments = payments.filter(p => p.status === 'rejected');
+
+        // Categorías agrupadas
+        const catMap = new Map();
+        products.forEach(p => {
+            const c = String(p.category || meta.defaultCategory).trim() || 'General';
+            const prev = catMap.get(c) || { count: 0, stock: 0, value: 0, avgPriceSum: 0 };
+            prev.count += 1;
+            prev.stock += Math.max(0, Number(p.stock || 0));
+            prev.value += Math.max(0, Number(p.stock || 0)) * Number(p.price || 0);
+            prev.avgPriceSum += Number(p.price || 0);
+            catMap.set(c, prev);
+        });
+        const categories = Array.from(catMap.entries()).map(([name, info]) => ({
+            name,
+            count: info.count,
+            stock: info.stock,
+            value: info.value,
+            avgPrice: info.count ? info.avgPriceSum / info.count : 0
+        })).sort((a, b) => b.count - a.count);
+
+        if (kind === 'appointments' || kind === 'restaurant') {
+            const isRestaurant = kind === 'restaurant';
+            const bookingType = isRestaurant ? 'reservation' : 'appointment';
+            const bookingsRes = await api(`/api/v1/dashboard/bookings?booking_type=${bookingType}&limit=200`).catch(() => ({ bookings: [] }));
+            const bookings = Array.isArray(bookingsRes.bookings) ? bookingsRes.bookings : [];
+
+            const timezone = business.timezone || 'America/Caracas';
+            const dateKey = (value) => {
+                const d = new Date(value);
+                return Number.isNaN(d.getTime()) ? '' : new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+            };
+            const todayKey = dateKey(new Date());
+            const pendingB = bookings.filter(b => b.status === 'pending');
+            const confirmedB = bookings.filter(b => b.status === 'confirmed');
+            const completedB = bookings.filter(b => b.status === 'completed');
+            const cancelledB = bookings.filter(b => b.status === 'cancelled');
+            const todayActiveB = bookings.filter(b => dateKey(b.starts_at) === todayKey && ['pending', 'confirmed', 'completed'].includes(b.status));
+
+            // Actualizar los 4 KPIs superiores para Citas / Restaurante
+            if (titleSales) titleSales.textContent = isRestaurant ? 'Reservas Totales (IA)' : 'Citas Capturadas (IA)';
+            if (valueSales) valueSales.textContent = bookings.length.toLocaleString('es-ES');
+            if (subSales) subSales.textContent = `${confirmedB.length + completedB.length} aprobadas / completadas`;
+
+            if (titleToday) titleToday.textContent = isRestaurant ? 'Reservas para Hoy' : 'Agenda de Hoy';
+            if (valueToday) valueToday.textContent = todayActiveB.length.toLocaleString('es-ES');
+            if (subToday) subToday.textContent = isRestaurant
+                ? `${todayActiveB.reduce((s, b) => s + Number(b.party_size || 1), 0)} comensales previstos hoy`
+                : `${todayActiveB.filter(b => b.status === 'confirmed').length} confirmadas para hoy`;
+
+            if (titleChats) titleChats.textContent = 'Conversaciones IA';
+            if (subChats) subChats.textContent = `${products.length} ${meta.itemNounPlural} activos`;
+
+            if (titleHandoffs) titleHandoffs.textContent = isRestaurant ? 'Reservas por Aprobar' : 'Citas por Aprobar';
+            const handoffEl = document.getElementById('kpi-handoffs');
+            if (handoffEl) handoffEl.textContent = pendingB.length.toLocaleString('es-ES');
+            if (subHandoffs) subHandoffs.textContent = pendingB.length ? 'Esperan tu confirmación' : 'Bandeja al día';
+
+            // Estimar valor económico de citas según tarifas del catálogo
+            const avgServicePrice = products.length
+                ? products.reduce((s, p) => s + Number(p.price || 0), 0) / products.length
+                : 0;
+            const confirmRate = bookings.length
+                ? Math.round(((confirmedB.length + completedB.length) / bookings.length) * 100)
+                : 100;
+
+            // Conteo por servicio solicitado
+            const svcMap = new Map();
+            bookings.forEach(b => {
+                const sName = String(b.service_name || (isRestaurant ? 'Reserva de mesa' : 'Consulta General')).trim();
+                svcMap.set(sName, (svcMap.get(sName) || 0) + 1);
+            });
+            const topServices = Array.from(svcMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+            if (!root) return;
+
+            if (isBasic) {
+                // ANÁLISIS SENCILLO Y EJECUTIVO ($19 · CITAS)
+                root.innerHTML = `
+                  <div class="panel-grid">
+                    <div class="panel glass-panel">
+                      <h3><i class="ph ph-chart-pie-slice"></i> Rendimiento de Agenda Automatizada</h3>
+                      <div class="vertical-grid" style="margin-bottom:14px;">
+                        <div class="vertical-card">
+                          <h3>Tasa de Aprobación</h3>
+                          <div class="vertical-number" style="color:#34d399;">${confirmRate}%</div>
+                          <p class="vertical-small">Citas confirmadas sobre total</p>
+                        </div>
+                        <div class="vertical-card">
+                          <h3>Atendidas / Completadas</h3>
+                          <div class="vertical-number" style="color:#7cecf5;">${completedB.length}</div>
+                          <p class="vertical-small">Clientes ya atendidos</p>
+                        </div>
+                        <div class="vertical-card">
+                          <h3>Tarifa Promedio</h3>
+                          <div class="vertical-number">$${avgServicePrice.toFixed(2)}</div>
+                          <p class="vertical-small">Sobre ${products.length} servicio(s)</p>
+                        </div>
+                      </div>
+                      <div class="list-item" style="margin-bottom:0;">
+                        <div class="list-item-content">
+                          <h4>Distribución de estados en la agenda</h4>
+                          <p>Pendientes: <strong style="color:#fbbf24;">${pendingB.length}</strong> · Confirmadas: <strong style="color:#34d399;">${confirmedB.length}</strong> · Completadas: <strong style="color:#93c5fd;">${completedB.length}</strong> · Canceladas: <strong style="color:#fb7185;">${cancelledB.length}</strong></p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="panel glass-panel">
+                      <h3><i class="ph ph-ranking"></i> Servicios más Solicitados en el Chat</h3>
+                      ${topServices.length ? topServices.map(([sName, count]) => {
+                          const pct = Math.max(8, Math.round((count / Math.max(1, bookings.length)) * 100));
+                          return `<div style="margin-bottom:12px;">
+                            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+                              <strong style="color:#f8fafc;">${escapeHtml(sName)}</strong>
+                              <span class="muted">${count} solicitud(es) · ${pct}%</span>
+                            </div>
+                            <div class="usage-track" style="margin:0;"><div class="usage-fill" style="width:${pct}%;"></div></div>
+                          </div>`;
+                      }).join('') : '<p class="muted" style="font-size:13px;line-height:1.7;">Aún no se registran solicitudes de citas. Cuando tus clientes agenden por el Chat IA, verás aquí la demanda real por cada servicio.</p>'}
+                    </div>
+                  </div>`;
+            } else if (isRestaurant) {
+                // ANÁLISIS AVANZADO ($49 · RESTAURANTE Y CAFETERÍA)
+                const totalGuestsToday = todayActiveB.reduce((s, b) => s + Number(b.party_size || 1), 0);
+                const occupancyPct = Math.min(100, Math.round((todayActiveB.length / Math.max(1, currentRestaurantTableCount)) * 100));
+                const avgParty = bookings.length ? (bookings.reduce((s, b) => s + Number(b.party_size || 1), 0) / bookings.length).toFixed(1) : '0.0';
+                const totalMenuStock = products.reduce((s, p) => s + Math.max(0, Number(p.stock || 0)), 0);
+
+                root.innerHTML = `
+                  <div class="vertical-grid">
+                    <div class="vertical-card">
+                      <h3><i class="ph ph-armchair"></i> Ocupación Estimada de Mesas Hoy</h3>
+                      <div class="vertical-number" style="color:#34d399;">${occupancyPct}%</div>
+                      <div class="usage-track"><div class="usage-fill" style="width:${occupancyPct}%"></div></div>
+                      <p class="vertical-small">${todayActiveB.length} de ${currentRestaurantTableCount} mesas con reserva activa hoy</p>
+                    </div>
+                    <div class="vertical-card">
+                      <h3><i class="ph ph-users-three"></i> Promedio de Comensales por Reserva</h3>
+                      <div class="vertical-number" style="color:#7cecf5;">${avgParty} pers.</div>
+                      <p class="vertical-small">${totalGuestsToday} comensales programados para la jornada de hoy</p>
+                    </div>
+                    <div class="vertical-card">
+                      <h3><i class="ph ph-bowl-food"></i> Cobertura del Menú Digital</h3>
+                      <div class="vertical-number">${products.length} platos</div>
+                      <p class="vertical-small">${totalMenuStock} porciones disponibles en ${categories.length} categoría(s)</p>
+                    </div>
+                  </div>
+                  <div class="panel-grid">
+                    <div class="panel glass-panel">
+                      <h3><i class="ph ph-chart-bar"></i> Estructura del Menú por Categoría Gastronómica</h3>
+                      ${categories.length ? categories.slice(0, 6).map(cat => `
+                        <div class="list-item" style="padding:12px 14px;margin-bottom:8px;">
+                          <div class="list-item-content">
+                            <h4>${escapeHtml(cat.name)}</h4>
+                            <p>${cat.count} plato(s) activo(s) · Precio promedio: <strong>$${cat.avgPrice.toFixed(2)}</strong></p>
+                          </div>
+                          <span class="badge success">${Math.round(cat.stock)} porciones</span>
+                        </div>`).join('') : '<p class="muted">Sin platos cargados todavía en el menú digital.</p>'}
+                    </div>
+                    <div class="panel glass-panel">
+                      <h3><i class="ph ph-pulse"></i> Indicadores Operativos de Sala y Delivery</h3>
+                      <div class="list-item"><div class="list-item-content"><h4>Reservas confirmadas vs. pendientes</h4><p>Aprobadas: <strong style="color:#34d399;">${confirmedB.length}</strong> · En espera de confirmación: <strong style="color:#fbbf24;">${pendingB.length}</strong></p></div><span class="badge ai">${confirmRate}% confirmación</span></div>
+                      <div class="list-item"><div class="list-item-content"><h4>Pagos digitales de pedidos (Webchat / Telegram)</h4><p>Aprobados: <strong style="color:#34d399;">${approvedPayments.length}</strong> · En verificación: <strong style="color:#fbbf24;">${pendingPayments.length}</strong></p></div><span class="badge ${pendingPayments.length ? 'warning' : 'success'}">${pendingPayments.length ? 'Revisión pendiente' : 'Al día'}</span></div>
+                      <div class="list-item" style="margin-bottom:0;"><div class="list-item-content"><h4>Platos agotados o por agotarse (≤ 5 porciones)</h4><p>Control preventivo para evitar ofrecer platos sin existencia en el chat</p></div><span class="badge ${products.filter(p => Number(p.stock || 0) <= 5).length ? 'danger' : 'success'}">${products.filter(p => Number(p.stock || 0) <= 5).length} alerta(s)</span></div>
+                    </div>
+                  </div>`;
+            } else {
+                // ANÁLISIS AVANZADO ($49 · CONSULTORIO / CLÍNICA / SERVICIOS PROFESIONALES)
+                const projectedRevenue = (confirmedB.length + completedB.length) * avgServicePrice;
+                const uniquePatients = new Set(bookings.map(b => (b.customer_phone || b.customer_name || '').toLowerCase().trim()).filter(Boolean)).size;
+                const cancelRate = bookings.length ? Math.round((cancelledB.length / bookings.length) * 100) : 0;
+
+                root.innerHTML = `
+                  <div class="vertical-grid">
+                    <div class="vertical-card">
+                      <h3><i class="ph ph-currency-circle-dollar"></i> Facturación Estimada en Consultas</h3>
+                      <div class="vertical-number" style="color:#34d399;">$${projectedRevenue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <p class="vertical-small">Calculada sobre ${confirmedB.length + completedB.length} citas aprobadas/atendidas (arancel prom. $${avgServicePrice.toFixed(2)})</p>
+                    </div>
+                    <div class="vertical-card">
+                      <h3><i class="ph ph-users"></i> Pacientes / Clientes Únicos en Agenda</h3>
+                      <div class="vertical-number" style="color:#7cecf5;">${uniquePatients}</div>
+                      <p class="vertical-small">Capturados y registrados automáticamente por la IA</p>
+                    </div>
+                    <div class="vertical-card">
+                      <h3><i class="ph ph-shield-check"></i> Eficiencia de Confirmación Clínica</h3>
+                      <div class="vertical-number">${confirmRate}%</div>
+                      <p class="vertical-small">Tasa de cancelación / reprogramación: ${cancelRate}%</p>
+                    </div>
+                  </div>
+
+                  <div class="panel-grid">
+                    <div class="panel glass-panel">
+                      <h3><i class="ph ph-stethoscope"></i> Demanda Analítica por Especialidad / Servicio</h3>
+                      ${topServices.length ? topServices.map(([sName, count]) => {
+                          const pct = Math.max(8, Math.round((count / Math.max(1, bookings.length)) * 100));
+                          return `<div style="margin-bottom:13px;">
+                            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+                              <strong style="color:#f8fafc;">${escapeHtml(sName)}</strong>
+                              <span class="muted">${count} paciente(s) · ${pct}% del total</span>
+                            </div>
+                            <div class="usage-track" style="margin:0;"><div class="usage-fill" style="width:${pct}%;"></div></div>
+                          </div>`;
+                      }).join('') : '<p class="muted" style="font-size:13px;line-height:1.7;">Sin registros aún. A medida que el asistente IA agende consultas, este gráfico mostrará qué especialidades o servicios concentran mayor demanda.</p>'}
+                    </div>
+
+                    <div class="panel glass-panel">
+                      <h3><i class="ph ph-activity"></i> Balance Operativo de Recepción y Triaje IA</h3>
+                      <div class="list-item"><div class="list-item-content"><h4>Solicitudes en espera de aprobación</h4><p>Citas tomadas por el bot pendientes del visto bueno del centro</p></div><span class="badge ${pendingB.length ? 'warning' : 'success'}">${pendingB.length} pendiente(s)</span></div>
+                      <div class="list-item"><div class="list-item-content"><h4>Carga programada para hoy</h4><p>Pacientes citados en la fecha actual (${todayKey})</p></div><span class="badge ai">${todayActiveB.length} cita(s) hoy</span></div>
+                      <div class="list-item" style="margin-bottom:0;"><div class="list-item-content"><h4>Cobertura del Tarifario Oficial</h4><p>${products.length} servicio(s) / consulta(s) distribuidos en ${categories.length} categoría(s)</p></div><span class="badge success">Activo</span></div>
+                    </div>
+                  </div>`;
+            }
+            return;
+        }
+
+        // COMERCIO MINORISTA, BODEGÓN, MINIMARKET Y ENTERPRISE ($19, $49, $99)
+        const totalUnits = products.reduce((s, p) => s + Math.max(0, Number(p.stock || 0)), 0);
+        const inventoryValue = products.reduce((s, p) => s + (Math.max(0, Number(p.stock || 0)) * Number(p.price || 0)), 0);
+        const outOfStock = products.filter(p => Number(p.stock || 0) <= 0);
+        const lowStock = products.filter(p => Number(p.stock || 0) > 0 && Number(p.stock || 0) <= 5);
+        const healthyStock = products.filter(p => Number(p.stock || 0) > 5);
+        const avgOrderTicket = approvedPayments.length
+            ? approvedPayments.reduce((s, p) => s + Number(p.amount || 0), 0) / approvedPayments.length
+            : (products.length ? products.reduce((s, p) => s + Number(p.price || 0), 0) / products.length : 0);
+
+        if (titleSales) titleSales.textContent = 'Ingresos Confirmados';
+        if (subSales) subSales.textContent = `${approvedPayments.length} pago(s) verificado(s)`;
+        if (titleToday) titleToday.textContent = 'Ingresos de Hoy';
+        if (subToday) subToday.textContent = 'Ventas registradas hoy';
+        if (titleChats) titleChats.textContent = 'Conversaciones IA';
+        if (subChats) subChats.textContent = `${products.length} producto(s) en catálogo`;
+        if (titleHandoffs) titleHandoffs.textContent = 'Pagos en Revisión';
+        const handoffEl = document.getElementById('kpi-handoffs');
+        if (handoffEl) handoffEl.textContent = pendingPayments.length.toLocaleString('es-ES');
+        if (subHandoffs) subHandoffs.textContent = pendingPayments.length ? 'Esperan aprobación' : 'Sin pagos pendientes';
+
+        if (!root) return;
+
+        if (isBasic) {
+            // ANÁLISIS SENCILLO Y EJECUTIVO ($19 · CATÁLOGO)
+            root.innerHTML = `
+              <div class="panel-grid">
+                <div class="panel glass-panel">
+                  <h3><i class="ph ph-chart-line-up"></i> Resumen Analítico de Catálogo y Ventas</h3>
+                  <div class="vertical-grid" style="margin-bottom:14px;">
+                    <div class="vertical-card">
+                      <h3>Productos Activos</h3>
+                      <div class="vertical-number">${products.length}</div>
+                      <p class="vertical-small">${Math.round(totalUnits)} unidades totales</p>
+                    </div>
+                    <div class="vertical-card">
+                      <h3>Valor del Catálogo</h3>
+                      <div class="vertical-number" style="color:#34d399;">$${inventoryValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <p class="vertical-small">Stock × precio de venta</p>
+                    </div>
+                    <div class="vertical-card">
+                      <h3>Ticket Promedio</h3>
+                      <div class="vertical-number" style="color:#7cecf5;">$${avgOrderTicket.toFixed(2)}</div>
+                      <p class="vertical-small">Promedio por operación</p>
+                    </div>
+                  </div>
+                  <div class="list-item" style="margin-bottom:0;">
+                    <div class="list-item-content">
+                      <h4>Estado general de existencias</h4>
+                      <p>Stock óptimo (>5 uds): <strong style="color:#34d399;">${healthyStock.length}</strong> · Por reponer (1–5 uds): <strong style="color:#fbbf24;">${lowStock.length}</strong> · Agotados (0 uds): <strong style="color:#fb7185;">${outOfStock.length}</strong></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="panel glass-panel">
+                  <h3><i class="ph ph-folders"></i> Distribución del Catálogo por Categoría</h3>
+                  ${categories.length ? categories.slice(0, 5).map(cat => {
+                      const pct = Math.max(8, Math.round((cat.count / Math.max(1, products.length)) * 100));
+                      return `<div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+                          <strong style="color:#f8fafc;">${escapeHtml(cat.name)}</strong>
+                          <span class="muted">${cat.count} prod. · ${Math.round(cat.stock)} uds · $${cat.value.toFixed(2)}</span>
+                        </div>
+                        <div class="usage-track" style="margin:0;"><div class="usage-fill" style="width:${pct}%;"></div></div>
+                      </div>`;
+                  }).join('') : '<p class="muted" style="font-size:13px;line-height:1.7;">Aún no hay productos cargados. Al registrar tus artículos en la sección Catálogo de Productos, verás aquí el desglose analítico por categoría.</p>'}
+                </div>
+              </div>`;
+        } else {
+            // ANÁLISIS AVANZADO ($49 SMART BUSINESS Y $99 ENTERPRISE · COMERCIO, BODEGÓN, MINIMARKET, SUPERMERCADO)
+            const stockHealthPct = products.length ? Math.round((healthyStock.length / products.length) * 100) : 100;
+            const approvalConversion = (approvedPayments.length + rejectedPayments.length) > 0
+                ? Math.round((approvedPayments.length / (approvedPayments.length + rejectedPayments.length)) * 100)
+                : 100;
+
+            root.innerHTML = `
+              <div class="vertical-grid">
+                <div class="vertical-card">
+                  <h3><i class="ph ph-vault"></i> Capital Valorizado en Inventario</h3>
+                  <div class="vertical-number" style="color:#34d399;">$${inventoryValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <p class="vertical-small">${products.length} SKUs activos · ${Math.round(totalUnits).toLocaleString('es-ES')} unidades en existencia</p>
+                </div>
+                <div class="vertical-card">
+                  <h3><i class="ph ph-receipt"></i> Ticket Promedio & Efectividad de Cobro</h3>
+                  <div class="vertical-number" style="color:#7cecf5;">$${avgOrderTicket.toFixed(2)}</div>
+                  <p class="vertical-small">${approvalConversion}% de solicitudes de pago validadas positivamente</p>
+                </div>
+                <div class="vertical-card">
+                  <h3><i class="ph ph-shield-Warning"></i> Índice de Continuidad de Stock</h3>
+                  <div class="vertical-number" style="color:${stockHealthPct >= 80 ? '#34d399' : '#fbbf24'};">${stockHealthPct}%</div>
+                  <div class="usage-track"><div class="usage-fill" style="width:${stockHealthPct}%"></div></div>
+                  <p class="vertical-small">${lowStock.length} en punto de reorden (≤5) · ${outOfStock.length} agotado(s)</p>
+                </div>
+              </div>
+
+              <div class="panel-grid">
+                <div class="panel glass-panel">
+                  <h3><i class="ph ph-chart-bar-horizontal"></i> Valorización Financiera por Categoría / Departamento</h3>
+                  ${categories.length ? categories.slice(0, 6).map(cat => {
+                      const valPct = inventoryValue > 0 ? Math.max(6, Math.round((cat.value / inventoryValue) * 100)) : Math.round((cat.count / Math.max(1, products.length)) * 100);
+                      return `<div style="margin-bottom:13px;">
+                        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
+                          <strong style="color:#f8fafc;">${escapeHtml(cat.name)} <span class="muted" style="font-weight:400;">(${cat.count} SKUs · ${Math.round(cat.stock)} uds)</span></strong>
+                          <span style="color:#34d399;font-weight:600;">$${cat.value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${valPct}%)</span>
+                        </div>
+                        <div class="usage-track" style="margin:0;"><div class="usage-fill" style="width:${valPct}%;"></div></div>
+                      </div>`;
+                  }).join('') : '<p class="muted">Sin inventario registrado todavía.</p>'}
+                </div>
+
+                <div class="panel glass-panel">
+                  <h3><i class="ph ph-radar"></i> Radar Ejecutivo de Operaciones y Prevención de Fugas</h3>
+                  <div class="list-item">
+                    <div class="list-item-content">
+                      <h4>Riesgo de venta perdida por quiebre de stock (0 uds)</h4>
+                      <p>Artículos que el Chat IA no puede vender actualmente por falta de unidades</p>
+                    </div>
+                    <span class="badge ${outOfStock.length ? 'danger' : 'success'}">${outOfStock.length} agotado(s)</span>
+                  </div>
+                  <div class="list-item">
+                    <div class="list-item-content">
+                      <h4>Artículos en punto crítico de reposición (1 a 5 uds)</h4>
+                      <p>Mercancía próxima a agotarse según el movimiento actual</p>
+                    </div>
+                    <span class="badge ${lowStock.length ? 'warning' : 'success'}">${lowStock.length} en alerta</span>
+                  </div>
+                  <div class="list-item" style="margin-bottom:0;">
+                    <div class="list-item-content">
+                      <h4>Flujo de caja en cola de verificación</h4>
+                      <p>Solicitudes de pago reportadas por clientes en Webchat o Telegram</p>
+                    </div>
+                    <span class="badge ${pendingPayments.length ? 'warning' : 'ai'}">$${pendingPayments.reduce((s, p) => s + Number(p.amount || 0), 0).toFixed(2)} (${pendingPayments.length})</span>
+                  </div>
+                </div>
+              </div>`;
+        }
+    } catch (error) {
+        console.warn('Error calculando analítica ejecutiva:', error);
+    }
+}
+
+/* ---------------------------------------------------------
+   VISTA 2: MÓDULO OPERATIVO ESPECIALIZADO (#view-specialized)
+   CERO SUBIDA DE TARIFAS DUPLICADA · CERO PROMPT DE IA AQUÍ
+--------------------------------------------------------- */
+async function renderSpecializedWorkspace(business) {
+    const root = document.getElementById('specialized-workspace');
+    if (!root || !business) return;
+    const kind = businessKind(business);
+    const isBasicPlan = currentPlanCode === 'emprendedor';
+
+    if (kind === 'appointments') {
+        root.innerHTML = isBasicPlan
+            ? basicAppointmentsOperationHtml(business)
+            : advancedAppointmentsOperationHtml(business);
+        await loadBusinessBookings('appointment');
+        return;
+    }
+
+    if (kind === 'restaurant') {
+        root.innerHTML = restaurantOperationHtml(business);
+        await Promise.all([
+            loadRestaurantTableSettings(),
+            loadBusinessBookings('reservation')
+        ]);
+        return;
+    }
+
+    if (kind === 'enterprise') {
+        root.innerHTML = enterpriseOperationHtml(business);
+        await loadEnterpriseWorkspace();
+        return;
+    }
+
+    // Retail ($19 o $49)
+    root.innerHTML = isBasicPlan
+        ? basicRetailOperationHtml(business)
+        : advancedRetailOperationHtml(business);
+    await loadRetailWorkspace();
+}
+
+/* --- A. OPERACIÓN DE CITAS Y CONSULTAS ($19 BÁSICO) --- */
+function basicAppointmentsOperationHtml(business) {
+    const meta = getBusinessProfileMeta(business);
+    return `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.opTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.opSubtitle)}</p>
+      </div>
+      <div class="vertical-grid">
+        <div class="vertical-card">
+          <h3><i class="ph ph-clock-countdown"></i> Por Aprobar</h3>
+          <div class="vertical-number" id="booking-pending-count" style="color:#fbbf24;">0</div>
+          <p class="vertical-small">Solicitudes capturadas por el Chat IA</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-check-circle"></i> Confirmadas</h3>
+          <div class="vertical-number" id="booking-confirmed-count" style="color:#34d399;">0</div>
+          <p class="vertical-small">Citas aprobadas en firme</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-calendar-check"></i> Citas para Hoy</h3>
+          <div class="vertical-number" id="booking-today-count" style="color:#7cecf5;">0</div>
+          <p class="vertical-small">Programadas en la fecha actual</p>
+        </div>
+      </div>
+
+      <div class="vertical-layout">
+        <div class="panel glass-panel" style="padding:22px;">
+          <div class="vertical-intro">
+            <div>
+              <h3><i class="ph ph-calendar-plus"></i> Bandeja de Citas Capturadas por la IA</h3>
+              <p class="muted">Revisa los datos recolectados por el asistente y aprueba o rechaza con un clic.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadBusinessBookings('appointment')"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;" onclick="setBookingFilter('all','appointment')">Todas</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(245,158,11,.4);color:#fbbf24;" onclick="setBookingFilter('pending','appointment')">Por aprobar</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(16,185,129,.4);color:#34d399;" onclick="setBookingFilter('confirmed','appointment')">Confirmadas</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(56,189,248,.4);color:#38bdf8;" onclick="setBookingFilter('today','appointment')">De hoy</button>
+          </div>
+          <input id="booking-search-input" placeholder="Buscar por nombre del cliente, teléfono o servicio..." oninput="renderFilteredBookings('appointment')" style="margin-bottom:14px;">
+          <div id="specialized-bookings-list" class="booking-list"><p class="muted">Sincronizando agenda...</p></div>
+        </div>
+
+        <div class="panel glass-panel" style="padding:22px;">
+          <h3><i class="ph ph-clock"></i> Cronograma del Día (Hoy)</h3>
+          <p class="muted" style="font-size:12px;margin-bottom:14px;">Orden cronológico de las atenciones previstas para hoy.</p>
+          <div id="today-schedule-list" class="booking-list"><p class="muted">Verificando agenda de hoy...</p></div>
+        </div>
+      </div>`;
+}
+
+/* --- B. OPERACIÓN CLÍNICA / CONSULTORIO / SERVICIOS AVANZADA ($49 SMART BUSINESS) --- */
+function advancedAppointmentsOperationHtml(business) {
+    const meta = getBusinessProfileMeta(business);
+    return `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.opTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.opSubtitle)}</p>
+      </div>
+      <div class="vertical-grid">
+        <div class="vertical-card">
+          <h3><i class="ph ph-clock-countdown"></i> En Espera de Aprobación</h3>
+          <div class="vertical-number" id="booking-pending-count" style="color:#fbbf24;">0</div>
+          <p class="vertical-small">Nuevas citas tomadas por recepción IA</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-calendar-check"></i> Pacientes / Citas de Hoy</h3>
+          <div class="vertical-number" id="booking-today-count" style="color:#34d399;">0</div>
+          <p class="vertical-small">Agenda activa del día en curso</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-identification-card"></i> Padrón de Pacientes / Clientes</h3>
+          <div class="vertical-number" id="booking-patients-count" style="color:#7cecf5;">0</div>
+          <p class="vertical-small">Expedientes únicos registrados por IA</p>
+        </div>
+      </div>
+
+      <div class="vertical-layout">
+        <div class="panel glass-panel" style="padding:22px;">
+          <div class="vertical-intro">
+            <div>
+              <h3><i class="ph ph-stethoscope"></i> Control de Citas y Aprobación Ejecutiva</h3>
+              <p class="muted">Detección automática de disponibilidad y confirmación en un clic sin cruces de horario.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadBusinessBookings('appointment')"><i class="ph ph-arrows-clockwise"></i> Sincronizar</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;" onclick="setBookingFilter('all','appointment')">Todas</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(245,158,11,.4);color:#fbbf24;" onclick="setBookingFilter('pending','appointment')">Por aprobar</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(16,185,129,.4);color:#34d399;" onclick="setBookingFilter('confirmed','appointment')">Aprobadas</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(56,189,248,.4);color:#38bdf8;" onclick="setBookingFilter('today','appointment')">Agenda de hoy</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(147,197,253,.4);color:#93c5fd;" onclick="setBookingFilter('completed','appointment')">Atendidas</button>
+          </div>
+          <input id="booking-search-input" placeholder="Filtrar por paciente/cliente, teléfono o especialidad..." oninput="renderFilteredBookings('appointment')" style="margin-bottom:14px;">
+          <div id="specialized-bookings-list" class="booking-list" style="max-height:520px;overflow-y:auto;"><p class="muted">Cargando citas...</p></div>
+        </div>
+
+        <div style="display:grid;gap:18px;">
+          <div class="panel glass-panel" style="padding:22px;">
+            <h3><i class="ph ph-clock"></i> Cronograma Horario de Hoy</h3>
+            <p class="muted" style="font-size:12px;margin-bottom:12px;">Pacientes/clientes programados para hoy ordenados por hora.</p>
+            <div id="today-schedule-list" class="booking-list" style="max-height:230px;overflow-y:auto;"><p class="muted">Cargando cronograma...</p></div>
+          </div>
+
+          <div class="panel glass-panel" style="padding:22px;">
+            <h3><i class="ph ph-address-book"></i> Directorio Automático de Pacientes / Clientes</h3>
+            <p class="muted" style="font-size:12px;margin-bottom:12px;">Historial consolidado de cada persona agendada por el asistente IA.</p>
+            <div id="patient-directory-list" class="booking-list" style="max-height:240px;overflow-y:auto;"><p class="muted">Consolidando directorio...</p></div>
+          </div>
+        </div>
+      </div>`;
+}
+
+/* --- C. OPERACIÓN DE RESTAURANTE ($49 SMART BUSINESS: SALÓN, MESAS Y RESERVAS IA) --- */
+function restaurantOperationHtml(business) {
+    const meta = getBusinessProfileMeta(business);
+    return `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.opTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.opSubtitle)}</p>
+      </div>
+      <div class="vertical-grid">
+        <div class="vertical-card">
+          <h3><i class="ph ph-armchair"></i> Mesas del Establecimiento</h3>
+          <div class="vertical-number" id="restaurant-table-count-display">12</div>
+          <p class="vertical-small">Capacidad física configurada</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-clock-countdown"></i> Reservas por Aprobar</h3>
+          <div class="vertical-number" id="booking-pending-count" style="color:#fbbf24;">0</div>
+          <p class="vertical-small">Capturadas automáticamente por el Chat IA</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-users"></i> Comensales Hoy</h3>
+          <div class="vertical-number" id="booking-guests-count" style="color:#34d399;">0</div>
+          <p class="vertical-small">Personas en reservas activas de hoy</p>
+        </div>
+      </div>
+
+      <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;">
+        <div class="vertical-intro" style="align-items:flex-end;flex-wrap:wrap;">
+          <div>
+            <h3><i class="ph ph-grid-four"></i> Plano de Ocupación de Mesas en Tiempo Real</h3>
+            <p class="muted">Refleja automáticamente las mesas libres y las reservadas para la jornada de hoy.</p>
+            <div class="muted" style="margin-top:8px;"><span style="color:#34d399;">● Mesa Disponible</span> &nbsp; <span style="color:#fbbf24;">● Mesa con Reserva Hoy</span></div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label class="muted" for="restaurant-table-count-input" style="font-size:12px;">Total de mesas</label>
+            <input id="restaurant-table-count-input" type="number" min="1" max="100" value="12" style="width:86px;min-width:86px;">
+            <button class="btn-secondary" onclick="saveRestaurantTableSettings()">Actualizar plano</button>
+          </div>
+        </div>
+        <div id="restaurant-table-board" class="table-board"><p class="muted">Cargando plano de mesas...</p></div>
+      </div>
+
+      <div class="vertical-layout">
+        <div class="panel glass-panel" style="padding:22px;">
+          <div class="vertical-intro">
+            <div>
+              <h3><i class="ph ph-calendar-check"></i> Bandeja de Reservas de Mesa (Vía Chat IA)</h3>
+              <p class="muted">Aprueba o rechaza las reservas solicitadas por tus clientes sin registrar nada a mano.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadBusinessBookings('reservation')"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;" onclick="setBookingFilter('all','reservation')">Todas</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(245,158,11,.4);color:#fbbf24;" onclick="setBookingFilter('pending','reservation')">Por aprobar</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(16,185,129,.4);color:#34d399;" onclick="setBookingFilter('confirmed','reservation')">Confirmadas</button>
+            <button type="button" class="btn-secondary" style="padding:6px 12px;font-size:11px;border-color:rgba(56,189,248,.4);color:#38bdf8;" onclick="setBookingFilter('today','reservation')">De hoy</button>
+          </div>
+          <input id="booking-search-input" placeholder="Buscar reserva por cliente o teléfono..." oninput="renderFilteredBookings('reservation')" style="margin-bottom:14px;">
+          <div id="specialized-bookings-list" class="booking-list"><p class="muted">Cargando reservas...</p></div>
+        </div>
+
+        <div class="panel glass-panel" style="padding:22px;">
+          <h3><i class="ph ph-clock"></i> Turnos de Reserva para Hoy</h3>
+          <p class="muted" style="font-size:12px;margin-bottom:12px;">Llegadas programadas hoy ordenadas por hora.</p>
+          <div id="today-schedule-list" class="booking-list"><p class="muted">Cargando llegadas de hoy...</p></div>
+        </div>
+      </div>`;
+}
+
+/* --- D. OPERACIÓN DE COMERCIO BÁSICO ($19: CONTROL RÁPIDO DE EXISTENCIAS) --- */
+function basicRetailOperationHtml(business) {
+    const meta = getBusinessProfileMeta(business);
+    return `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.opTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.opSubtitle)}</p>
+      </div>
+      <div class="vertical-grid">
+        <div class="vertical-card">
+          <h3><i class="ph ph-package"></i> Productos Activos</h3>
+          <div class="vertical-number" id="retail-product-count">0</div>
+          <p class="vertical-small">En venta por el Chat IA</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-warning-circle"></i> Por Reponer (≤5 uds)</h3>
+          <div class="vertical-number" id="retail-low-stock" style="color:#fbbf24;">0</div>
+          <p class="vertical-small">Pocas unidades disponibles</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-prohibit"></i> Agotados (0 uds)</h3>
+          <div class="vertical-number" id="retail-out-stock" style="color:#fb7185;">0</div>
+          <p class="vertical-small">Requieren reposición</p>
+        </div>
+      </div>
+
+      <div class="panel glass-panel" style="padding:22px;">
+        <div class="vertical-intro">
+          <div>
+            <h3><i class="ph ph-arrows-left-right"></i> Control Rápido de Existencias en Mostrador</h3>
+            <p class="muted">Descuenta ventas presenciales o suma reposiciones en un clic para que el Chat IA siempre tenga el stock exacto.</p>
+          </div>
+          <button class="btn-secondary" onclick="loadRetailWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+        </div>
+        <div id="retail-low-list" class="booking-list"><p class="muted">Cargando existencias...</p></div>
+      </div>`;
+}
+
+/* --- E. OPERACIÓN DE COMERCIO AVANZADO ($49 TIENDA, BODEGÓN, MINIMARKET) --- */
+function advancedRetailOperationHtml(business) {
+    const meta = getBusinessProfileMeta(business);
+    return `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.opTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.opSubtitle)}</p>
+      </div>
+      <div class="vertical-grid">
+        <div class="vertical-card">
+          <h3><i class="ph ph-package"></i> SKUs Activos</h3>
+          <div class="vertical-number" id="retail-product-count">0</div>
+          <p class="vertical-small">Sincronizados con el vendedor IA</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-warning-circle"></i> Punto de Reorden (≤5)</h3>
+          <div class="vertical-number" id="retail-low-stock" style="color:#fbbf24;">0</div>
+          <p class="vertical-small">Prioridad de abastecimiento</p>
+        </div>
+        <div class="vertical-card">
+          <h3><i class="ph ph-currency-circle-dollar"></i> Valor en Anaquel</h3>
+          <div class="vertical-number" id="retail-inventory-val" style="color:#34d399;">$0.00</div>
+          <p class="vertical-small">Capital activo en mercancía</p>
+        </div>
+      </div>
+
+      <div class="vertical-layout">
+        <div class="panel glass-panel" style="padding:22px;">
+          <div class="vertical-intro">
+            <div>
+              <h3><i class="ph ph-warning-octagon" style="color:#fbbf24;"></i> Radar de Reposición Rápida (Stock Crítico y Bajo)</h3>
+              <p class="muted">Reabastece con un clic los artículos agotados o con 5 unidades o menos para no frenar las ventas del chat.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadRetailWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+          </div>
+          <div id="retail-low-list" class="booking-list" style="max-height:460px;overflow-y:auto;"><p class="muted">Analizando inventario...</p></div>
+        </div>
+
+        <div class="panel glass-panel" style="padding:22px;">
+          <h3><i class="ph ph-shopping-bag-open"></i> Pedidos Recientes Generados</h3>
+          <p class="muted" style="font-size:12px;margin-bottom:12px;">Órdenes registradas automáticamente al aprobar pagos del chat.</p>
+          <div id="retail-orders-list" class="booking-list" style="max-height:460px;overflow-y:auto;"><p class="muted">Consultando pedidos...</p></div>
+        </div>
+      </div>`;
+}
+
+/* --- F. OPERACIÓN ENTERPRISE ($99 ALTO VOLUMEN) --- */
+function enterpriseOperationHtml(business) {
+    const meta = getBusinessProfileMeta(business);
+    return `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.opTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.opSubtitle)}</p>
+      </div>
+      <div class="vertical-grid">
+        <div class="vertical-card"><h3><i class="ph ph-package"></i> SKUs Activos</h3><div class="vertical-number" id="ent-products">—</div><p class="vertical-small">Catálogo corporativo</p></div>
+        <div class="vertical-card"><h3><i class="ph ph-shopping-cart"></i> Órdenes Registradas</h3><div class="vertical-number" id="ent-orders-pending" style="color:#7cecf5;">—</div><p class="vertical-small">Flujo transaccional</p></div>
+        <div class="vertical-card"><h3><i class="ph ph-warning-circle"></i> Alertas de Reabastecimiento</h3><div class="vertical-number" id="ent-low-stock" style="color:#fbbf24;">—</div><p class="vertical-small">SKUs con ≤ 5 unidades</p></div>
+      </div>
+      <div class="vertical-layout">
+        <div class="panel glass-panel" style="padding:22px;">
+          <div class="vertical-intro"><div><h3><i class="ph ph-receipt"></i> Monitor de Órdenes Corporativas</h3><p class="muted">Actividad transaccional real del negocio.</p></div><button class="btn-secondary" onclick="loadEnterpriseWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div>
+          <div id="ent-orders-list" class="booking-list" style="max-height:460px;overflow-y:auto;"><p class="muted">Cargando órdenes...</p></div>
+        </div>
+        <div class="panel glass-panel" style="padding:22px;">
+          <h3><i class="ph ph-warning-octagon" style="color:#fbbf24;"></i> Cola de Reposición Prioritaria</h3>
+          <p class="muted" style="font-size:12px;margin-bottom:12px;">Productos críticos con recarga inmediata.</p>
+          <div id="ent-stock-list" class="booking-list" style="max-height:460px;overflow-y:auto;"><p class="muted">Cargando alertas...</p></div>
+        </div>
+      </div>`;
+}
+
+/* ---------------------------------------------------------
+   VISTA 3: MÓDULO EXCLUSIVO DE CATÁLOGO / SERVICIOS Y TARIFAS / MENÚ (#view-catalog)
+   (Único lugar oficial para crear productos/tarifas/platos o subir CSV en $49+)
+--------------------------------------------------------- */
+async function renderCatalogWorkspace(business) {
+    const root = document.getElementById('catalog-workspace');
+    if (!root || !business) return;
+    const meta = getBusinessProfileMeta(business);
+    const allowCsv = canCurrentPlanUseCsv() && meta.allowCsv;
+
+    const csvPanelHtml = allowCsv ? `
+      <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;border-color:rgba(0,242,254,.22);">
+        <div class="vertical-intro" style="margin-bottom:10px;">
+          <div>
+            <h3><i class="ph ph-file-csv" style="color:#00f2fe;"></i> Importación Corporativa por Lotes (CSV)</h3>
+            <p class="muted" style="font-size:12px;">Carga o actualiza decenas de ${escapeHtml(meta.itemNounPlural)} en segundos desde un archivo CSV o Excel exportado.</p>
+          </div>
+          <button type="button" class="btn-secondary" onclick="downloadCatalogCsvTemplate()"><i class="ph ph-download-simple"></i> Descargar plantilla CSV</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px;border-radius:12px;background:rgba(0,242,254,.05);border:1px dashed rgba(0,242,254,.35);">
+          <input type="file" accept=".csv,text/csv" onchange="importCatalogCsv(event)" style="max-width:380px;padding:8px;font-size:12px;">
+          <span class="muted" style="font-size:12px;">Columnas admitidas: <code>name, price, ${meta.showStock ? 'stock, ' : ''}category, image_urls</code></span>
+        </div>
+      </div>` : '';
+
+    const stockInputHtml = meta.showStock ? `
+      <label>${escapeHtml(meta.stockLabel)} *
+        <input id="wsItemStock" type="number" step="1" min="0" value="15" required>
+      </label>` : '';
+
+    root.innerHTML = `
+      <div class="section-header">
+        <h2>${escapeHtml(meta.catTitle)}</h2>
+        <p class="muted">${escapeHtml(meta.catSubtitle)}</p>
+      </div>
+
+      ${csvPanelHtml}
+
+      <div class="vertical-layout">
+        <div class="panel glass-panel" style="padding:22px;">
+          <div class="vertical-intro">
+            <div>
+              <h3><i class="ph ph-list-checks"></i> Listado Oficial Activo (<span id="ws-catalog-count">0</span>)</h3>
+              <p class="muted">Haz clic sobre cualquier precio para actualizarlo al instante${meta.showStock ? ' o ajusta las unidades con (− / ＋)' : ''}.</p>
+            </div>
+            <button class="btn-secondary" onclick="loadWorkspaceCatalogItems()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
+          </div>
+          <input id="ws-catalog-search" placeholder="Buscar por nombre o categoría..." oninput="filterWorkspaceCatalogItems()" style="margin-bottom:14px;">
+          <div id="workspace-catalog-list" class="booking-list" style="max-height:520px;overflow-y:auto;"><p class="muted">Cargando registros...</p></div>
+        </div>
+
+        <div class="panel glass-panel" style="padding:22px;">
+          <h3 style="margin-bottom:6px;"><i class="ph ph-plus-circle"></i> Registrar ${escapeHtml(meta.itemNoun)} manualmente</h3>
+          <p class="muted" style="font-size:12px;margin-bottom:16px;">Cada ${escapeHtml(meta.itemNoun)} guardado queda inmediatamente disponible para que el Chat IA lo consulte y cotice.</p>
+          <form class="vertical-form" onsubmit="createManualCatalogItem(event,'ws')">
+            <label>Nombre del ${escapeHtml(meta.itemNoun)} *
+              <input id="wsItemName" required maxlength="200" placeholder="Escribe el nombre claro...">
+            </label>
+            <div style="display:grid;grid-template-columns:${meta.showStock ? '1fr 1fr' : '1fr'};gap:10px;">
+              <label>${escapeHtml(meta.priceLabel)} *
+                <input id="wsItemPrice" type="number" step="0.01" min="0" required placeholder="0.00">
+              </label>
+              ${stockInputHtml}
+            </div>
+            <label>Categoría / Especialidad
+              <input id="wsItemCategory" maxlength="100" placeholder="Ej. ${escapeHtml(meta.defaultCategory)}">
+            </label>
+            <label>URL de imagen de referencia (opcional)
+              <input id="wsItemImage" placeholder="https://...">
+            </label>
+            <button type="submit" class="btn-action" style="width:100%;margin-top:6px;"><i class="ph ph-floppy-disk"></i> Guardar en el catálogo oficial</button>
+          </form>
+        </div>
+      </div>`;
+
+    await loadWorkspaceCatalogItems();
+}
+
+/* ---------------------------------------------------------
+   OPERACIONES CRUD DEL CATÁLOGO
+--------------------------------------------------------- */
+async function createManualCatalogItem(event, sourcePrefix = 'ws') {
+    event.preventDefault();
+    const nameEl = document.getElementById(`${sourcePrefix}ItemName`);
+    const priceEl = document.getElementById(`${sourcePrefix}ItemPrice`);
+    const stockEl = document.getElementById(`${sourcePrefix}ItemStock`);
+    const categoryEl = document.getElementById(`${sourcePrefix}ItemCategory`);
+    const imageEl = document.getElementById(`${sourcePrefix}ItemImage`);
+    const meta = getBusinessProfileMeta(currentBusiness);
+
+    const name = (nameEl?.value || '').trim();
+    const price = Number(priceEl?.value || 0);
+    const stock = meta.showStock ? Number(stockEl?.value || 0) : 0;
+    const category = (categoryEl?.value || '').trim() || meta.defaultCategory;
+    const imageUrl = (imageEl?.value || '').trim() || null;
+
+    if (!name) {
+        showToast(`Escribe el nombre del ${meta.itemNoun}.`, true);
+        return;
+    }
+    try {
+        const result = await api('/api/v1/dashboard/catalog/item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, price, stock, category, image_url: imageUrl })
+        });
+        showToast(result.message || 'Guardado correctamente.');
+        if (nameEl) nameEl.value = '';
+        if (priceEl) priceEl.value = '';
+        if (stockEl && meta.showStock) stockEl.value = '15';
+        if (imageEl) imageEl.value = '';
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast('No se pudo guardar: ' + e.message, true);
+    }
+}
+
+async function adjustCatalogItemStock(productId, newStock) {
+    try {
+        await api(`/api/v1/dashboard/catalog/item/${encodeURIComponent(productId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stock: Math.max(0, Math.round(Number(newStock || 0))) })
+        });
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast('No se pudo actualizar stock: ' + e.message, true);
+    }
+}
+
+async function promptEditCatalogPrice(productId, currentName, currentPrice) {
+    const input = prompt(`Nuevo precio en USD para "${currentName}":`, String(Number(currentPrice || 0).toFixed(2)));
+    if (input === null) return;
+    const parsed = Number(String(input).replace(',', '.').trim());
+    if (Number.isNaN(parsed) || parsed < 0) {
+        showToast('Ingresa un monto válido.', true);
+        return;
+    }
+    try {
+        await api(`/api/v1/dashboard/catalog/item/${encodeURIComponent(productId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ price: parsed })
+        });
+        showToast('Precio actualizado.');
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast('No se pudo actualizar el precio: ' + e.message, true);
+    }
+}
+
+async function deleteCatalogItem(productId, itemName) {
+    if (!confirm(`¿Eliminar "${itemName}" del catálogo activo?`)) return;
+    try {
+        await api(`/api/v1/dashboard/catalog/item/${encodeURIComponent(productId)}`, { method: 'DELETE' });
+        showToast('Registro eliminado.');
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast('No se pudo eliminar: ' + e.message, true);
+    }
+}
+
 async function loadStoreProducts() {
-    const list = document.getElementById('catalogList');
-    if (!list) return;
-    const initialKind = businessKind(currentBusiness || {});
-    const initialLoadingText = initialKind === 'appointments' ? 'Consultando servicios y tarifas...' : (initialKind === 'restaurant' ? 'Consultando menú y precios...' : 'Consultando catálogo en tiempo real...');
-    list.innerHTML = `<p style="color: #94a3b8; text-align: center; padding: 20px;"><i class="ph ph-spinner ph-spin"></i> ${initialLoadingText}</p>`;
+    await refreshActiveWorkspaceCatalog();
+}
+
+async function refreshActiveWorkspaceCatalog() {
+    if (document.getElementById('workspace-catalog-list')) {
+        await loadWorkspaceCatalogItems();
+    }
+    if (document.getElementById('retail-low-list')) {
+        await loadRetailWorkspace();
+    }
+    if (document.getElementById('ent-orders-list')) {
+        await loadEnterpriseWorkspace();
+    }
+}
+
+function renderCatalogItemRow(p, showStockControls = true) {
+    const stockVal = Math.round(Number(p.stock || 0));
+    const stockColor = stockVal > 10 ? '#10b981' : (stockVal > 0 ? '#f59e0b' : '#ef4444');
+    const kind = businessKind(currentBusiness || {});
+    const appointmentMode = kind === 'appointments';
+    const restaurantMode = kind === 'restaurant';
+    const metaLabel = appointmentMode
+        ? `${escapeHtml(p.category || 'Consulta / Servicio')}`
+        : `${escapeHtml(p.category || 'General')} · ${restaurantMode ? 'Porciones' : 'Stock'}: <strong style="color:${stockColor};font-size:.82rem;">${stockVal}</strong>`;
+    const img = Array.isArray(p.images) && p.images[0]
+        ? `<img class="catalog-preview-img" src="${escapeHtml(p.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : `<span class="catalog-preview-img" style="display:grid;place-items:center;color:#38bdf8;background:rgba(56,189,248,.08);"><i class="ph ${appointmentMode ? 'ph-stethoscope' : restaurantMode ? 'ph-bowl-food' : 'ph-package'}"></i></span>`;
+    const stockButtons = (!appointmentMode && showStockControls)
+        ? `<button type="button" class="btn-secondary" style="padding:5px 9px;font-size:11px;" title="Restar 1" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${Math.max(0, stockVal - 1)})">−</button>
+           <button type="button" class="btn-secondary" style="padding:5px 9px;font-size:11px;" title="Sumar 1" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${stockVal + 1})">＋</button>`
+        : '';
+    return `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin-bottom:8px;flex-wrap:wrap;">
+            <div style="display:flex;gap:11px;align-items:center;min-width:0;flex:1;">${img}<div style="min-width:0;">
+                <div style="font-weight:600;color:#f8fafc;font-size:.92rem;overflow-wrap:anywhere;">${escapeHtml(p.name)}</div>
+                <span style="font-size:.75rem;color:#94a3b8;">${metaLabel}</span>
+            </div></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <button type="button" onclick="promptEditCatalogPrice('${escapeHtml(p.id)}','${escapeHtml(p.name)}',${Number(p.price || 0)})" style="background:rgba(0,242,254,.1);border:1px solid rgba(0,242,254,.28);color:#00f2fe;padding:6px 11px;border-radius:9px;font-size:.88rem;font-weight:700;cursor:pointer;" title="Editar precio">$${Number(p.price || 0).toFixed(2)} <i class="ph ph-pencil-simple" style="font-size:11px;"></i></button>
+                ${stockButtons}
+                <button type="button" onclick="deleteCatalogItem('${escapeHtml(p.id)}','${escapeHtml(p.name)}')" style="background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:#fda4af;padding:6px 9px;border-radius:9px;font-size:12px;cursor:pointer;" title="Eliminar"><i class="ph ph-trash"></i></button>
+            </div>
+        </div>`;
+}
+
+let cachedWorkspaceProducts = [];
+async function loadWorkspaceCatalogItems() {
+    const container = document.getElementById('workspace-catalog-list');
+    if (!container) return;
     try {
         const data = await api('/api/v1/dashboard/catalog', { cache: "no-store" });
-        if (data.products && data.products.length > 0) {
-            list.innerHTML = '';
-            data.products.forEach(p => {
-                const stockVal = Math.round(Number(p.stock || 0));
-                const stockColor = stockVal > 10 ? '#10b981' : (stockVal > 0 ? '#f59e0b' : '#ef4444');
-                const kind = businessKind(currentBusiness || {});
-                const appointmentMode = kind === 'appointments';
-                const restaurantMode = kind === 'restaurant';
-                const metaLabel = appointmentMode
-                    ? `${escapeHtml(p.category || 'Servicio')} · ${Array.isArray(p.images) ? p.images.length : 0} imagen(es)`
-                    : `${escapeHtml(p.category || 'General')} · ${restaurantMode ? 'Disponibilidad' : 'Stock'}: <strong style="color:${stockColor};font-size:.85rem;">${stockVal}</strong> · ${Array.isArray(p.images) ? p.images.length : 0} imagen(es)`;
-                const img = Array.isArray(p.images) && p.images[0] ? `<img class="catalog-preview-img" src="${escapeHtml(p.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="catalog-preview-img" style="display:grid;place-items:center;color:#64748b;"><i class="ph ph-image"></i></span>';
-                list.innerHTML += `
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:8px;">
-                        <div style="display:flex;gap:11px;align-items:center;min-width:0;">${img}<div style="min-width:0;">
-                            <div style="font-weight:600;color:#f8fafc;font-size:.92rem;overflow-wrap:anywhere;">${escapeHtml(p.name)}</div>
-                            <span style="font-size:.75rem;color:#94a3b8;">${metaLabel}</span>
-                        </div></div>
-                        <div style="font-size:1rem;font-weight:700;color:#00f2fe;white-space:nowrap;">$${Number(p.price || 0).toFixed(2)}</div>
-                    </div>`;
-            });
-        } else {
-            const kind = businessKind(currentBusiness || {});
-            const emptyLabel = kind === 'appointments' ? 'No hay servicios registrados en este negocio.' : (kind === 'restaurant' ? 'No hay platos o artículos registrados en el menú.' : 'No hay productos registrados en este negocio.');
-            list.innerHTML = `<p class="muted" style="text-align: center; padding: 20px;">${emptyLabel}</p>`;
+        cachedWorkspaceProducts = data.products || [];
+        const countEl = document.getElementById('ws-catalog-count');
+        if (countEl) countEl.textContent = String(cachedWorkspaceProducts.length);
+        filterWorkspaceCatalogItems();
+    } catch (e) {
+        container.innerHTML = `<p class="muted">No se pudo cargar el catálogo: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+function filterWorkspaceCatalogItems() {
+    const container = document.getElementById('workspace-catalog-list');
+    if (!container) return;
+    const query = (document.getElementById('ws-catalog-search')?.value || '').trim().toLowerCase();
+    const meta = getBusinessProfileMeta(currentBusiness);
+    const filtered = query
+        ? cachedWorkspaceProducts.filter(p => String(p.name || '').toLowerCase().includes(query) || String(p.category || '').toLowerCase().includes(query))
+        : cachedWorkspaceProducts;
+    if (!filtered.length) {
+        container.innerHTML = `<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:15px;">Sin ${escapeHtml(meta.itemNounPlural)} registrados</h3><p class="muted" style="font-size:12px;">Usa el formulario de la derecha para registrar tu primer ${escapeHtml(meta.itemNoun)}.</p></div>`;
+        return;
+    }
+    container.innerHTML = filtered.slice(0, 60).map(p => renderCatalogItemRow(p, meta.showStock)).join('');
+}
+
+/* ---------------------------------------------------------
+   INSTRUCCIONES IA EN CANALES (#view-settings)
+--------------------------------------------------------- */
+async function loadWorkspaceAiInstructions() {
+    const textarea = document.getElementById('workspace-ai-prompt');
+    if (!textarea) return;
+    try {
+        const data = await api('/api/v1/dashboard/ai-instructions');
+        textarea.value = data.ai_instructions || '';
+        if (!textarea.value.trim()) {
+            fillWorkspaceDefaultAiPrompt(true);
         }
     } catch (e) {
-        list.innerHTML = `<p style="color: #fda4af; text-align: center; padding: 20px;">Error al cargar catálogo: ${escapeHtml(e.message)}</p>`;
+        console.warn('No se pudieron cargar las instrucciones IA:', e);
+    }
+}
+
+function fillWorkspaceDefaultAiPrompt(silent = false) {
+    const textarea = document.getElementById('workspace-ai-prompt');
+    if (!textarea) return;
+    const bType = canonicalBusinessType(currentBusiness?.business_type || 'sales_small');
+    const name = currentBusiness?.name || 'nuestro negocio';
+    const generator = DASHBOARD_AI_PROMPTS[bType] || DASHBOARD_AI_PROMPTS.sales_small;
+    textarea.value = generator(name);
+    if (!silent) {
+        showToast('Plantilla IA generada según tu giro. Ajusta lo que desees y pulsa Guardar.');
+    }
+}
+
+async function saveWorkspaceAiInstructions() {
+    const textarea = document.getElementById('workspace-ai-prompt');
+    const statusEl = document.getElementById('workspace-ai-prompt-status');
+    if (!textarea) return;
+    try {
+        const data = await api('/api/v1/dashboard/ai-instructions', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ai_instructions: textarea.value.trim() })
+        });
+        showToast(data.message || 'Instrucciones de la IA actualizadas.');
+        if (statusEl) {
+            statusEl.textContent = '✓ Guardado y activo en todos los canales';
+            statusEl.style.color = '#34d399';
+        }
+    } catch (e) {
+        showToast('No se pudieron guardar las instrucciones: ' + e.message, true);
     }
 }
 
 function downloadCatalogCsvTemplate() {
-    const appointmentMode = businessKind(currentBusiness || {}) === 'appointments';
+    const kind = businessKind(currentBusiness || {});
+    const appointmentMode = kind === 'appointments';
+    const restaurantMode = kind === 'restaurant';
     const sample = appointmentMode
-        ? 'name,price,stock,category,image_urls\nConsulta inicial,25,0,Consulta,https://tu-dominio.com/servicio.jpg\n'
-        : 'name,price,stock,category,image_urls\nProducto real,12.50,8,General,https://tu-dominio.com/imagen-producto.jpg\n';
+        ? 'name,price,stock,category,image_urls\nConsulta General,30,0,Consulta Medica,\nEvaluacion Especializada,45,0,Especialidad,\n'
+        : (restaurantMode
+            ? 'name,price,stock,category,image_urls\nPlato Especial de la Casa,14.50,30,Platos Fuertes,\nBebida Natural,3.50,50,Bebidas,\n'
+            : 'name,price,stock,category,image_urls\nProducto Comercial,15.00,25,General,\n');
     const blob = new Blob(['\ufeff', sample], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = appointmentMode ? 'plantilla_servicios_calyrisia.csv' : 'plantilla_catalogo_calyrisia.csv';
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = appointmentMode ? 'plantilla_tarifario_calyrisia.csv' : (restaurantMode ? 'plantilla_menu_calyrisia.csv' : 'plantilla_inventario_calyrisia.csv');
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
@@ -1204,12 +2445,7 @@ function formatBookingDate(value) {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? escapeHtml(value) : d.toLocaleString('es-VE', {dateStyle:'medium', timeStyle:'short'});
 }
-function planUpgradeCard(required, business) {
-    const details = currentPlanCode === 'emprendedor'
-        ? 'Este tipo de operación requiere agenda especializada, reservas y procesos de atención ampliados.'
-        : 'Este perfil requiere herramientas para inventarios de gran volumen, equipos y operaciones empresariales.';
-    return `<div class="upgrade-lock"><span class="badge">Función de ${escapeHtml(required.label)}</span><h3>Este espacio está diseñado para ${escapeHtml(required.label)}</h3><p class="muted" style="max-width:760px;line-height:1.8;">${details} Elige el plan adecuado para activar el panel específico de ${escapeHtml(business?.name || 'tu negocio')}.</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;"><a class="btn btn-primary" target="_blank" rel="noopener" href="${whatsappUpgradeText(required.label,business?.name)}">Consultar cambio de plan <i class="ph ph-arrow-up-right"></i></a><a class="btn btn-secondary" href="/#planes" target="_blank" rel="noopener">Comparar planes</a></div></div>`;
-}
+
 async function loadPaymentInstructions() {
     const message = document.getElementById('payment-instructions-message');
     try {
@@ -1253,7 +2489,7 @@ async function loadDashboardChannels() {
         const toggle = document.getElementById('webchat-toggle-btn');
         if (badge) { badge.textContent = data.webchat_enabled ? 'Activo' : 'Desactivado'; badge.className = 'badge ' + (data.webchat_enabled ? 'success' : ''); }
         if (toggle) toggle.innerHTML = `<i class="ph ph-power"></i> ${data.webchat_enabled ? 'Desactivar Webchat' : 'Activar Webchat'}`;
-        if (summary) summary.textContent = `Plan ${CALYRISIA_PLAN_LIMITS[currentPlanCode].label}: ${data.active_channels} de ${data.max_channels} canales activos. Telegram: ${data.telegram_enabled ? 'activo' : 'inactivo'}. Webchat: ${data.webchat_enabled ? 'activo' : 'inactivo'}. WhatsApp requiere activación comercial.`;
+        if (summary) summary.textContent = `Canales activos: ${data.active_channels}. Telegram: ${data.telegram_enabled ? 'activo' : 'inactivo'}. Webchat: ${data.webchat_enabled ? 'activo' : 'inactivo'}.`;
     } catch (e) {
         const summary = document.getElementById('channels-summary'); if (summary) summary.textContent = `No se pudo consultar el estado de los canales: ${e.message}`;
     }
@@ -1263,128 +2499,19 @@ async function toggleDashboardWebchat() {
         const state = await api('/api/v1/dashboard/channels');
         const data = await api('/api/v1/dashboard/channels/webchat/toggle', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:!state.webchat_enabled})});
         showToast(data.message || 'Estado de Webchat actualizado.');
-        await loadDashboardChannels(); await loadPlanUsage();
+        await loadDashboardChannels();
     } catch(e) { showToast('No se pudo cambiar Webchat: ' + e.message, true); }
 }
 
-async function loadPlanUsage() {
-    const grid = document.getElementById('plan-usage-grid');
-    if (!grid) return;
-    try {
-        const data = await api('/api/v1/dashboard/plan-usage');
-        const plan = data.plan || CALYRISIA_PLAN_LIMITS[currentPlanCode];
-        const usage = data.usage || {};
-        const badge = document.getElementById('current-plan-badge');
-        if (badge) badge.textContent = `${plan.label} · $${plan.price_usd}/mes`;
-        const metric = (label, used, max, unit) => {
-            const n = Math.max(0, Number(used || 0)); const cap = Math.max(1, Number(max || 1));
-            const percent = Math.min(100, Math.round(n / cap * 100));
-            return `<div class="vertical-card"><h3>${label}</h3><div class="vertical-number">${n.toLocaleString('es-ES')} <span style="font-size:13px;color:#96a7c4;font-weight:400;">/ ${cap.toLocaleString('es-ES')}</span></div><div class="usage-track"><div class="usage-fill" style="width:${percent}%"></div></div><p class="vertical-small">${percent}% del límite · ${unit}</p></div>`;
-        };
-        grid.innerHTML = metric('Respuestas de IA', usage.ai_responses || 0, plan.ai_responses_month, 'por mes') + metric('Productos de catálogo', usage.products || 0, plan.products, 'productos') + metric('Imágenes de catálogo', usage.images || 0, plan.images, 'imágenes registradas') + metric('Canales activos', usage.channels || 0, plan.channels, 'canales incluidos');
-    } catch (e) {
-        grid.innerHTML = `<p class="muted">No fue posible consultar el consumo del plan: ${escapeHtml(e.message)}</p>`;
-    }
-}
-async function applyBusinessOverview(business) {
-    const kind = businessKind(business);
-    const titleSales = document.getElementById('kpi-sales-title');
-    const titleToday = document.getElementById('kpi-sales-today-title');
-    const valueSales = document.getElementById('kpi-sales');
-    const valueToday = document.getElementById('kpi-sales-today');
-    if (!titleSales || !titleToday || !valueSales || !valueToday) return;
-
-    if (kind === 'appointments' || kind === 'restaurant') {
-        const isRestaurant = kind === 'restaurant';
-        const bookingType = isRestaurant ? 'reservation' : 'appointment';
-        titleSales.textContent = isRestaurant ? 'Reservas registradas' : 'Citas registradas';
-        titleToday.textContent = isRestaurant ? 'Reservas para hoy' : 'Citas para hoy';
-        valueSales.textContent = '—';
-        valueToday.textContent = '—';
-        try {
-            const data = await api(`/api/v1/dashboard/bookings?booking_type=${bookingType}&limit=200`);
-            const bookings = Array.isArray(data.bookings) ? data.bookings : [];
-            const timezone = business.timezone || 'America/Caracas';
-            const dateKey = (value) => {
-                const date = new Date(value);
-                return Number.isNaN(date.getTime()) ? '' : new Intl.DateTimeFormat('en-CA', {timeZone:timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
-            };
-            const todayKey = dateKey(new Date());
-            const today = bookings.filter(item => dateKey(item.starts_at) === todayKey && ['pending','confirmed'].includes(String(item.status || '').toLowerCase()));
-            valueSales.textContent = bookings.length.toLocaleString('es-ES');
-            valueToday.textContent = today.length.toLocaleString('es-ES');
-        } catch (error) {
-            console.warn('No se pudo adaptar el resumen a las citas/reservas:', error);
-        }
-    } else if (kind === 'enterprise') {
-        titleSales.textContent = 'Ventas registradas';
-        titleToday.textContent = 'Ingresos de hoy';
-    } else {
-        titleSales.textContent = 'Ingresos Generados';
-        titleToday.textContent = 'Ingresos de Hoy';
-    }
-}
-
-async function renderSpecializedWorkspace(business) {
-    const root = document.getElementById('specialized-workspace');
-    if (!root || !business) return;
-    const kind = businessKind(business);
-    const requiredCode = requiredPlanForBusiness(business);
-    if (planRank(currentPlanCode) < planRank(requiredCode)) {
-        root.innerHTML = `<div class="section-header"><h2>${kind === 'restaurant' ? 'Mesas y reservas' : kind === 'appointments' ? 'Agenda de citas' : 'Operación de alto volumen'}</h2><p class="muted">Vista adaptada a la actividad de tu negocio.</p></div>${planUpgradeCard(CALYRISIA_PLAN_LIMITS[requiredCode], business)}`;
-        return;
-    }
-    if (kind === 'restaurant') {
-        root.innerHTML = restaurantWorkspaceHtml(business);
-        await loadRestaurantTableSettings();
-        await loadBusinessBookings('reservation');
-    } else if (kind === 'appointments') {
-        root.innerHTML = appointmentWorkspaceHtml(business);
-        await loadBusinessBookings('appointment');
-    } else if (kind === 'enterprise') {
-        root.innerHTML = enterpriseWorkspaceHtml(business);
-        await loadEnterpriseWorkspace();
-    } else {
-        root.innerHTML = retailWorkspaceHtml(business);
-        await loadRetailWorkspace();
-    }
-}
-function appointmentWorkspaceHtml(business) {
-    const isHealth = /clinica|salud|medic|odont|laboratorio/i.test(business.business_type || business.industry || '');
-    const title = isHealth ? 'Agenda de atención' : 'Agenda de citas y servicios';
-    const catalogHeading = isHealth ? 'Servicios, consultas y tarifas' : 'Servicios y tarifas';
-    return `<div class="section-header"><h2>${title}</h2><p class="muted">Organiza citas, gestiona tu lista de servicios y da seguimiento desde un solo espacio.</p></div>
-      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-calendar-check"></i> Agenda</h3><div class="vertical-number" id="booking-count">—</div><p class="vertical-small">Registros en este negocio</p></div><div class="vertical-card"><h3><i class="ph ph-clock"></i> Por confirmar</h3><div class="vertical-number" id="booking-pending-count">—</div><p class="vertical-small">Esperan revisión del equipo</p></div><div class="vertical-card"><h3><i class="ph ph-check-circle"></i> Confirmadas</h3><div class="vertical-number" id="booking-confirmed-count">—</div><p class="vertical-small">Citas confirmadas</p></div></div>
-      <div class="panel glass-panel" style="padding:20px;margin-bottom:18px;"><div class="vertical-intro" style="flex-wrap:wrap;"><div><h3>${catalogHeading}</h3><p class="muted">Mantén actualizados los servicios y precios que puede consultar el asistente de tu negocio.</p></div><button class="btn-action" onclick="openCatalogModal()"><i class="ph ph-list-checks"></i> Gestionar servicios</button></div></div>
-      <div class="vertical-layout"><div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Próximas citas</h3><p class="muted">Actualizado desde los registros de ${escapeHtml(business.name || 'tu negocio')}.</p></div><button class="btn-secondary" onclick="loadBusinessBookings('appointment')"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div><div id="specialized-bookings-list" class="booking-list"><p class="muted">Cargando agenda...</p></div></div>
-      <div class="panel glass-panel" style="padding:22px;"><h3 style="margin-bottom:16px;">Registrar cita</h3><form class="vertical-form" onsubmit="createBusinessBooking(event,'appointment')"><label>Nombre del cliente<input name="customer_name" required maxlength="200" placeholder="Nombre completo"></label><label>Teléfono<input name="customer_phone" placeholder="+58..."></label><label>Servicio o motivo<input name="service_name" required maxlength="200" placeholder="Consulta, limpieza, asesoría..."></label><label>Fecha y hora<input type="datetime-local" name="starts_at" required></label><label>Notas<textarea name="notes" rows="2" placeholder="Observaciones internas"></textarea></label><button type="submit" class="btn-action"><i class="ph ph-calendar-plus"></i> Guardar cita</button><p class="vertical-small">Las citas nuevas se crean como pendientes hasta que el equipo las confirme.</p></form></div></div>`;
-}
-function restaurantWorkspaceHtml(business) {
-    return `<div class="section-header"><h2>Restaurante · Mesas y reservas</h2><p class="muted">Controla disponibilidad, reservas y capacidad del local desde un solo tablero.</p></div>
-      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-armchair"></i> Mesas configuradas</h3><div class="vertical-number" id="restaurant-table-count-display">12</div><p class="vertical-small">Capacidad de mesas de este establecimiento</p></div><div class="vertical-card"><h3><i class="ph ph-calendar-dots"></i> Reservas de hoy</h3><div class="vertical-number" id="booking-count">—</div><p class="vertical-small">Pendientes y confirmadas</p></div><div class="vertical-card"><h3><i class="ph ph-users"></i> Comensales previstos</h3><div class="vertical-number" id="booking-guests-count">—</div><p class="vertical-small">Personas en las reservas activas de hoy</p></div></div>
-      <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;"><div class="vertical-intro" style="align-items:flex-end;flex-wrap:wrap;"><div><h3>Disponibilidad de mesas</h3><p class="muted">El tablero se calcula a partir de las reservas registradas para hoy.</p><div class="muted" style="margin-top:8px;"><span style="color:#34d399;">● Disponible</span> &nbsp; <span style="color:#fbbf24;">● Reservada</span></div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><label class="muted" for="restaurant-table-count-input" style="font-size:12px;">Mesas del local</label><input id="restaurant-table-count-input" type="number" min="1" max="100" value="12" style="width:86px;min-width:86px;"><button class="btn-secondary" onclick="saveRestaurantTableSettings()">Guardar</button></div></div><div id="restaurant-table-board" class="table-board"><p class="muted">Cargando mesas...</p></div></div>
-      <div class="vertical-layout"><div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Reservas recientes</h3><p class="muted">Confirmación y seguimiento de clientes.</p></div><button class="btn-secondary" onclick="loadBusinessBookings('reservation')"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div><div id="specialized-bookings-list" class="booking-list"><p class="muted">Cargando reservas...</p></div></div>
-      <div class="panel glass-panel" style="padding:22px;"><h3 style="margin-bottom:16px;">Crear reserva</h3><form class="vertical-form" onsubmit="createBusinessBooking(event,'reservation')"><label>Nombre de la reserva<input name="customer_name" required maxlength="200" placeholder="Nombre del cliente"></label><label>Teléfono<input name="customer_phone" placeholder="+58..."></label><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><label>Personas<input type="number" name="party_size" min="1" max="200" value="2" required></label><label>Mesa<select name="table_number">${Array.from({length:currentRestaurantTableCount},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">Mesa ${i+1}</option>`).join('')}</select></label></div><label>Fecha y hora<input type="datetime-local" name="starts_at" required></label><label>Nota<input name="notes" placeholder="Preferencia o detalle"></label><button type="submit" class="btn-action"><i class="ph ph-calendar-plus"></i> Registrar reserva</button><p class="vertical-small">Se crea pendiente y la mesa queda marcada como reservada cuando esté pendiente o confirmada para hoy.</p></form></div></div>`;
-}
-function retailWorkspaceHtml(business) {
-    return `<div class="section-header"><h2>Inventario y catálogo</h2><p class="muted">Control rápido de existencias, fotografías del catálogo y carga desde CSV para ${escapeHtml(business.name || 'tu comercio')}.</p></div>
-      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-package"></i> Productos activos</h3><div class="vertical-number" id="retail-product-count">—</div><p class="vertical-small">Registrados en el catálogo</p></div><div class="vertical-card"><h3><i class="ph ph-warning-circle"></i> Stock bajo</h3><div class="vertical-number" id="retail-low-stock">—</div><p class="vertical-small">Productos con 5 unidades o menos</p></div><div class="vertical-card"><h3><i class="ph ph-images"></i> Imágenes registradas</h3><div class="vertical-number" id="retail-images">—</div><p class="vertical-small">Utiliza el importador CSV para asociar imágenes por URL</p></div></div>
-      <div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Productos que requieren atención</h3><p class="muted">Catálogo e inventario vinculados a este negocio.</p></div><div style="display:flex;gap:9px;flex-wrap:wrap;"><button class="btn-secondary" onclick="openCatalogModal()"><i class="ph ph-package"></i> Abrir catálogo</button><button class="btn-secondary" onclick="loadRetailWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div></div><div id="retail-low-list" class="booking-list"><p class="muted">Cargando inventario...</p></div></div>`;
-}
-function enterpriseWorkspaceHtml(business) {
-    return `<div class="section-header"><h2>Operación de alto volumen</h2><p class="muted">Visión operativa para catálogos grandes, ventas frecuentes y equipos que necesitan seguimiento coordinado.</p></div>
-      <div class="vertical-grid"><div class="vertical-card"><h3><i class="ph ph-package"></i> Productos</h3><div class="vertical-number" id="ent-products">—</div><p class="vertical-small">Dentro del límite de catálogo</p></div><div class="vertical-card"><h3><i class="ph ph-shopping-cart"></i> Pedidos pendientes</h3><div class="vertical-number" id="ent-orders-pending">—</div><p class="vertical-small">En proceso de seguimiento</p></div><div class="vertical-card"><h3><i class="ph ph-warning-circle"></i> Stock bajo</h3><div class="vertical-number" id="ent-low-stock">—</div><p class="vertical-small">Alertas para reposición</p></div></div>
-      <div class="vertical-layout"><div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Pedidos recientes</h3><p class="muted">Actividad comercial real de este negocio.</p></div><button class="btn-secondary" onclick="loadEnterpriseWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button></div><div id="ent-orders-list" class="booking-list"><p class="muted">Cargando pedidos...</p></div></div>
-      <div class="panel glass-panel" style="padding:22px;"><div class="vertical-intro"><div><h3>Control del catálogo</h3><p class="muted">Importa lotes sin registrar producto por producto.</p></div><button class="btn-action" onclick="openCatalogModal()"><i class="ph ph-file-csv"></i> Abrir catálogo</button></div><div id="ent-stock-list" class="booking-list"><p class="muted">Cargando inventario...</p></div><p class="vertical-small" style="margin-top:12px;">Los controles de equipo y auditoría avanzada se muestran en Enterprise.</p></div></div>`;
-}
+/* ---------------------------------------------------------
+   GESTIÓN OPERATIVA DE CITAS, PACIENTES Y MESAS
+--------------------------------------------------------- */
 async function loadRestaurantTableSettings() {
     try {
         const data = await api('/api/v1/dashboard/business-settings');
         currentRestaurantTableCount = Math.max(1, Math.min(100, Number(data.restaurant_table_count || 12)));
         const display = document.getElementById('restaurant-table-count-display'); if (display) display.textContent = String(currentRestaurantTableCount);
         const input = document.getElementById('restaurant-table-count-input'); if (input) input.value = String(currentRestaurantTableCount);
-        const select = document.querySelector('#specialized-workspace select[name="table_number"]');
-        if (select) select.innerHTML = Array.from({length:currentRestaurantTableCount},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">Mesa ${i+1}</option>`).join('');
         renderRestaurantTables(currentRestaurantBookings, currentRestaurantTableCount);
     } catch (e) { console.warn('No se pudo cargar la configuración de mesas:', e); }
 }
@@ -1395,97 +2522,359 @@ async function saveRestaurantTableSettings() {
         const data = await api('/api/v1/dashboard/business-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_table_count:count})});
         currentRestaurantTableCount = Number(data.restaurant_table_count || 12);
         const display = document.getElementById('restaurant-table-count-display'); if (display) display.textContent = String(currentRestaurantTableCount);
-        const select = document.querySelector('#specialized-workspace select[name="table_number"]');
-        if (select) select.innerHTML = Array.from({length:currentRestaurantTableCount},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">Mesa ${i+1}</option>`).join('');
         renderRestaurantTables(currentRestaurantBookings, currentRestaurantTableCount);
         showToast(data.message || 'Configuración guardada.');
     } catch(e) { showToast('No se pudo guardar la cantidad de mesas: ' + e.message, true); }
 }
 
+let activeBookingFilter = 'all';
+let cachedBookings = [];
+function setBookingFilter(filterValue, type) {
+    activeBookingFilter = filterValue || 'all';
+    renderFilteredBookings(type);
+}
+
 async function loadBusinessBookings(type) {
     const list = document.getElementById('specialized-bookings-list');
     if (!list) return;
-    list.innerHTML = '<p class="muted">Cargando registros...</p>';
+    list.innerHTML = '<p class="muted">Sincronizando bandeja con el Chat IA...</p>';
     try {
-        const data = await api(`/api/v1/dashboard/bookings?booking_type=${encodeURIComponent(type)}&limit=100`);
-        const items = data.bookings || [];
-        const todayItems = items.filter(b => b.starts_at && new Date(b.starts_at).toDateString() === new Date().toDateString() && ['pending','confirmed'].includes(b.status));
-        const setText = (id,value) => { const el=document.getElementById(id); if(el) el.textContent=value; };
-        setText('booking-count', type === 'reservation' ? todayItems.length : items.length);
-        setText('booking-pending-count', items.filter(b=>b.status==='pending').length);
-        setText('booking-confirmed-count', items.filter(b=>b.status==='confirmed').length);
-        setText('booking-guests-count', todayItems.reduce((sum,b)=>sum+Number(b.party_size||1),0));
-        if (!items.length) list.innerHTML = `<div class="upgrade-lock" style="padding:23px;"><h3 style="font-size:17px;">Todavía no hay ${type==='reservation'?'reservas':'citas'} registradas</h3><p class="muted">Usa el formulario para crear el primer registro. Cada entrada queda aislada dentro de este negocio.</p></div>`;
-        else list.innerHTML = items.map(b => {
-            const statusColor = b.status==='confirmed'?'#34d399':b.status==='cancelled'?'#fb7185':b.status==='completed'?'#93c5fd':'#fbbf24';
-            return `<div class="booking-row"><div><h4>${escapeHtml(b.customer_name)} · ${escapeHtml(b.service_name || (type==='reservation'?'Reserva':'Cita'))}</h4><p>${formatBookingDate(b.starts_at)} · ${escapeHtml(b.customer_phone||'Sin teléfono')}${type==='reservation' ? ` · Mesa ${escapeHtml(b.table_number||'por asignar')} · ${Number(b.party_size||1)} persona(s)` : ''}</p><p style="color:${statusColor};text-transform:uppercase;letter-spacing:.06em;font-size:10px;margin-top:4px;">${escapeHtml(b.status)}</p></div><div class="booking-row-actions">${b.status==='pending'?`<button class="btn-money" onclick="setBusinessBookingStatus('${b.id}','confirmed','${type}')">Confirmar</button>`:''}${b.status==='confirmed'?`<button class="btn-secondary" onclick="setBusinessBookingStatus('${b.id}','completed','${type}')">Completar</button>`:''}${!['completed','cancelled'].includes(b.status)?`<button class="btn-payment-reject" onclick="setBusinessBookingStatus('${b.id}','cancelled','${type}')">Cancelar</button>`:''}</div></div>`;
-        }).join('');
-        if (type === 'reservation') { currentRestaurantBookings = todayItems; renderRestaurantTables(todayItems, currentRestaurantTableCount); }
+        const data = await api(`/api/v1/dashboard/bookings?booking_type=${encodeURIComponent(type)}&limit=150`);
+        cachedBookings = data.bookings || [];
+        renderFilteredBookings(type);
     } catch (e) {
-        list.innerHTML = `<p class="muted">No se pudo cargar el panel: ${escapeHtml(e.message)}</p>`;
+        list.innerHTML = `<p class="muted">No se pudo cargar la bandeja: ${escapeHtml(e.message)}</p>`;
     }
 }
+
+function renderFilteredBookings(type) {
+    const list = document.getElementById('specialized-bookings-list');
+    if (!list) return;
+    const items = cachedBookings;
+    const todayStr = new Date().toDateString();
+    const todayItems = items.filter(b => b.starts_at && new Date(b.starts_at).toDateString() === todayStr && ['pending','confirmed'].includes(b.status));
+
+    const setText = (id,value) => { const el=document.getElementById(id); if(el) el.textContent=String(value); };
+    setText('booking-count', type === 'reservation' ? todayItems.length : items.length);
+    setText('booking-pending-count', items.filter(b=>b.status==='pending').length);
+    setText('booking-confirmed-count', items.filter(b=>b.status==='confirmed').length);
+    setText('booking-today-count', todayItems.length);
+    setText('booking-guests-count', todayItems.reduce((sum,b)=>sum+Number(b.party_size||1),0));
+
+    // Directorio único de pacientes/clientes
+    const patientMap = new Map();
+    items.forEach(b => {
+        const key = (b.customer_phone || b.customer_name || '').trim().toLowerCase();
+        if (!key) return;
+        const prev = patientMap.get(key) || { name: b.customer_name, phone: b.customer_phone || 'Sin teléfono', visits: 0, lastService: b.service_name || 'Consulta', lastDate: b.starts_at };
+        prev.visits += 1;
+        patientMap.set(key, prev);
+    });
+    setText('booking-patients-count', patientMap.size);
+
+    const dirEl = document.getElementById('patient-directory-list');
+    if (dirEl) {
+        const patients = Array.from(patientMap.values());
+        dirEl.innerHTML = patients.length ? patients.slice(0, 25).map(pt => `
+          <div class="booking-row" style="padding:11px 13px;">
+            <div>
+              <h4>${escapeHtml(pt.name)}</h4>
+              <p><i class="ph ph-phone"></i> ${escapeHtml(pt.phone)} · Último: <strong>${escapeHtml(pt.lastService)}</strong></p>
+            </div>
+            <span class="badge ai">${pt.visits} cita(s)</span>
+          </div>`).join('') : '<p class="muted" style="font-size:12px;">El directorio se poblará automáticamente con cada paciente que agende en el chat.</p>';
+    }
+
+    // Cronograma de hoy ordenado por hora
+    const todayScheduleEl = document.getElementById('today-schedule-list');
+    if (todayScheduleEl) {
+        const sortedToday = [...todayItems].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
+        todayScheduleEl.innerHTML = sortedToday.length ? sortedToday.map(b => {
+            const timeLabel = new Date(b.starts_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+            return `<div class="booking-row" style="padding:11px 13px;">
+              <div>
+                <h4><span style="color:#00f2fe;">${escapeHtml(timeLabel)}</span> · ${escapeHtml(b.customer_name)}</h4>
+                <p>${escapeHtml(b.service_name || (type==='reservation' ? `${Number(b.party_size||1)} comensales` : 'Consulta'))} · ${escapeHtml(b.customer_phone || '')}</p>
+              </div>
+              <span class="badge ${b.status === 'confirmed' ? 'success' : 'warning'}">${b.status === 'confirmed' ? 'Confirmada' : 'Por aprobar'}</span>
+            </div>`;
+        }).join('') : '<p class="muted" style="font-size:12px;">No hay citas o reservas programadas para la fecha de hoy.</p>';
+    }
+
+    // Detectar posibles choques de hora (misma hora exacta en citas activas)
+    const slotCounts = new Map();
+    items.filter(b => ['pending', 'confirmed'].includes(b.status) && b.starts_at).forEach(b => {
+        const slotKey = new Date(b.starts_at).toISOString().slice(0, 16);
+        slotCounts.set(slotKey, (slotCounts.get(slotKey) || 0) + 1);
+    });
+
+    const query = (document.getElementById('booking-search-input')?.value || '').trim().toLowerCase();
+    let visibleItems = items;
+    if (activeBookingFilter === 'pending') visibleItems = items.filter(b => b.status === 'pending');
+    else if (activeBookingFilter === 'confirmed') visibleItems = items.filter(b => b.status === 'confirmed');
+    else if (activeBookingFilter === 'completed') visibleItems = items.filter(b => b.status === 'completed');
+    else if (activeBookingFilter === 'today') visibleItems = todayItems;
+
+    if (query) {
+        visibleItems = visibleItems.filter(b =>
+            String(b.customer_name || '').toLowerCase().includes(query) ||
+            String(b.customer_phone || '').toLowerCase().includes(query) ||
+            String(b.service_name || '').toLowerCase().includes(query)
+        );
+    }
+
+    if (!visibleItems.length) {
+        const noun = type === 'reservation' ? 'reservas de mesa' : 'citas o consultas';
+        list.innerHTML = `<div class="upgrade-lock" style="padding:22px;"><h3 style="font-size:16px;">No hay ${noun} en esta vista</h3><p class="muted" style="font-size:12px;">Cuando un cliente converse con tu Asistente IA y solicite agendar, la solicitud aparecerá automáticamente aquí lista para que pulses <strong>Aprobar</strong> o <strong>Rechazar</strong>.</p></div>`;
+    } else {
+        list.innerHTML = visibleItems.map(b => {
+            const statusMap = {
+                pending: { label: 'POR APROBAR (CAPTURADA POR IA)', color: '#fbbf24' },
+                confirmed: { label: 'APROBADA Y CONFIRMADA ✓', color: '#34d399' },
+                completed: { label: 'ATENDIDA / COMPLETADA', color: '#93c5fd' },
+                cancelled: { label: 'RECHAZADA / CANCELADA', color: '#fb7185' }
+            };
+            const st = statusMap[b.status] || { label: String(b.status || '').toUpperCase(), color: '#cbd5e1' };
+            const slotKey = b.starts_at ? new Date(b.starts_at).toISOString().slice(0, 16) : '';
+            const hasConflict = slotKey && (slotCounts.get(slotKey) || 0) > 1 && ['pending', 'confirmed'].includes(b.status);
+            const conflictAlert = hasConflict
+                ? `<span class="badge danger" style="margin-left:6px;">⚠ Coincidencia de hora</span>`
+                : '';
+            const notesHtml = b.notes ? `<p style="font-size:11px;color:#cbd5e1;margin-top:3px;">Observación: ${escapeHtml(b.notes)}</p>` : '';
+            return `<div class="booking-row">
+                <div>
+                    <h4>${escapeHtml(b.customer_name)} · <span style="color:#7cecf5;">${escapeHtml(b.service_name || (type==='reservation'?'Reserva de mesa':'Consulta / Cita'))}</span> ${conflictAlert}</h4>
+                    <p><i class="ph ph-calendar-blank"></i> ${formatBookingDate(b.starts_at)} · <i class="ph ph-phone"></i> ${escapeHtml(b.customer_phone||'Sin teléfono')}${type==='reservation' ? ` · <strong>${Number(b.party_size||1)} persona(s)</strong>${b.table_number ? ` · Mesa ${escapeHtml(b.table_number)}` : ''}` : ''}</p>
+                    ${notesHtml}
+                    <p style="color:${st.color};font-weight:700;letter-spacing:.06em;font-size:10px;margin-top:5px;">${st.label}</p>
+                </div>
+                <div class="booking-row-actions">
+                    ${b.status==='pending'?`<button class="btn-money" onclick="setBusinessBookingStatus('${b.id}','confirmed','${type}')"><i class="ph ph-check"></i> Aprobar</button>`:''}
+                    ${b.status==='pending'?`<button class="btn-payment-reject" onclick="setBusinessBookingStatus('${b.id}','cancelled','${type}')"><i class="ph ph-x"></i> Rechazar</button>`:''}
+                    ${b.status==='confirmed'?`<button class="btn-secondary" onclick="setBusinessBookingStatus('${b.id}','completed','${type}')"><i class="ph ph-check-circle"></i> Atendida</button>`:''}
+                    ${b.status==='confirmed'?`<button class="btn-payment-reject" onclick="setBusinessBookingStatus('${b.id}','cancelled','${type}')">Cancelar</button>`:''}
+                </div>
+            </div>`;
+        }).join('');
+    }
+    if (type === 'reservation') { currentRestaurantBookings = todayItems; renderRestaurantTables(todayItems, currentRestaurantTableCount); }
+}
+
 function renderRestaurantTables(todayBookings, tableCount = currentRestaurantTableCount) {
     const board = document.getElementById('restaurant-table-board');
     if (!board) return;
     const occupied = new Map();
-    todayBookings.forEach(b => { if (b.table_number) occupied.set(String(b.table_number).replace(/^0+/,''),b); });
+    todayBookings.forEach((b, idx) => {
+        const key = b.table_number ? String(b.table_number).replace(/^0+/,'') : String(idx + 1);
+        if (!occupied.has(key)) occupied.set(key, b);
+    });
     board.innerHTML = Array.from({length:Math.max(1, Math.min(100, Number(tableCount)||12))},(_,index)=>{
         const n=String(index+1), booking=occupied.get(n), reserved=Boolean(booking);
-        return `<div class="table-tile ${reserved?'reserved':''}"><div class="table-num">${n.padStart(2,'0')}</div><strong>${reserved?'Reservada':'Disponible'}</strong><small>${reserved?`${escapeHtml(booking.customer_name)} · ${Number(booking.party_size||1)} pers.`:'Lista para asignar'}</small></div>`;
+        return `<div class="table-tile ${reserved?'reserved':''}"><div class="table-num">${n.padStart(2,'0')}</div><strong>${reserved?(booking.status==='confirmed'?'Reserva Aprobada':'Por Aprobar'):'Disponible'}</strong><small>${reserved?`${escapeHtml(booking.customer_name)} · ${Number(booking.party_size||1)} pers.`:'Libre para asignar'}</small></div>`;
     }).join('');
 }
-async function createBusinessBooking(event,type) {
-    event.preventDefault(); const form=event.currentTarget; const fd=new FormData(form); const localDate=fd.get('starts_at');
-    try {
-        const payload={booking_type:type,customer_name:fd.get('customer_name'),customer_phone:fd.get('customer_phone'),service_name:fd.get('service_name')||(type==='reservation'?'Reserva de mesa':'Cita'),starts_at:new Date(localDate).toISOString(),party_size:Number(fd.get('party_size')||1),table_number:fd.get('table_number')||null,notes:fd.get('notes')||''};
-        const data=await api('/api/v1/dashboard/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        showToast(data.message||'Registro creado.');form.reset();await loadBusinessBookings(type);
-    } catch(e) { showToast('No se pudo guardar: '+e.message,true); }
-}
+
 async function setBusinessBookingStatus(id,status,type) {
-    try { await api(`/api/v1/dashboard/bookings/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});showToast('Estado actualizado.');await loadBusinessBookings(type); }
-    catch(e){showToast('No se pudo actualizar: '+e.message,true);}
+    try {
+        await api(`/api/v1/dashboard/bookings/${encodeURIComponent(id)}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+        showToast(status === 'confirmed' ? '✓ Solicitud aprobada y confirmada.' : (status === 'cancelled' ? 'Solicitud rechazada.' : 'Marcada como atendida.'));
+        await loadBusinessBookings(type);
+        await applyBusinessOverview(currentBusiness);
+    } catch(e){showToast('No se pudo actualizar: '+e.message,true);}
 }
+
 async function loadRetailWorkspace() {
     try {
-        const data=await api('/api/v1/dashboard/catalog');const products=data.products||[];const low=products.filter(p=>Number(p.stock||0)<=5);const images=products.reduce((sum,p)=>sum+(Array.isArray(p.images)?p.images.length:0),0);
-        const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=String(v)};set('retail-product-count',products.length);set('retail-low-stock',low.length);set('retail-images',images);
-        const list=document.getElementById('retail-low-list');if(list) list.innerHTML=low.length?low.slice(0,15).map(p=>`<div class="booking-row"><div><h4>${escapeHtml(p.name)}</h4><p>${escapeHtml(p.category)} · Precio $${Number(p.price||0).toFixed(2)}</p></div><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} unidades</span></div>`).join(''):'<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:16px;">Sin alertas de inventario</h3><p class="muted">No se encontraron productos con 5 unidades o menos.</p></div>';
-    } catch(e){ const el=document.getElementById('retail-low-list');if(el)el.innerHTML=`<p class="muted">${escapeHtml(e.message)}</p>`; }
+        const [catalog, ordersData] = await Promise.all([
+            api('/api/v1/dashboard/catalog', { cache: 'no-store' }),
+            currentBusinessId ? api(`/api/v1/sales/orders?business_id=${encodeURIComponent(currentBusinessId)}&limit=20`).catch(() => ({ orders: [] })) : Promise.resolve({ orders: [] })
+        ]);
+        const products = catalog.products || [];
+        const orders = ordersData.orders || [];
+        const low = products.filter(p => Number(p.stock || 0) <= 5);
+        const out = products.filter(p => Number(p.stock || 0) <= 0);
+        const totalVal = products.reduce((s, p) => s + (Math.max(0, Number(p.stock || 0)) * Number(p.price || 0)), 0);
+
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+        set('retail-product-count', products.length);
+        set('retail-low-stock', low.length);
+        set('retail-out-stock', out.length);
+        set('retail-inventory-val', `$${totalVal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+
+        const isBasic = currentPlanCode === 'emprendedor';
+        const list = document.getElementById('retail-low-list');
+        if (list) {
+            if (isBasic) {
+                // En plan básico ($19) mostramos todos los productos para ajuste rápido de mostrador
+                list.innerHTML = products.length ? products.slice(0, 40).map(p => {
+                    const st = Math.round(Number(p.stock || 0));
+                    const badgeCls = st === 0 ? 'danger' : (st <= 5 ? 'warning' : 'success');
+                    return `<div class="booking-row">
+                      <div>
+                        <h4>${escapeHtml(p.name)}</h4>
+                        <p>${escapeHtml(p.category || 'General')} · Precio: <strong>$${Number(p.price || 0).toFixed(2)}</strong></p>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="badge ${badgeCls}">${st} uds</span>
+                        <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${Math.max(0, st - 1)})">−1</button>
+                        <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${st + 1})">+1</button>
+                        <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${st + 5})">+5</button>
+                      </div>
+                    </div>`;
+                }).join('') : '<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:15px;">Sin productos registrados</h3><p class="muted" style="font-size:12px;">Registra tus productos en la sección Catálogo de Productos del menú lateral.</p></div>';
+            } else {
+                // En plan $49 mostramos los productos críticos y bajos con reposición rápida
+                const sortedByStock = [...products].sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
+                list.innerHTML = sortedByStock.length ? sortedByStock.slice(0, 30).map(p => {
+                    const st = Math.round(Number(p.stock || 0));
+                    const badgeCls = st === 0 ? 'danger' : (st <= 5 ? 'warning' : 'success');
+                    return `<div class="booking-row">
+                      <div>
+                        <h4>${escapeHtml(p.name)}</h4>
+                        <p>${escapeHtml(p.category || 'General')} · Precio: <strong>$${Number(p.price || 0).toFixed(2)}</strong></p>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                        <span class="badge ${badgeCls}">${st === 0 ? 'AGOTADO (0)' : `${st} uds`}</span>
+                        <button class="btn-secondary" style="padding:6px 10px;font-size:10px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${Math.max(0, st - 1)})">−1</button>
+                        <button class="btn-secondary" style="padding:6px 10px;font-size:10px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${st + 10})">+10 uds</button>
+                        <button class="btn-secondary" style="padding:6px 10px;font-size:10px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${st + 25})">+25 uds</button>
+                      </div>
+                    </div>`;
+                }).join('') : '<p class="muted">Sin productos registrados en el inventario.</p>';
+            }
+        }
+
+        const ordersEl = document.getElementById('retail-orders-list');
+        if (ordersEl) {
+            ordersEl.innerHTML = orders.length ? orders.slice(0, 15).map(o => `
+              <div class="booking-row">
+                <div>
+                  <h4>Orden #${escapeHtml(o.order_number || String(o.id || '').slice(0, 8))}</h4>
+                  <p>${formatBookingDate(o.created_at)} · Estado de cobro: <strong>${escapeHtml(o.payment_status || 'verificado')}</strong></p>
+                </div>
+                <div style="text-align:right;">
+                  <strong style="color:#34d399;font-size:14px;">$${Number(o.total_amount || 0).toFixed(2)}</strong>
+                  <p style="font-size:10px;color:#94a3b8;text-transform:uppercase;">${escapeHtml(o.status || 'completada')}</p>
+                </div>
+              </div>`).join('') : '<div class="upgrade-lock" style="padding:18px;"><h3 style="font-size:15px;">Sin órdenes registradas aún</h3><p class="muted" style="font-size:12px;">Cada vez que apruebes un pago de un cliente en la sección Aprobaciones, la orden y el descuento de stock quedarán registrados aquí.</p></div>';
+        }
+    } catch (e) {
+        const el = document.getElementById('retail-low-list');
+        if (el) el.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
+    }
 }
+
 async function loadEnterpriseWorkspace() {
     try {
-        const [catalog,ordersData]=await Promise.all([api('/api/v1/dashboard/catalog'),api(`/api/v1/sales/orders?business_id=${encodeURIComponent(currentBusinessId)}&limit=20`)]);
-        const products=catalog.products||[],orders=ordersData.orders||[],low=products.filter(p=>Number(p.stock||0)<=5),pending=orders.filter(o=>['pending','processing','created'].includes(String(o.status||'').toLowerCase()));
-        const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=String(v)};set('ent-products',products.length);set('ent-orders-pending',pending.length);set('ent-low-stock',low.length);
-        const orderList=document.getElementById('ent-orders-list');if(orderList)orderList.innerHTML=orders.length?orders.slice(0,12).map(o=>`<div class="booking-row"><div><h4>Pedido ${escapeHtml(o.order_number||String(o.id||'').slice(0,8))}</h4><p>${formatBookingDate(o.created_at)} · Pago: ${escapeHtml(o.payment_status||'sin estado')}</p></div><div style="text-align:right;"><strong style="color:#5be7f2;">$${Number(o.total_amount||0).toFixed(2)}</strong><p>${escapeHtml(o.status||'—')}</p></div></div>`).join(''):'<p class="muted">Todavía no hay pedidos registrados.</p>';
-        const stockList=document.getElementById('ent-stock-list');if(stockList)stockList.innerHTML=low.length?low.slice(0,10).map(p=>`<div class="booking-row"><div><h4>${escapeHtml(p.name)}</h4><p>${escapeHtml(p.category||'General')}</p></div><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} uds.</span></div>`).join(''):'<p class="muted">El inventario no muestra alertas de stock bajo.</p>';
+        const [catalog,ordersData]=await Promise.all([api('/api/v1/dashboard/catalog'),api(`/api/v1/sales/orders?business_id=${encodeURIComponent(currentBusinessId)}&limit=25`)]);
+        const products=catalog.products||[],orders=ordersData.orders||[],low=products.filter(p=>Number(p.stock||0)<=5);
+        const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=String(v)};
+        set('ent-products',products.length);
+        set('ent-orders-pending',orders.length);
+        set('ent-low-stock',low.length);
+        const orderList=document.getElementById('ent-orders-list');
+        if(orderList) orderList.innerHTML=orders.length?orders.slice(0,15).map(o=>`<div class="booking-row"><div><h4>Pedido #${escapeHtml(o.order_number||String(o.id||'').slice(0,8))}</h4><p>${formatBookingDate(o.created_at)} · Pago: ${escapeHtml(o.payment_status||'verificado')}</p></div><div style="text-align:right;"><strong style="color:#5be7f2;">$${Number(o.total_amount||0).toFixed(2)}</strong><p>${escapeHtml(o.status||'activo')}</p></div></div>`).join(''):'<p class="muted">Todavía no hay pedidos registrados.</p>';
+        const stockList=document.getElementById('ent-stock-list');
+        if(stockList) stockList.innerHTML=low.length?low.slice(0,15).map(p=>`<div class="booking-row"><div><h4>${escapeHtml(p.name)}</h4><p>${escapeHtml(p.category||'General')} · $${Number(p.price||0).toFixed(2)}</p></div><div style="display:flex;gap:8px;align-items:center;"><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} uds</span><button class="btn-secondary" style="padding:5px 9px;font-size:10px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${Number(p.stock||0)+50})">+50 uds</button></div></div>`).join(''):'<p class="muted">El inventario no muestra alertas de stock bajo.</p>';
     } catch(e){ const el=document.getElementById('ent-orders-list');if(el)el.innerHTML=`<p class="muted">No se pudieron cargar las operaciones: ${escapeHtml(e.message)}</p>`; }
 }
+
+
+async function loadCrmWorkspace() {
+    const listEl = document.getElementById('crm-customers-list');
+    if (!listEl) return;
+    const kind = businessKind(currentBusiness || {});
+    const isAppt = kind === 'appointments';
+    const titleEl = document.getElementById('crm-view-title');
+    if (titleEl) titleEl.textContent = isAppt ? 'Padrón de Pacientes / Clientes & Retención' : 'Directorio de Clientes & Retención';
+
+    try {
+        const [paymentsRes, bookingsRes] = await Promise.all([
+            api('/api/v1/dashboard/webchat-payments?status=all&limit=100').catch(() => ({ payments: [] })),
+            api(`/api/v1/dashboard/bookings?booking_type=${kind === 'restaurant' ? 'reservation' : 'appointment'}&limit=200`).catch(() => ({ bookings: [] }))
+        ]);
+        const payments = paymentsRes.payments || [];
+        const bookings = bookingsRes.bookings || [];
+        const map = new Map();
+        let riskCount = 0;
+
+        payments.forEach(p => {
+            if (p.status === 'rejected') riskCount++;
+            const name = String(p.customer_name || 'Cliente Webchat').trim();
+            const key = name.toLowerCase();
+            const prev = map.get(key) || { name, contact: p.payment_method || 'Chat', count: 0, totalUsd: 0, lastStatus: p.status };
+            prev.count += 1;
+            if (p.status === 'approved') prev.totalUsd += Number(p.amount || 0);
+            prev.lastStatus = p.status;
+            map.set(key, prev);
+        });
+
+        bookings.forEach(b => {
+            if (b.status === 'cancelled') riskCount++;
+            const name = String(b.customer_name || 'Cliente').trim();
+            const key = (b.customer_phone || name).trim().toLowerCase();
+            const prev = map.get(key) || { name, contact: b.customer_phone || 'Sin teléfono', count: 0, totalUsd: 0, lastService: b.service_name || 'Cita', lastStatus: b.status };
+            prev.count += 1;
+            prev.lastService = b.service_name || prev.lastService;
+            prev.lastStatus = b.status;
+            map.set(key, prev);
+        });
+
+        const customers = Array.from(map.values()).sort((a, b) => b.count - a.count);
+        const repeatCount = customers.filter(c => c.count >= 2).length;
+
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+        set('crm-total-customers', customers.length);
+        set('crm-repeat-customers', repeatCount);
+        set('crm-risk-count', riskCount);
+
+        if (!customers.length) {
+            listEl.innerHTML = '<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:15px;">Aún no hay clientes registrados</h3><p class="muted" style="font-size:12px;">A medida que tus clientes compren o agenden por el Chat IA, su historial se consolidará automáticamente en este directorio.</p></div>';
+            return;
+        }
+        listEl.innerHTML = customers.slice(0, 40).map(c => `
+          <div class="booking-row">
+            <div>
+              <h4>${escapeHtml(c.name)}</h4>
+              <p>${escapeHtml(c.contact)}${c.lastService ? ` · Último servicio: <strong>${escapeHtml(c.lastService)}</strong>` : ''}${c.totalUsd > 0 ? ` · Compras aprobadas: <strong style="color:#34d399;">$${c.totalUsd.toFixed(2)}</strong>` : ''}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="badge ${c.count >= 2 ? 'success' : 'ai'}">${c.count} interacción(es)</span>
+            </div>
+          </div>`).join('');
+    } catch (e) {
+        listEl.innerHTML = `<p class="muted">No se pudo cargar el directorio: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
 function parseCsv(text) {
     const rows=[];let row=[],field='',quoted=false;
     for(let i=0;i<text.length;i++) { const ch=text[i]; if(ch==='"' && quoted && text[i+1]==='"'){field+='"';i++;} else if(ch==='"'){quoted=!quoted;} else if(ch===','&&!quoted){row.push(field);field='';} else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);row=[];field='';} else field+=ch; }
-    row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);if(rows.length<2)throw new Error('El CSV debe incluir encabezados y al menos un producto.');
+    row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);if(rows.length<2)throw new Error('El CSV debe incluir encabezados y al menos un registro.');
     const headers=rows.shift().map(h=>String(h).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ /g,'_'));
     const idx=(aliases)=>headers.findIndex(h=>aliases.includes(h));
-    const nameI=idx(['name','nombre','producto']),priceI=idx(['price','precio']),stockI=idx(['stock','cantidad','existencia']),categoryI=idx(['category','categoria','categoría']),imagesI=idx(['image_urls','imagenes','images','image_url','imagen']);
+    const nameI=idx(['name','nombre','producto','servicio','plato']),priceI=idx(['price','precio','tarifa']),stockI=idx(['stock','cantidad','existencia']),categoryI=idx(['category','categoria','categoría','especialidad']),imagesI=idx(['image_urls','imagenes','images','image_url','imagen']);
     if(nameI<0||priceI<0)throw new Error('El CSV necesita columnas name/nombre y price/precio.');
     return rows.map(r=>({name:r[nameI]||'',price:Number(r[priceI]||0),stock:stockI>=0?Number(r[stockI]||0):0,category:categoryI>=0?(r[categoryI]||'General'):'General',image_urls:imagesI>=0?String(r[imagesI]||'').split('|').map(x=>x.trim()).filter(Boolean):[]})).filter(r=>String(r.name).trim());
 }
+
 async function importCatalogCsv(event) {
     const input=event.currentTarget, file=input.files?.[0];if(!file)return;
+    if (!canCurrentPlanUseCsv()) {
+        showToast('La importación por CSV está disponible a partir del Plan Smart Business ($49).', true);
+        input.value = '';
+        return;
+    }
     if(file.size>5*1024*1024){showToast('El CSV no puede superar 5 MB.',true);input.value='';return;}
     try {
         const rows=parseCsv(await file.text());
         const appointmentMode = businessKind(currentBusiness || {}) === 'appointments';
-        const importLabel = appointmentMode ? 'servicios' : (businessKind(currentBusiness || {}) === 'restaurant' ? 'elementos del menú' : 'productos');
-        if(!confirm(`Se intentarán importar ${rows.length} ${importLabel}. Los límites de tu plan se validarán antes de guardar. ¿Continuar?`))return;
+        const importLabel = appointmentMode ? 'servicios/consultas' : (businessKind(currentBusiness || {}) === 'restaurant' ? 'elementos del menú' : 'productos');
+        if(!confirm(`Se importarán ${rows.length} ${importLabel} al catálogo oficial de tu negocio. ¿Continuar?`))return;
         const result=await api('/api/v1/dashboard/catalog/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows})});
-        showToast(appointmentMode ? `Se actualizaron los servicios y tarifas: ${result.created_products || rows.length}.` : (result.message||'Catálogo importado.'));
-        await loadStoreProducts(); await loadPlanUsage();
-        if (businessKind(currentBusiness || {}) === 'enterprise') await loadEnterpriseWorkspace();
-        else if (businessKind(currentBusiness || {}) === 'retail') await loadRetailWorkspace();
+        showToast(appointmentMode ? `✓ Se importaron ${result.created_products || rows.length} servicios/consultas.` : (result.message||'✓ Catálogo CSV importado.'));
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
     } catch(e){showToast('No se pudo importar el CSV: '+e.message,true);} finally {input.value='';}
 }
 
@@ -1496,31 +2885,5 @@ window.setInterval(() => {
     }
 }, 3500);
 </script>
-
-<!-- MODAL DE CATÁLOGO RÁPIDO -->
-<div id="catalogModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; padding: 20px;">
-    <div style="background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
-        <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i id="catalogModalIcon" class="ph-bold ph-package" style="font-size: 1.5rem; color: #00f2fe;"></i>
-                <h3 id="catalogModalTitle" style="margin: 0; font-size: 1.2rem; color: #fff;">Catálogo de Productos</h3>
-            </div>
-            <button onclick="closeCatalogModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer;">&times;</button>
-        </div>
-        <div id="catalogList" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px;">
-            <p style="color: #94a3b8; text-align: center;">Cargando catálogo...</p>
-        </div>
-        <div style="padding:14px 24px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.18);display:grid;gap:8px;">
-            <label id="catalogCsvLabel" for="catalogCsvInput" style="font-size:12px;color:#cbd5e1;">Importar catálogo CSV · columnas: name, price, stock, category, image_urls (URLs separadas por |)</label>
-            <div class="catalog-actions"><input id="catalogCsvInput" type="file" accept=".csv,text/csv" style="max-width:330px;padding:8px;font-size:12px;" onchange="importCatalogCsv(event)"><span class="muted" style="font-size:11px;">Se validan los límites de tu plan antes de importar.</span></div>
-        </div>
-        <div style="padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
-            <button onclick="downloadCatalogCsvTemplate()" style="background: rgba(0,242,254,0.12); border: 1px solid rgba(0,242,254,0.3); color: #00f2fe; padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                <i class="ph ph-download-simple"></i> Descargar plantilla CSV
-            </button>
-            <button onclick="closeCatalogModal()" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 16px; border-radius: 10px; font-size: 0.85rem; cursor: pointer;">Cerrar</button>
-        </div>
-    </div>
-</div>
 </body>
 </html>

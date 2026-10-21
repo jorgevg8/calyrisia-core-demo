@@ -1,4 +1,5 @@
 from functools import lru_cache
+from urllib.parse import urlparse, unquote
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,6 +11,7 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, alias="APP_PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
+    database_url: str = Field(default="", alias="DATABASE_URL")
     pg_host: str = Field(default="127.0.0.1", alias="PGHOST")
     pg_port: int = Field(default=5432, alias="PGPORT")
     pg_database: str = Field(default="galaxy_db", alias="PGDATABASE")
@@ -40,6 +42,18 @@ class Settings(BaseSettings):
 
     @property
     def database_kwargs(self) -> dict:
+        if self.database_url and self.database_url.strip():
+            parsed = urlparse(self.database_url.strip())
+            if parsed.hostname:
+                return {
+                    "host": parsed.hostname,
+                    "port": parsed.port or self.pg_port or 5432,
+                    "dbname": (parsed.path or "").lstrip("/") or self.pg_database or "postgres",
+                    "user": unquote(parsed.username or self.pg_user),
+                    "password": unquote(parsed.password or self.pg_password),
+                    "sslmode": self.pg_sslmode or "require",
+                    "prepare_threshold": None,
+                }
         return {
             "host": self.pg_host,
             "port": self.pg_port,
@@ -47,6 +61,7 @@ class Settings(BaseSettings):
             "user": self.pg_user,
             "password": self.pg_password,
             "sslmode": self.pg_sslmode,
+            "prepare_threshold": None,
         }
 
 

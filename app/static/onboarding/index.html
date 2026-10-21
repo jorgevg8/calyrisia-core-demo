@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#080e18">
-  <link rel="icon" type="image/svg+xml" href="/brand/calyrisia-mark.svg">
-  <title>Encuentra tu plan | CALYRISIA</title>
+  <meta name="theme-color" content="#030611">
+  <link rel="icon" type="image/png" href="/brand/calyrisia-mark.png">
+  <title>Crear Negocio y Cuenta | CALYRISIA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,68 +17,77 @@
 
   <main class="onboarding-container">
     <header class="brand-header">
-      <img class="galaxy-logo" src="/brand/calyrisia-mark.svg" alt="">
+      <img class="galaxy-logo" src="data:image/png;base64,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" alt="CALYRISIA">
       <span class="brand-text">CALY<span class="brand-accent">RISIA</span></span>
-      <span class="header-pill">Planificación comercial</span>
+      <span class="header-pill">Configuración de Cuenta</span>
     </header>
 
-    <div class="stepper" aria-label="Pasos de solicitud">
-      <span class="step-dot active" id="stepper-1">1 <small>Actividad</small></span><span class="step-line"></span>
-      <span class="step-dot" id="stepper-2">2 <small>Negocio</small></span><span class="step-line"></span>
-      <span class="step-dot" id="stepper-3">3 <small>Solicitud</small></span>
+    <div class="stepper" aria-label="Pasos de activación">
+      <span class="step-dot active" id="stepper-1">1 <small>Tipo de negocio</small></span><span class="step-line"></span>
+      <span class="step-dot" id="stepper-2">2 <small>Negocio y Clave</small></span><span class="step-line"></span>
+      <span class="step-dot" id="stepper-3">3 <small>Ir al Dashboard</small></span>
     </div>
 
     <section id="step-1" class="step active">
-      <div class="eyebrow">01 · ENCUENTRA TU PLAN</div>
+      <div class="eyebrow">01 · SELECCIONA EL PERFIL DE TU EMPRESA</div>
       <h1>Tu negocio tiene su propio ritmo.<br><span>CALYRISIA se adapta a él.</span></h1>
-      <p class="subtitle">Selecciona el tipo de operación. Te mostraremos únicamente la categoría de negocio correspondiente a cada plan, con un panel adaptado a tu actividad.</p>
+      <p class="subtitle">Elige la actividad de tu negocio para configurar automáticamente los módulos de tu Dashboard.</p>
       <div id="plan-options" class="plan-options" aria-live="polite">
-        <div class="loading-card">Cargando opciones de negocio…</div>
+        <div class="loading-card">Cargando perfiles empresariales…</div>
       </div>
       <div class="selection-status" id="selection-status">Selecciona una actividad para continuar.</div>
-      <div class="actions actions-end"><a class="btn btn-quiet" href="/">Volver a CALYRISIA</a><button class="btn btn-primary" id="continue-step-1" onclick="nextStep(2)" disabled>Continuar <span>→</span></button></div>
+      <div class="actions actions-end"><a class="btn btn-quiet" href="/">Volver al inicio</a><button class="btn btn-primary" id="continue-step-1" onclick="nextStep(2)" disabled>Continuar <span>→</span></button></div>
     </section>
 
     <section id="step-2" class="step hidden">
-      <div class="eyebrow">02 · CUÉNTANOS SOBRE TU NEGOCIO</div>
-      <h1>Preparemos una solución<br><span>para tu operación.</span></h1>
-      <p class="subtitle">Estos datos nos permiten confirmar el alcance, los canales y la configuración apropiada. No se crea una cuenta ni se activa un plan en este paso.</p>
+      <div class="eyebrow">02 · DATOS DEL NEGOCIO Y CREDENCIALES DE ACCESO</div>
+      <h1>Crea tu negocio y tu clave<br><span>para entrar al Dashboard.</span></h1>
+      <p class="subtitle">Define el nombre de tu empresa y el correo y contraseña con los que ingresarás siempre a tu panel de control.</p>
       <div class="selected-plan-strip" id="selected-plan-strip"></div>
       <div class="checkout-context" id="checkout-context" hidden></div>
       <div class="form-grid">
-        <label class="field full">Nombre del negocio<input id="business_name" maxlength="200" placeholder="Ej. Bodegón El Centro" autocomplete="organization" required></label>
-        <label class="field">Tu nombre<input id="owner_full_name" maxlength="150" placeholder="Nombre y apellido" autocomplete="name" required></label>
-        <label class="field">Correo de contacto<input id="owner_email" type="email" maxlength="255" placeholder="nombre@empresa.com" autocomplete="email" required></label>
-        <label class="field">WhatsApp de contacto<input id="owner_phone" maxlength="50" placeholder="+58…" autocomplete="tel"></label>
+        <label class="field full">Nombre del negocio *<input id="business_name" maxlength="200" placeholder="Nombre comercial de tu empresa" autocomplete="organization" required></label>
+        <label class="field">Tu nombre y apellido *<input id="owner_full_name" maxlength="150" placeholder="Nombre del propietario" autocomplete="name" required></label>
+        <label class="field">Teléfono / WhatsApp *<input id="owner_phone" maxlength="50" placeholder="+58 412 000 0000" autocomplete="tel" required></label>
         <label class="field">Moneda principal<select id="currency"><option value="USD">USD · Dólar estadounidense</option><option value="VES">VES · Bolívar</option><option value="EUR">EUR · Euro</option><option value="COP">COP · Peso colombiano</option><option value="MXN">MXN · Peso mexicano</option></select></label>
         <label class="field">Zona horaria<select id="timezone"><option value="America/Caracas">Venezuela · Caracas</option><option value="America/Bogota">Colombia · Bogotá</option><option value="America/Mexico_City">México · Ciudad de México</option><option value="America/New_York">Estados Unidos · Nueva York</option><option value="Europe/Madrid">España · Madrid</option><option value="UTC">UTC</option></select></label>
-        <fieldset class="field full channel-field"><legend>¿Dónde atiendes a tus clientes?</legend><p class="field-help">Marca los canales que te interesan. La disponibilidad depende del plan y de la activación de cada integración.</p>
-          <div class="channel-options">
-            <label class="check-option"><input type="checkbox" name="channels" value="Telegram"><span><strong>Telegram</strong><small>Bot conectado a tu operación</small></span></label>
-            <label class="check-option"><input type="checkbox" name="channels" value="Webchat"><span><strong>Webchat</strong><small>Para tu propia página web</small></span></label>
-            <label class="check-option"><input type="checkbox" name="channels" value="WhatsApp"><span><strong>WhatsApp</strong><small>Requiere validación de integración</small></span></label>
+
+        <div class="field full" style="margin-top:8px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)">
+          <strong style="color:#7cecf5;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase">Credenciales para iniciar sesión en tu Dashboard</strong>
+        </div>
+        <label class="field full">Correo electrónico de acceso (Usuario) *<input id="owner_email" type="email" maxlength="255" placeholder="tu@correo.com" autocomplete="username" required></label>
+        <label class="field">Crea tu contraseña (mínimo 8 caracteres) *<input id="owner_password" type="password" minlength="8" maxlength="128" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required></label>
+        <label class="field">Confirmar contraseña *<input id="owner_password_confirm" type="password" minlength="8" maxlength="128" placeholder="Repite tu contraseña" autocomplete="new-password" required></label>
+
+        <div class="field full" style="margin-top:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="font-weight:600;color:#e2e8f0;font-size:.9rem;">Instrucciones operativas para la IA de tu negocio</span>
+            <button type="button" id="generateAiPromptBtn" onclick="generateBusinessAiPrompt(false)" style="padding:8px 14px;border-radius:999px;border:1px solid rgba(0,242,254,.45);background:linear-gradient(135deg,rgba(0,242,254,.18),rgba(139,92,246,.22));color:#7cecf5;font-size:.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 6px 18px rgba(0,242,254,.15);transition:all .2s ease;">
+              ✨ Generar prompt según mi tipo de negocio
+            </button>
           </div>
-        </fieldset>
-        <label class="field full">¿Qué te gustaría mejorar primero?<textarea id="business_needs" rows="3" maxlength="1500" placeholder="Ej. responder preguntas de productos, organizar citas, controlar reservas o reducir tareas manuales."></textarea></label>
+          <textarea id="business_needs" rows="5" maxlength="2500" placeholder="Pulsa «✨ Generar prompt según mi tipo de negocio» para crear automáticamente las instrucciones ideales para tu chat, o escríbelas a tu gusto."></textarea>
+          <small id="ai-prompt-helper" style="display:block;margin-top:6px;color:#94a3b8;font-size:.78rem;line-height:1.5;">
+            La IA usará estas instrucciones para atender sin perderse, responder precios, registrar pedidos o agendar citas automáticamente en tu Dashboard. Puedes agregar o quitar lo que quieras.
+          </small>
+        </div>
       </div>
-      <p class="privacy-note">Esta solicitud se enviará a CALYRISIA para revisar el plan. No incluyas contraseñas, datos de pago ni información médica de clientes.</p>
-      <div class="actions"><button class="btn btn-quiet" onclick="prevStep(1)">← Atrás</button><button class="btn btn-primary" onclick="prepareRequest()">Revisar solicitud <span>→</span></button></div>
+      <div class="actions"><button class="btn btn-quiet" onclick="prevStep(1)">← Atrás</button><button class="btn btn-primary" onclick="prepareRequest()">Continuar <span>→</span></button></div>
     </section>
 
     <section id="step-3" class="step hidden">
-      <div class="eyebrow">03 · RESUMEN</div>
-      <h1>Tu solicitud, <span>lista para revisar.</span></h1>
-      <p class="subtitle">Verifica que elegiste el perfil adecuado. Al continuar, podrás enviar los datos por el canal comercial que prefieras.</p>
+      <div class="eyebrow">03 · CONFIRMACIÓN Y ACCESO DIRECTO</div>
+      <h1>Todo listo para abrir <span>tu Dashboard.</span></h1>
+      <p class="subtitle">Revisa que los datos sean correctos. Al pulsar el botón se creará tu negocio y entrarás directamente a tu panel de control.</p>
       <div class="request-summary" id="request-summary"></div>
-      <div class="next-note"><span class="note-icon">✦</span><div><strong>¿Qué pasa después?</strong><p>Revisaremos el tipo de negocio, el volumen, los canales y las funciones requeridas. La activación y la configuración del dashboard se realizan después de confirmar la contratación.</p></div></div>
-      <div class="actions actions-stack">
-        <button class="btn btn-primary btn-full" onclick="sendWhatsAppRequest()">Solicitar por WhatsApp <span>↗</span></button>
-        <button class="btn btn-secondary btn-full" onclick="sendEmailRequest()">Solicitar por correo <span>↗</span></button>
-        <button class="btn btn-quiet" onclick="prevStep(2)">← Editar datos</button>
+      <div id="onboarding-error" class="checkout-context" hidden style="border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.1);color:#fecdd3;margin-top:16px"></div>
+      <div class="actions actions-stack" style="margin-top:22px">
+        <button class="btn btn-primary btn-full" id="createBusinessBtn" onclick="submitOnboardingAndEnterDashboard()">Crear mi Negocio e Ir al Dashboard <span>→</span></button>
+        <button class="btn btn-quiet" id="editOnboardingBtn" onclick="prevStep(2)">← Editar datos</button>
       </div>
     </section>
 
-    <footer class="page-footer"><span>© CALYRISIA · autonomous Business Intelligence</span><a href="/contacto/">Contacto comercial</a></footer>
+    <footer class="page-footer"><span>© 2026 CALYRISIA · Autonomous Business Intelligence</span><a href="/dashboard/">Ir al Login del Dashboard ↗</a></footer>
   </main>
   <script src="app.js"></script>
 </body>

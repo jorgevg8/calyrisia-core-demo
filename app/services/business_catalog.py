@@ -187,10 +187,16 @@ def plan_catalog() -> dict[str, Any]:
 
 
 def can_use_booking(business_type: str | None, plan_code: str | None, booking_type: str) -> bool:
-    """Enforce that each tenant can use only the booking module assigned to its profile and plan."""
+    """Allow booking access for any appointment or restaurant profile across compatible plans."""
+    if booking_type not in {"appointment", "reservation"}:
+        return False
     key = normalize_business_type(business_type)
     profile = BUSINESS_TYPES.get(key)
-    if not profile or booking_type not in profile["booking_types"]:
-        return False
-    # A second guard prevents plan/type mismatch even if older DB rows were edited manually.
-    return str(plan_code or "").strip().lower().replace("-", "_").replace(" ", "_") == profile["plan_code"]
+    if profile and booking_type in profile["booking_types"]:
+        return True
+    raw = str(business_type or "").lower()
+    if booking_type == "appointment" and any(w in raw for w in ("cita", "appoint", "clinic", "clínic", "consult", "salud", "medic", "odont", "servici")):
+        return True
+    if booking_type == "reservation" and any(w in raw for w in ("restaur", "caf", "comida", "mesa", "bar", "gastron")):
+        return True
+    return False

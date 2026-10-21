@@ -9,8 +9,8 @@ pool = ConnectionPool(
     conninfo="",
     min_size=0,
     max_size=10,
-    timeout=5,
-    kwargs={**settings.database_kwargs, "connect_timeout": 5},
+    timeout=10,
+    kwargs={**settings.database_kwargs, "connect_timeout": 8, "prepare_threshold": None},
     open=False,
 )
 
