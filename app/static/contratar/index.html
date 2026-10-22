@@ -122,8 +122,48 @@
     .wait-panel .btn{margin-top:10px}
     .status-failed{border-color:rgba(255,153,153,.35);background:rgba(210,84,84,.08)}
     @keyframes paymentPulse{50%{opacity:.45;box-shadow:0 0 0 9px rgba(0,240,255,.03)}}
-    @media(max-width:780px){.main-grid{grid-template-columns:1fr}.side{position:static}}
-    @media(max-width:540px){.wrap{width:calc(100% - 28px)}.buyer-grid,.methods,.flow{grid-template-columns:1fr}.binance-qr{flex-direction:column;align-items:center;text-align:center}.onboarding-next{align-items:stretch;flex-direction:column}.onboarding-next .btn,.actions .btn{width:100%}}
+    @media(max-width:920px){
+      .main-grid{grid-template-columns:1fr;gap:18px;padding-bottom:40px}
+      .side{position:static;padding:22px}
+      .hero{padding:28px 0 20px}
+    }
+    @media(max-width:680px){
+      .nav{height:auto;min-height:68px;padding:10px 16px !important;flex-wrap:wrap;gap:10px}
+      .brand-mark-wrap{width:38px;height:38px;border-radius:11px}
+      .brand img{width:28px;height:28px}
+      .wordmark{font-size:1.02rem;letter-spacing:.12em}
+      .nav-right{gap:4px;font-size:.76rem;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+      .nav-right a{padding:6px 9px;border-radius:8px}
+      .flow{grid-template-columns:1fr;gap:8px;margin-top:16px}
+      .flow-item{padding:10px 12px;font-size:.78rem}
+      .plan-summary{padding:15px 16px;margin-bottom:20px;border-radius:15px}
+      .plan-summary h2{font-size:1.18rem}
+      .price strong{font-size:1.68rem}
+      .buyer-card{padding:16px;border-radius:16px;margin-bottom:20px}
+      .buyer-grid{grid-template-columns:1fr;gap:11px}
+      .buyer-field input,.buyer-field textarea,.proof-field input{font-size:16px;padding:12px 13px}
+      .buyer-save-row .btn{width:100%;min-height:48px}
+      .methods{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+      .method{padding:13px 12px;gap:10px;border-radius:14px}
+      .method-icon{width:34px;height:34px;border-radius:10px}
+      .method-copy strong{font-size:.82rem}
+      .payment-detail{padding:16px;border-radius:16px}
+      .clean-pay-box{flex-direction:column;align-items:stretch;gap:14px;padding:16px}
+      .clean-pay-box .btn{width:100%}
+      .clean-lines{font-size:1.04rem;text-align:center}
+      .binance-qr{flex-direction:column;align-items:center;text-align:center;padding:16px}
+      .binance-qr .clean-lines{text-align:center;width:100%}
+      .binance-qr .btn{width:100%}
+      .onboarding-next{align-items:stretch;flex-direction:column;gap:12px}
+      .onboarding-next .btn,.actions .btn{width:100%;min-height:48px}
+      .foot-inner{flex-direction:column;align-items:center;text-align:center;gap:8px}
+    }
+    @media(max-width:420px){
+      .wrap{width:calc(100% - 24px)}
+      .method-card{padding:18px 15px;border-radius:20px}
+      .methods{grid-template-columns:1fr}
+      .nav-right a:first-child{display:none}
+    }
   </style>
 </head>
 <body>
