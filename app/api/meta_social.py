@@ -680,33 +680,41 @@ def _build_facebook_dialog_oauth_url(
     business_id: str,
     platform: str,
     force_login: bool = False,
+    minimal_scopes: bool = False,
 ) -> str:
     app_id = os.getenv("META_APP_ID", META_APP_ID).strip()
     redirect_uri = os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()
     state = f"{business_id}:{platform}"
 
-    # No enviamos config_id de Business Portfolio/Cuenta Publicitaria porque bloquea cuentas
-    # que no tienen cuenta publicitaria. Usamos los permisos directos de Páginas e Instagram
-    # con auth_type=rerequest (o reauthenticate al cambiar de cuenta).
-    scopes = [
-        "public_profile",
-        "pages_show_list",
-        "pages_messaging",
-        "pages_manage_metadata",
-        "pages_read_engagement",
-        "instagram_basic",
-        "instagram_manage_messages",
-    ]
+    # Permisos exactos habilitados en la App de Meta (sin pages_read_engagement ni config_id de Cuenta Publicitaria)
+    if minimal_scopes:
+        scopes = ["public_profile", "pages_show_list"]
+    elif platform == "facebook":
+        scopes = [
+            "pages_show_list",
+            "pages_messaging",
+            "pages_manage_metadata",
+        ]
+    else:
+        scopes = [
+            "pages_show_list",
+            "pages_messaging",
+            "pages_manage_metadata",
+            "instagram_basic",
+            "instagram_manage_messages",
+        ]
+
     params: dict[str, str] = {
         "client_id": app_id,
         "display": "popup",
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "auth_type": "reauthenticate" if force_login else "rerequest",
         "scope": ",".join(scopes),
         "state": state,
     }
-    return f"https://www.facebook.com/{META_GRAPH_API_VERSION}/dialog/oauth?{urllib.parse.urlencode(params)}"
+    if force_login:
+        params["auth_type"] = "reauthenticate"
+    return f"https://www.facebook.com/dialog/oauth?{urllib.parse.urlencode(params)}"
 
 
 @router.get("/dashboard/channels/meta/oauth-url")
