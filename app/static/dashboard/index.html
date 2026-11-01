@@ -3504,6 +3504,7 @@ async function loadMetaSocialChannels(fillInputs = false) {
 }
 
 async function saveMetaChannel(platform) {
+    // Compatibilidad con la configuración manual anterior del canal.
     const prefix = platform === 'instagram' ? 'ig' : 'fb';
     const label = platform === 'instagram' ? 'Instagram' : 'Facebook';
     const inputEl = document.getElementById(`${prefix}-account-name`);
@@ -3519,41 +3520,81 @@ async function saveMetaChannel(platform) {
     }
     const msgEl = document.getElementById(`${platform}-channel-message`);
     const btn = document.getElementById(`${prefix}-connect-btn`);
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Vinculando...'; }
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Vinculando...';
+    }
     try {
         const data = await api(`/api/v1/dashboard/channels/meta/${platform}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                account_name: accountName,
-                enabled: true
-            })
+            body: JSON.stringify({ account_name: accountName, enabled: true })
         });
         if (msgEl) {
             msgEl.textContent = data.message || `Cuenta de ${label} vinculada.`;
             msgEl.style.color = '#34d399';
-            async function openMetaOAuthPopup(platform) {
+        }
+        showToast(data.message || `✓ ${label} vinculado correctamente.`);
+        await loadMetaSocialChannels(true);
+        await loadDashboardChannels();
+    } catch (e) {
+        if (msgEl) {
+            msgEl.textContent = e.message;
+            msgEl.style.color = '#fda4af';
+        }
+        showToast(e.message, true);
+    } finally {
+        if (btn) btn.disabled = false;
+        await loadMetaSocialChannels(false);
+    }
+}
+
+// Debe permanecer en el ámbito global porque los botones del HTML la invocan
+// mediante onclick="openMetaOAuthPopup('facebook')" / ('instagram').
+async function openMetaOAuthPopup(platform) {
+    platform = String(platform || '').toLowerCase();
+    if (!['instagram', 'facebook'].includes(platform)) {
+        showToast('Canal de Meta no válido.', true);
+        return;
+    }
     const label = platform === 'instagram' ? 'Instagram' : 'Facebook';
     const msgEl = document.getElementById(`${platform}-channel-message`);
+    const width = 620, height = 720;
+    const left = Math.max(0, (window.screen.width - width) / 2);
+    const top = Math.max(0, (window.screen.height - height) / 2);
+    // Abrir la ventana dentro del gesto del usuario para evitar el bloqueador
+    // de popups mientras se solicita al backend la URL OAuth.
+    const popup = window.open(
+        'about:blank',
+        `CalyrisiaMeta_${platform}`,
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+    if (msgEl) {
+        msgEl.textContent = `Preparando la conexión segura con ${label}...`;
+        msgEl.style.color = '#38bdf8';
+    }
     try {
         const data = await api(`/api/v1/dashboard/channels/meta/oauth-url?platform=${encodeURIComponent(platform)}`);
         if (!data || !data.auth_url) {
-            throw new Error(`No se pudo generar la ventana de conexión para ${label}.`);
+            throw new Error(data?.detail || `No se pudo generar la conexión de ${label}.`);
         }
-        const width = 620, height = 720;
-        const left = Math.max(0, (window.screen.width - width) / 2);
-        const top = Math.max(0, (window.screen.height - height) / 2);
-        window.open(
-            data.auth_url,
-            `CalyrisiaMeta_${platform}`,
-            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-        );
+        if (popup && !popup.closed) {
+            popup.location.replace(data.auth_url);
+        } else {
+            // Alternativa cuando el navegador bloquea las ventanas emergentes.
+            window.location.assign(data.auth_url);
+        }
         if (msgEl) {
-            msgEl.textContent = `Inicia sesión con tu cuenta de ${label} en la ventana emergente para completar la vinculación...`;
+            msgEl.textContent = `Inicia sesión con tu cuenta de ${label} en la ventana de conexión para completar la vinculación.`;
             msgEl.style.color = '#38bdf8';
         }
     } catch (e) {
-        showToast(e.message, true);
+        if (popup && !popup.closed) popup.close();
+        if (msgEl) {
+            msgEl.textContent = e.message || `No se pudo iniciar la conexión de ${label}.`;
+            msgEl.style.color = '#fda4af';
+        }
+        showToast(e.message || `No se pudo iniciar la conexión de ${label}.`, true);
     }
 }
 
@@ -3568,6 +3609,8 @@ window.addEventListener('message', async (event) => {
     await loadDashboardChannels();
 });
 
+// La autenticación de Telegram también se expone globalmente para los botones
+// inline del dashboard.
 async function sendTelegramOtpCode() {
     const phoneInput = document.getElementById('telegram-phone-number');
     const otpBox = document.getElementById('telegram-otp-box');
@@ -3576,9 +3619,14 @@ async function sendTelegramOtpCode() {
     const phone = (phoneInput?.value || '').trim();
     if (!phone) {
         showToast('Ingresa tu número de teléfono con código de país (ej. +58412...).', true);
+        if (phoneInput) phoneInput.focus();
         return;
     }
     if (btn) { btn.disabled = true; btn.textContent = 'Enviando código...'; }
+    if (msgEl) {
+        msgEl.textContent = 'Solicitando código de acceso a Telegram...';
+        msgEl.style.color = '#38bdf8';
+    }
     try {
         const data = await api('/api/v1/dashboard/channels/telegram/send-code', {
             method: 'POST',
@@ -3622,13 +3670,19 @@ async function verifyTelegramOtpCode() {
             body: JSON.stringify({ phone_number: phone, code, password: password || null })
         });
         if (data.requires_2fa) {
-            if (pwInput) pwInput.style.display = 'block';
+            if (pwInput) {
+                pwInput.style.display = 'block';
+                pwInput.focus();
+            }
             if (msgEl) { msgEl.textContent = data.message; msgEl.style.color = '#fbbf24'; }
             showToast(data.message, true);
             return;
         }
         if (otpBox) otpBox.style.display = 'none';
-        if (msgEl) { msgEl.textContent = data.message; msgEl.style.color = '#34d399'; }
+        if (pwInput) pwInput.value = '';
+        const codeInput = document.getElementById('telegram-otp-code');
+        if (codeInput) codeInput.value = '';
+        if (msgEl) { msgEl.textContent = data.message || 'Telegram conectado.'; msgEl.style.color = '#34d399'; }
         showToast(data.message || '✓ Telegram conectado.');
         await loadTelegramChannel(true);
         await loadDashboardChannels();
@@ -3637,21 +3691,6 @@ async function verifyTelegramOtpCode() {
         showToast(e.message, true);
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Verificar y conectar'; }
-    }
-}
-        }
-        showToast(data.message || `✓ ${label} vinculado correctamente.`);
-        await loadMetaSocialChannels(true);
-        await loadDashboardChannels();
-    } catch (e) {
-        if (msgEl) {
-            msgEl.textContent = e.message;
-            msgEl.style.color = '#fda4af';
-        }
-        showToast(e.message, true);
-    } finally {
-        if (btn) btn.disabled = false;
-        await loadMetaSocialChannels(false);
     }
 }
 
