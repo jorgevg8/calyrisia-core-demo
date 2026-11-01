@@ -40,6 +40,8 @@ services:
         sync: false
       - key: META_CONFIG_ID
         sync: false
+      - key: META_FACEBOOK_CONFIG_ID
+        sync: false
       - key: META_REDIRECT_URI
         value: https://calyrisia.com/api/auth/meta/callback
       - key: META_WEBHOOK_VERIFY_TOKEN

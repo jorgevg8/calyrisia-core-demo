@@ -2039,6 +2039,7 @@ app.mount("/landing", StaticFiles(directory="app/static/landing", html=True), na
 app.mount("/contacto", StaticFiles(directory="app/static/contacto", html=True), name="contacto")
 app.mount("/contratar", StaticFiles(directory="app/static/contratar", html=True), name="contratar")
 app.mount("/feedback", StaticFiles(directory="app/static/feedback", html=True), name="feedback")
+app.mount("/privacidad", StaticFiles(directory="app/static/privacidad", html=True), name="privacidad")
 
 @app.get("/", include_in_schema=False)
 def root() -> FileResponse:

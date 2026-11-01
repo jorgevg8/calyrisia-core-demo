@@ -6,6 +6,9 @@ import hmac
 import json
 import logging
 import os
+import secrets
+import time
+import html
 import re
 import unicodedata
 import urllib.parse
@@ -35,12 +38,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 VALID_META_PLATFORMS = ("instagram", "facebook", "whatsapp")
-META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v21.0").strip() or "v21.0"
+META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v26.0").strip() or "v26.0"
 
 # Credenciales de la App de Meta (configurables por entorno en Render)
-META_APP_ID = os.getenv("META_APP_ID", "1485549296488369").strip()
+META_APP_ID = os.getenv("META_APP_ID", "2456430845105397").strip() or "2456430845105397"
 META_APP_SECRET = os.getenv("META_APP_SECRET", "").strip()
-META_CONFIG_ID = os.getenv("META_CONFIG_ID", "").strip()
+# Unified Login configuration shown in the supplied Meta for Developers screenshot.
+META_CONFIG_ID = os.getenv("META_CONFIG_ID", "1831235794732615").strip() or "1831235794732615"
+# Optional separate Facebook Login for Business configuration for Messenger Pages.
+META_FACEBOOK_CONFIG_ID = os.getenv("META_FACEBOOK_CONFIG_ID", "").strip()
 META_REDIRECT_URI = os.getenv(
     "META_REDIRECT_URI",
     "https://calyrisia.com/api/auth/meta/callback",
@@ -94,7 +100,6 @@ class MetaOAuthSelectAccountRequest(BaseModel):
     platform: str = Field(..., min_length=3, max_length=30)
     page_or_ig_id: str = Field(..., min_length=1, max_length=160)
     account_name: str = Field(..., min_length=1, max_length=160)
-    access_token: str = Field(default="", max_length=800)
 
 
 async def ensure_meta_social_schema() -> None:
@@ -111,6 +116,7 @@ async def ensure_meta_social_schema() -> None:
                         channel_status varchar(30) NOT NULL DEFAULT 'disconnected',
                         account_name varchar(160) NOT NULL DEFAULT '',
                         page_or_ig_id varchar(120) NOT NULL DEFAULT '',
+                        parent_page_id varchar(120) NOT NULL DEFAULT '',
                         access_token text NOT NULL DEFAULT '',
                         verify_token varchar(160) NOT NULL DEFAULT '',
                         last_error text,
@@ -121,6 +127,7 @@ async def ensure_meta_social_schema() -> None:
                     )
                     """
                 )
+                cur.execute("ALTER TABLE public.business_meta_channels ADD COLUMN IF NOT EXISTS parent_page_id varchar(120) NOT NULL DEFAULT ''")
                 try:
                     cur.execute("SAVEPOINT sp_meta_platform_chk")
                     cur.execute(
@@ -436,14 +443,15 @@ async def _send_meta_graph_reply(
     access_token: str,
     recipient_id: str,
     message_text: str,
+    send_target_id: str | None = None,
 ) -> tuple[bool, str | None]:
-    """Send an outbound reply via Meta Graph API when an official Page/Instagram/WhatsApp token is present."""
+    """Send a reply through the correct Meta asset (Page token for Messenger/Unified Instagram)."""
     token = (access_token or "").strip()
     if not token or not recipient_id or not message_text:
-        return False, None
-    target_node = (page_or_ig_id or "me").strip() or "me"
-    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_node}/messages"
+        return False, "Falta token, destinatario o contenido para enviar el mensaje."
+    target_node = (send_target_id or page_or_ig_id or "me").strip() or "me"
     if platform == "whatsapp":
+        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_node}/messages"
         payload: dict[str, Any] = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
@@ -452,26 +460,30 @@ async def _send_meta_graph_reply(
             "text": {"preview_url": False, "body": message_text[:4000]},
         }
     else:
+        # Messenger and Instagram Unified Login use the linked Facebook Page node
+        # with a Page access token. A standalone Instagram Login flow is not used here.
+        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_node}/messages"
         payload = {
             "recipient": {"id": recipient_id},
             "messaging_type": "RESPONSE",
             "message": {"text": message_text[:1950]},
         }
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
-            resp = await client.post(
-                url,
-                params={"access_token": token},
-                json=payload,
-            )
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(url, params={"access_token": token}, json=payload)
         if resp.status_code >= 400:
-            err = resp.text[:400]
-            logger.warning("Meta Graph send error (%s): %s", platform, err)
-            return False, err
+            try:
+                body = resp.json()
+                err_obj = body.get("error") if isinstance(body, dict) else {}
+                err = str((err_obj or {}).get("message") or resp.text[:500])
+            except Exception:
+                err = resp.text[:500]
+            logger.warning("Meta Graph send error (%s, target=%s, status=%s): %s", platform, target_node, resp.status_code, err)
+            return False, err[:500]
         return True, None
     except Exception as exc:
         logger.warning("Meta Graph HTTP exception (%s): %s", platform, exc)
-        return False, str(exc)
+        return False, str(exc)[:500]
 
 
 async def process_meta_incoming_message(
@@ -587,7 +599,7 @@ async def process_meta_incoming_message(
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT page_or_ig_id, access_token, enabled
+                SELECT page_or_ig_id, access_token, enabled, parent_page_id
                 FROM public.business_meta_channels
                 WHERE business_id = %s::uuid AND platform = %s
                 """,
@@ -601,6 +613,7 @@ async def process_meta_incoming_message(
                 access_token=str(ch_row[1] or ""),
                 recipient_id=sender_id,
                 message_text=reply_text,
+                send_target_id=(str(ch_row[3] or "").strip() if platform == "instagram" else str(ch_row[0] or "")),
             )
             with conn.cursor() as cur:
                 cur.execute(
@@ -650,7 +663,7 @@ def _channel_row_to_dict(business_id: str, platform: str, row: tuple | None, bas
     acc_str = str(account_name or "").strip()
     pid_str = str(page_or_ig_id or "").strip()
     vtok_str = str(verify_token or "").strip() or default_vtoken
-    configured = bool(acc_str or pid_str or token_str)
+    configured = bool(acc_str and pid_str and token_str)
     return {
         "platform": platform,
         "label": _platform_label(platform),
@@ -670,10 +683,46 @@ def _channel_row_to_dict(business_id: str, platform: str, row: tuple | None, bas
 
 
 # ---------------------------------------------------------------------------
-# META OAUTH POPUP FLOW (INSTAGRAM DIRECT & FACEBOOK MESSENGER)
-# Sin config_id de Portfolio Comercial/Cuenta Publicitaria para permitir
-# iniciar sesión con la cuenta y elegir directamente la Página o el Instagram
+# META OAUTH POPUP FLOW (FACEBOOK MESSENGER + INSTAGRAM UNIFIED LOGIN)
+# Instagram Unified Login usa Facebook Login for Business con config_id:
+# no se debe enviar scope ni cambiarlo por instagram.com/oauth/authorize.
 # ---------------------------------------------------------------------------
+
+def _meta_state_signature(payload: str) -> str:
+    secret = os.getenv("META_APP_SECRET", META_APP_SECRET).strip()
+    if not secret:
+        raise HTTPException(status_code=503, detail="Falta configurar META_APP_SECRET en el servidor.")
+    return hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _build_meta_oauth_state(*, business_id: str, platform: str) -> str:
+    issued_at = str(int(time.time()))
+    nonce = secrets.token_urlsafe(18)
+    payload = "|".join((business_id, platform, issued_at, nonce))
+    return f"{payload}|{_meta_state_signature(payload)}"
+
+
+def _parse_and_validate_meta_oauth_state(state: str | None) -> tuple[str, str] | None:
+    parts = (state or "").split("|")
+    if len(parts) != 5:
+        return None
+    business_id, platform, issued_at, nonce, signature = parts
+    payload = "|".join(parts[:4])
+    try:
+        age = int(time.time()) - int(issued_at)
+        if age < -60 or age > 600:
+            return None
+        expected = _meta_state_signature(payload)
+    except (ValueError, HTTPException):
+        return None
+    if not hmac.compare_digest(signature, expected) or platform not in ("instagram", "facebook"):
+        return None
+    try:
+        uuid.UUID(business_id)
+    except (ValueError, TypeError, AttributeError):
+        return None
+    return business_id, platform
+
 
 def _build_facebook_dialog_oauth_url(
     *,
@@ -682,39 +731,48 @@ def _build_facebook_dialog_oauth_url(
     force_login: bool = False,
     minimal_scopes: bool = False,
 ) -> str:
-    app_id = os.getenv("META_APP_ID", META_APP_ID).strip()
-    redirect_uri = os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()
-    state = f"{business_id}:{platform}"
-
-    # Permisos exactos habilitados en la App de Meta (sin pages_read_engagement ni config_id de Cuenta Publicitaria)
-    if minimal_scopes:
-        scopes = ["public_profile", "pages_show_list"]
-    elif platform == "facebook":
-        scopes = [
-            "pages_show_list",
-            "pages_messaging",
-            "pages_manage_metadata",
-        ]
-    else:
-        scopes = [
-            "pages_show_list",
-            "pages_messaging",
-            "pages_manage_metadata",
-            "instagram_basic",
-            "instagram_manage_messages",
-        ]
+    app_id = os.getenv("META_APP_ID", "").strip() or META_APP_ID
+    redirect_uri = os.getenv("META_REDIRECT_URI", "").strip() or META_REDIRECT_URI
+    if not app_id or not redirect_uri:
+        raise HTTPException(status_code=503, detail="Falta META_APP_ID o META_REDIRECT_URI en el servidor.")
+    state = _build_meta_oauth_state(business_id=business_id, platform=platform)
 
     params: dict[str, str] = {
         "client_id": app_id,
         "display": "popup",
         "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": ",".join(scopes),
         "state": state,
     }
+    if platform == "instagram":
+        config_id = os.getenv("META_CONFIG_ID", "").strip() or META_CONFIG_ID
+        if config_id:
+            # Unified Login: configuration defines the permissions. Sending scope as well
+            # causes Invalid Scopes on Meta apps created with this newer setup.
+            params["config_id"] = config_id
+            params["override_default_response_type"] = "true"
+        else:
+            # Compatibility fallback for older Meta apps that still expose the legacy flow.
+            params["scope"] = ",".join([
+                "pages_show_list", "pages_messaging", "pages_manage_metadata",
+                "instagram_basic", "instagram_manage_messages",
+            ])
+    elif platform == "facebook":
+        facebook_config_id = os.getenv("META_FACEBOOK_CONFIG_ID", "").strip() or META_FACEBOOK_CONFIG_ID
+        if facebook_config_id:
+            params["config_id"] = facebook_config_id
+            params["override_default_response_type"] = "true"
+        else:
+            scopes = ["pages_show_list", "pages_messaging", "pages_manage_metadata"]
+            if minimal_scopes:
+                scopes = ["public_profile", "pages_show_list"]
+            params["scope"] = ",".join(scopes)
+    else:
+        raise HTTPException(status_code=422, detail="Canal Meta no válido para OAuth.")
+
     if force_login:
         params["auth_type"] = "reauthenticate"
-    return f"https://www.facebook.com/dialog/oauth?{urllib.parse.urlencode(params)}"
+    return f"https://www.facebook.com/{META_GRAPH_API_VERSION}/dialog/oauth?{urllib.parse.urlencode(params)}"
 
 
 @router.get("/dashboard/channels/meta/oauth-url")
@@ -735,6 +793,39 @@ async def get_meta_oauth_url(
     return {"success": True, "auth_url": auth_url, "platform": platform}
 
 
+async def _subscribe_meta_webhook(
+    *, platform: str, page_id: str, access_token: str
+) -> tuple[bool, str | None]:
+    """Attach the app to the linked Page; Unified Login Instagram messaging uses its Page token."""
+    if not page_id or not access_token:
+        return False, "No se recibió el ID de la Página ni su token de acceso."
+    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{page_id}/subscribed_apps"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.post(
+                url,
+                params={
+                    "subscribed_fields": "messages,messaging_postbacks",
+                    "access_token": access_token,
+                },
+            )
+        try:
+            data = response.json()
+        except Exception:
+            data = {}
+        subscribed_ok = (
+            isinstance(data, dict)
+            and str(data.get("success", "")).strip().lower() == "true"
+        )
+        if response.status_code < 400 and subscribed_ok:
+            return True, None
+        err = ((data.get("error") or {}).get("message") if isinstance(data, dict) else None)
+        return False, str(err or response.text or f"Meta respondió HTTP {response.status_code}")[:500]
+    except Exception as exc:
+        logger.warning("Meta webhook subscription failed (%s, page=%s): %s", platform, page_id, exc)
+        return False, str(exc)[:500]
+
+
 async def _activate_meta_account_in_db(
     *,
     business_id: str,
@@ -743,74 +834,92 @@ async def _activate_meta_account_in_db(
     page_or_ig_id: str,
     access_token: str,
     subscribe_page_id: str | None = None,
-) -> None:
+) -> dict[str, Any]:
     vtoken = os.getenv("META_WEBHOOK_VERIFY_TOKEN", META_WEBHOOK_VERIFY_TOKEN).strip() or _default_verify_token(business_id)
-    if subscribe_page_id and access_token:
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                await client.post(
-                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{subscribe_page_id}/subscribed_apps",
-                    params={
-                        "subscribed_fields": "messages,messaging_postbacks",
-                        "access_token": access_token,
-                    },
-                )
-        except Exception as sub_exc:
-            logger.warning("No se pudo suscribir automáticamente la página %s: %s", subscribe_page_id, sub_exc)
-
+    ready, subscription_error = await _subscribe_meta_webhook(
+        platform=platform,
+        page_id=(subscribe_page_id or (page_or_ig_id if platform == "facebook" else "")),
+        access_token=access_token,
+    )
+    status = "connected" if ready else "pending_webhook"
     async with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """INSERT INTO public.business_meta_channels
-                   (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, access_token, verify_token, last_error, connected_at, updated_at)
-                   VALUES (%s::uuid, %s, true, 'connected', %s, %s, %s, %s, NULL, now(), now())
+                   (business_id, platform, enabled, channel_status, account_name, page_or_ig_id,
+                    parent_page_id, access_token, verify_token, last_error, connected_at, updated_at)
+                   VALUES (%s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, now(), now())
                    ON CONFLICT (business_id, platform) DO UPDATE SET
-                     enabled = true,
-                     channel_status = 'connected',
+                     enabled = EXCLUDED.enabled,
+                     channel_status = EXCLUDED.channel_status,
                      account_name = EXCLUDED.account_name,
                      page_or_ig_id = EXCLUDED.page_or_ig_id,
+                     parent_page_id = EXCLUDED.parent_page_id,
                      access_token = EXCLUDED.access_token,
                      verify_token = EXCLUDED.verify_token,
-                     last_error = NULL,
+                     last_error = EXCLUDED.last_error,
                      connected_at = COALESCE(business_meta_channels.connected_at, now()),
                      updated_at = now()""",
-                (business_id, platform, account_name[:160], page_or_ig_id[:120], access_token, vtoken),
+                (
+                    business_id, platform, ready, status, account_name[:160], page_or_ig_id[:120],
+                    (subscribe_page_id or "")[:120], access_token, vtoken,
+                    subscription_error,
+                ),
             )
         conn.commit()
+    return {"ready": ready, "channel_status": status, "last_error": subscription_error}
 
 
 @router.post("/auth/meta/select-account")
 async def select_meta_oauth_account(payload: MetaOAuthSelectAccountRequest) -> dict[str, Any]:
-    """Activate the specific Page or Instagram account chosen by the user inside the Meta OAuth popup."""
+    """Activate only an account returned by this server-side OAuth session."""
     await ensure_meta_social_schema()
     session_info = _pending_meta_oauth_sessions.get(payload.session_key)
-    if not session_info:
+    if not session_info or time.time() - float(session_info.get("created_at", 0)) > 600:
+        _pending_meta_oauth_sessions.pop(payload.session_key, None)
         raise HTTPException(status_code=400, detail="La sesión de vinculación expiró. Cierra esta ventana y vuelve a pulsar Conectar.")
 
-    business_id = str(session_info["business_id"])
     platform = payload.platform.lower().strip()
-    if platform not in VALID_META_PLATFORMS:
-        platform = str(session_info.get("requested_platform") or "instagram")
+    requested_platform = str(session_info.get("requested_platform") or "")
+    if platform != requested_platform or platform not in ("instagram", "facebook"):
+        raise HTTPException(status_code=400, detail="La plataforma seleccionada no coincide con la autorización de Meta.")
 
-    account_name = payload.account_name.strip()[:160]
-    if platform == "instagram" and account_name and not account_name.startswith("@"):
-        account_name = "@" + account_name
-    page_or_ig_id = payload.page_or_ig_id.strip()[:120] or f"meta_{platform}_{business_id[:8]}"
-    access_token = (payload.access_token or session_info.get("user_access_token") or "").strip()
+    candidates = session_info.get("candidates") or []
+    candidate = next((
+        item for item in candidates
+        if isinstance(item, dict) and str(item.get("id") or "") == payload.page_or_ig_id
+    ), None)
+    if not candidate:
+        raise HTTPException(status_code=400, detail="La cuenta no pertenece a la sesión de autorización. Vuelve a conectar desde Meta.")
 
-    await _activate_meta_account_in_db(
-        business_id=business_id,
+    account_name = str(candidate.get("name") or payload.account_name or "Cuenta Meta").strip()[:160]
+    page_or_ig_id = str(candidate.get("id") or "").strip()[:120]
+    page_id = str(candidate.get("page_id") or (page_or_ig_id if platform == "facebook" else "")).strip()[:120]
+    access_token = str(candidate.get("access_token") or "").strip()
+    if not page_or_ig_id or not page_id or not access_token:
+        raise HTTPException(status_code=400, detail="Meta no devolvió una Página y un token válidos para esta cuenta. Verifica los permisos y vuelve a autorizar.")
+
+    result = await _activate_meta_account_in_db(
+        business_id=str(session_info["business_id"]),
         platform=platform,
         account_name=account_name,
         page_or_ig_id=page_or_ig_id,
         access_token=access_token,
-        subscribe_page_id=page_or_ig_id if platform == "facebook" else None,
+        subscribe_page_id=page_id,
     )
+    _pending_meta_oauth_sessions.pop(payload.session_key, None)
+    if result["ready"]:
+        message = f"✓ {_platform_label(platform)} ({account_name}) vinculado; webhook confirmado y listo para responder con IA."
+    else:
+        message = f"Cuenta guardada, pero Meta no confirmó la suscripción del webhook: {result['last_error'] or 'verifica la configuración de webhooks y permisos.'}"
     return {
         "success": True,
+        "ready": result["ready"],
         "platform": platform,
         "account_name": account_name,
-        "message": f"✓ {_platform_label(platform)} ({account_name}) vinculado y activo con IA.",
+        "channel_status": result["channel_status"],
+        "last_error": result["last_error"],
+        "message": message,
     }
 
 
@@ -819,12 +928,8 @@ async def handle_meta_oauth_callback(
     state: str | None = None,
     error: str | None = None,
 ) -> HTMLResponse:
-    await ensure_meta_social_schema()
-    parts = (state or "").split(":", 1)
-    business_id = parts[0].strip() if parts and parts[0] else ""
-    requested_platform = parts[1].strip().lower() if len(parts) > 1 else "instagram"
-    if requested_platform not in VALID_META_PLATFORMS:
-        requested_platform = "instagram"
+    parsed_state = _parse_and_validate_meta_oauth_state(state)
+    business_id, requested_platform = parsed_state if parsed_state else ("", "instagram")
 
     switch_account_url = (
         _build_facebook_dialog_oauth_url(business_id=business_id, platform=requested_platform, force_login=True)
@@ -837,7 +942,8 @@ async def handle_meta_oauth_callback(
         else "#"
     )
 
-    if error or not code or not business_id:
+
+    if error or not code or not business_id or not parsed_state:
         return HTMLResponse(
             f"""<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Vincular {_platform_label(requested_platform)}</title></head>
             <body style="background:#090d16;color:#f8fafc;font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-align:center;padding:48px 24px;">
@@ -851,14 +957,14 @@ async def handle_meta_oauth_callback(
             </div>
             <script>
                 if (window.opener) {{
-                    window.opener.postMessage({{ type: 'META_CONNECTED', status: 'error', message: 'Inicio de sesión cancelado' }}, '*');
+                    window.opener.postMessage({{ type: 'META_CONNECTED', status: 'error', message: 'Inicio de sesión cancelado o estado OAuth no válido' }}, {json.dumps(urllib.parse.urlsplit(os.getenv('META_REDIRECT_URI', META_REDIRECT_URI).strip()).scheme + '://' + urllib.parse.urlsplit(os.getenv('META_REDIRECT_URI', META_REDIRECT_URI).strip()).netloc)});
                 }}
             </script></body></html>"""
         )
 
-    app_id = os.getenv("META_APP_ID", META_APP_ID).strip()
-    app_secret = os.getenv("META_APP_SECRET", META_APP_SECRET).strip()
-    redirect_uri = os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()
+    app_id = os.getenv("META_APP_ID", "").strip() or META_APP_ID
+    app_secret = os.getenv("META_APP_SECRET", "").strip() or META_APP_SECRET
+    redirect_uri = os.getenv("META_REDIRECT_URI", "").strip() or META_REDIRECT_URI
 
     user_access_token = ""
     me_name = "Usuario de Meta"
@@ -882,10 +988,27 @@ async def handle_meta_oauth_callback(
             user_access_token = str(token_data.get("access_token") or "").strip()
             if not user_access_token:
                 error_detail = str(
-                    token_data.get("error", {}).get("message")
-                    or "Falta META_APP_SECRET en Render o el código de autorización expiró."
+                    (token_data.get("error") or {}).get("message")
+                    or "Falta META_APP_SECRET en el servidor o el código de autorización expiró."
                 )
             else:
+                # Exchange the short-lived user token for a long-lived token before
+                # requesting Page tokens; this reduces unexpected disconnects.
+                long_res = await client.get(
+                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/oauth/access_token",
+                    params={
+                        "grant_type": "fb_exchange_token",
+                        "client_id": app_id,
+                        "client_secret": app_secret,
+                        "fb_exchange_token": user_access_token,
+                    },
+                )
+                if long_res.status_code < 400:
+                    long_data = long_res.json()
+                    user_access_token = str(long_data.get("access_token") or user_access_token).strip()
+                else:
+                    logger.warning("Meta long-lived token exchange failed: %s", long_res.text[:300])
+
                 me_res = await client.get(
                     f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me",
                     params={"fields": "id,name", "access_token": user_access_token},
@@ -898,19 +1021,22 @@ async def handle_meta_oauth_callback(
                 pages_res = await client.get(
                     f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/accounts",
                     params={
-                        "fields": "id,name,access_token,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}",
+                        "fields": "id,name,access_token,tasks,instagram_business_account{id,username}",
                         "limit": "100",
                         "access_token": user_access_token,
                     },
                 )
-                raw_pages = list(pages_res.json().get("data") or []) if pages_res.status_code < 400 else []
+                pages_json = pages_res.json() if pages_res.content else {}
+                raw_pages = list(pages_json.get("data") or []) if pages_res.status_code < 400 and isinstance(pages_json, dict) else []
+                if pages_res.status_code >= 400:
+                    error_detail = str((pages_json.get("error") or {}).get("message") or "Meta no permitió listar las páginas. Revisa pages_show_list y los activos incluidos en la configuración.")
 
                 # 2. Consultar páginas dentro de Business Manager (/me/businesses -> owned_pages / client_pages)
                 try:
                     biz_res = await client.get(
                         f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/businesses",
                         params={
-                            "fields": "id,name,owned_pages{id,name,access_token,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}}",
+                            "fields": "id,name,owned_pages{id,name,access_token,tasks,instagram_business_account{id,username}}",
                             "access_token": user_access_token,
                         },
                     )
@@ -921,6 +1047,9 @@ async def handle_meta_oauth_callback(
                 except Exception:
                     pass
 
+                if not raw_pages and not error_detail:
+                    error_detail = "Meta inició sesión, pero no devolvió páginas. En la cuenta autorizada debes tener una Página con tarea de mensajería y, para Instagram, una cuenta profesional vinculada. Revisa los activos/permisos de la configuración Unified Login."
+
                 seen_page_ids: set[str] = set()
                 seen_ig_ids: set[str] = set()
                 for page in raw_pages:
@@ -928,21 +1057,22 @@ async def handle_meta_oauth_callback(
                         continue
                     page_id = str(page.get("id") or "").strip()
                     page_name = str(page.get("name") or "Página de Facebook").strip()[:160]
-                    page_token = str(page.get("access_token") or user_access_token).strip()
-                    if page_id and page_id not in seen_page_ids:
+                    page_token = str(page.get("access_token") or "").strip()
+                    if page_id and page_id not in seen_page_ids and page_token:
                         seen_page_ids.add(page_id)
                         discovered_pages.append(
                             {
                                 "id": page_id,
                                 "name": page_name,
+                                "page_id": page_id,
                                 "access_token": page_token,
                             }
                         )
-                    ig_obj = page.get("instagram_business_account") or page.get("connected_instagram_account") or {}
+                    ig_obj = page.get("instagram_business_account") or {}
                     if isinstance(ig_obj, dict):
                         ig_id = str(ig_obj.get("id") or "").strip()
                         ig_user = str(ig_obj.get("username") or ig_obj.get("name") or "").strip()
-                        if ig_id and ig_id not in seen_ig_ids:
+                        if ig_id and page_id and page_token and ig_id not in seen_ig_ids:
                             seen_ig_ids.add(ig_id)
                             ig_handle = f"@{ig_user.lstrip('@')}" if ig_user else f"@{page_name.replace(' ', '_').lower()}"
                             discovered_ig_accounts.append(
@@ -959,42 +1089,34 @@ async def handle_meta_oauth_callback(
         error_detail = str(exc)
 
     session_key = uuid.uuid4().hex
+    candidates = discovered_ig_accounts if requested_platform == "instagram" else discovered_pages
+    # Keep Page tokens server-side; never embed access tokens in popup HTML/JavaScript.
     _pending_meta_oauth_sessions[session_key] = {
         "business_id": business_id,
         "requested_platform": requested_platform,
         "user_access_token": user_access_token,
         "me_id": me_id,
         "me_name": me_name,
+        "candidates": candidates,
+        "created_at": time.time(),
     }
+    for old_key, old_session in list(_pending_meta_oauth_sessions.items()):
+        if time.time() - float(old_session.get("created_at", 0)) > 600:
+            _pending_meta_oauth_sessions.pop(old_key, None)
 
-    # Determinar candidatos según el botón que pulsó el usuario (Instagram o Facebook)
-    candidates = discovered_ig_accounts if requested_platform == "instagram" else discovered_pages
     platform_title = "Instagram Direct" if requested_platform == "instagram" else "Facebook Messenger"
     accent_gradient = (
         "linear-gradient(135deg,#f43f5e,#a855f7)"
         if requested_platform == "instagram"
         else "linear-gradient(135deg,#3b82f6,#1d4ed8)"
     )
-
-    # Si hay exactamente 1 cuenta/página descubierta para ese canal, la dejamos conectada de una vez
-    # pero le mostramos la pantalla de confirmación para que vea qué cuenta quedó activa o pueda cambiarla.
-    auto_connected_item: dict[str, str] | None = None
-    if len(candidates) == 1 and not error_detail:
-        auto_connected_item = candidates[0]
-        try:
-            await _activate_meta_account_in_db(
-                business_id=business_id,
-                platform=requested_platform,
-                account_name=auto_connected_item["name"],
-                page_or_ig_id=auto_connected_item["id"],
-                access_token=auto_connected_item["access_token"],
-                subscribe_page_id=auto_connected_item.get("page_id") or auto_connected_item["id"],
-            )
-        except Exception as act_exc:
-            logger.warning("Auto-connect warning: %s", act_exc)
-
-    candidates_json = json.dumps(candidates)
-    auto_connected_json = json.dumps(auto_connected_item)
+    safe_me_name = html.escape(me_name)
+    public_candidates = [
+        {"id": item.get("id", ""), "name": item.get("name", ""),
+         "page_name": item.get("page_name", ""), "page_id": item.get("page_id", "")}
+        for item in candidates
+    ]
+    candidates_json = json.dumps(public_candidates)
 
     return HTMLResponse(
         f"""<!doctype html>
@@ -1058,21 +1180,12 @@ async def handle_meta_oauth_callback(
   <span class="pill">{platform_title}</span>
   <h2>Selecciona la cuenta que quedará activa</h2>
   <p class="sub">
-    Sesión de Meta: <strong style="color:#e2e8f0;">{me_name}</strong>.
-    Elige la cuenta o página donde responderá el Cerebro IA de tu negocio:
+    Sesión autorizada: <strong style="color:#e2e8f0;">{safe_me_name}</strong>.
+    Selecciona una cuenta realmente devuelta por Meta para activar el canal:
   </p>
 
   <div id="accounts-list"></div>
 
-  <div id="direct-box" style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(148,163,184,0.14);">
-    <label style="display:block;font-size:12px;color:#cbd5e1;font-weight:600;margin-bottom:6px;">
-      {"¿Tu cuenta de Instagram no aparece en la lista? Escribe el @usuario que quedará activo:" if requested_platform == "instagram" else "¿Tu Página de Facebook no aparece arriba? Escribe el nombre de tu Página para dejarla activa:"}
-    </label>
-    <div style="display:flex;gap:8px;">
-      <input id="manual-account-input" class="input-box" style="margin-bottom:0;" placeholder="{"@tu_cuenta_instagram" if requested_platform == "instagram" else "Nombre de tu Página de Facebook"}" value="{(auto_connected_item['name'] if auto_connected_item else '')}">
-      <button type="button" class="btn-primary" onclick="activateCustomAccount()">Activar cuenta</button>
-    </div>
-  </div>
 
   <div id="status-msg" class="status-msg"></div>
 
@@ -1086,61 +1199,42 @@ async def handle_meta_oauth_callback(
 const SESSION_KEY = {json.dumps(session_key)};
 const PLATFORM = {json.dumps(requested_platform)};
 const CANDIDATES = {candidates_json};
-const AUTO_CONNECTED = {auto_connected_json};
 const ERROR_DETAIL = {json.dumps(error_detail)};
 
 const listEl = document.getElementById('accounts-list');
 const statusEl = document.getElementById('status-msg');
 
+const PARENT_ORIGIN = {json.dumps(urllib.parse.urlsplit(os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()).scheme + "://" + urllib.parse.urlsplit(os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()).netloc)};
+function escapeHtml(value) {{
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[ch]));
+}}
 function notifyParentAndClose(accountName, message) {{
-  if (window.opener) {{
+  if (window.opener && PARENT_ORIGIN) {{
     window.opener.postMessage({{
-      type: 'META_CONNECTED',
-      status: 'ok',
-      platform: PLATFORM,
-      account_name: accountName,
-      message: message || 'Cuenta conectada y lista para responder con IA.'
-    }}, '*');
+      type: 'META_CONNECTED', status: 'ok', platform: PLATFORM,
+      account_name: accountName, message: message || 'Cuenta conectada y lista para responder con IA.'
+    }}, PARENT_ORIGIN);
   }}
   setTimeout(() => window.close(), 700);
 }}
-
-async function selectAccount(id, name, token) {{
+async function selectAccount(id, name) {{
   statusEl.style.color = '#38bdf8';
   statusEl.textContent = 'Activando ' + name + ' en CALYRISIA...';
   try {{
     const res = await fetch('/api/v1/auth/meta/select-account', {{
-      method: 'POST',
-      headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{
-        session_key: SESSION_KEY,
-        platform: PLATFORM,
-        page_or_ig_id: id,
-        account_name: name,
-        access_token: token || ''
-      }})
+      method: 'POST', headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ session_key: SESSION_KEY, platform: PLATFORM, page_or_ig_id: id, account_name: name }})
     }});
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'No se pudo activar la cuenta.');
-    statusEl.style.color = '#34d399';
-    statusEl.textContent = data.message || '¡Cuenta activada con éxito!';
-    notifyParentAndClose(data.account_name || name, data.message);
+    statusEl.style.color = data.ready ? '#34d399' : '#fbbf24';
+    statusEl.textContent = data.message || 'Resultado de la vinculación recibido.';
+    if (data.ready) notifyParentAndClose(data.account_name || name, data.message);
   }} catch (err) {{
     statusEl.style.color = '#fda4af';
     statusEl.textContent = err.message;
   }}
 }}
-
-function activateCustomAccount() {{
-  const val = (document.getElementById('manual-account-input')?.value || '').trim();
-  if (!val) {{
-    statusEl.style.color = '#fda4af';
-    statusEl.textContent = 'Escribe el usuario o nombre de la cuenta que deseas dejar activa.';
-    return;
-  }}
-  selectAccount('meta_' + PLATFORM + '_' + Date.now(), val, '');
-}}
-
 if (ERROR_DETAIL) {{
   statusEl.style.color = '#fda4af';
   statusEl.textContent = ERROR_DETAIL;
@@ -1148,38 +1242,19 @@ if (ERROR_DETAIL) {{
 
 if (CANDIDATES.length > 0) {{
   listEl.innerHTML = CANDIDATES.map((item, idx) => {{
-    const sub = item.page_name ? ('Página vinculada: ' + item.page_name) : ('ID: ' + item.id);
+    const sub = item.page_name ? ('Página vinculada: ' + escapeHtml(item.page_name)) : ('ID: ' + escapeHtml(item.id));
     return `<div class="account-option">
-      <div>
-        <strong>${{item.name}}</strong>
-        <small>${{sub}}</small>
-      </div>
+      <div><strong>${{escapeHtml(item.name)}}</strong><small>${{sub}}</small></div>
       <button type="button" class="btn-primary" id="cand-btn-${{idx}}">Conectar y activar</button>
     </div>`;
   }}).join('');
   CANDIDATES.forEach((item, idx) => {{
-    document.getElementById('cand-btn-' + idx)?.addEventListener('click', () => {{
-      selectAccount(item.id, item.name, item.access_token || '');
-    }});
+    document.getElementById('cand-btn-' + idx)?.addEventListener('click', () => selectAccount(item.id, item.name));
   }});
 }} else {{
   listEl.innerHTML = `<div style="padding:12px 14px;border-radius:12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.28);color:#fde68a;font-size:12.5px;margin-bottom:10px;">
-    Meta inició sesión correctamente, pero no devolvió páginas comerciales asociadas en este perfil. Puedes elegir otra cuenta con el botón inferior o activar tu cuenta directamente abajo.
+    Meta no devolvió cuentas autorizadas para este canal. No se creará una conexión ficticia. Comprueba que elegiste los activos correctos en Unified Login, que la cuenta de Instagram es Profesional y que está vinculada a una Página; después vuelve a iniciar sesión.
   </div>`;
-}}
-
-if (AUTO_CONNECTED) {{
-  statusEl.style.color = '#34d399';
-  statusEl.textContent = '✓ Cuenta ' + AUTO_CONNECTED.name + ' detectada y lista. Pulsa "Conectar y activar" para confirmar.';
-  if (window.opener) {{
-    window.opener.postMessage({{
-      type: 'META_CONNECTED',
-      status: 'ok',
-      platform: PLATFORM,
-      account_name: AUTO_CONNECTED.name,
-      message: '✓ ' + AUTO_CONNECTED.name + ' conectada y activa con IA.'
-    }}, '*');
-  }}
 }}
 </script>
 </body>
@@ -1246,6 +1321,14 @@ async def save_meta_channel(
     page_or_ig_id = (payload.page_or_ig_id or "").strip()[:120]
     access_token = (payload.access_token or "").strip()[:600]
     verify_token = (payload.verify_token or "").strip()[:160] or META_WEBHOOK_VERIFY_TOKEN or _default_verify_token(business_id)
+
+    if platform in ("instagram", "facebook"):
+        # These channels must come from a real OAuth selection so the linked Page ID,
+        # Page token and Instagram business ID remain paired correctly.
+        raise HTTPException(
+            status_code=409,
+            detail=f"{_platform_label(platform)} se vincula con el botón OAuth del dashboard. No uses la configuración manual.",
+        )
 
     async with get_connection() as conn:
         with conn.cursor() as cur:
@@ -1321,14 +1404,42 @@ async def toggle_meta_channel(
     await ensure_meta_social_schema()
     business_id = str(current_user["business_id"])
     base_url = f"{request.url.scheme}://{request.url.netloc}" if request.url.netloc else ""
-    status = "connected" if payload.enabled else "paused"
+    result_error = None
+    enabled = bool(payload.enabled)
+    status = "connected" if enabled else "paused"
     async with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """UPDATE public.business_meta_channels
-                   SET enabled = %s, channel_status = %s, updated_at = now()
+                """SELECT account_name, page_or_ig_id, parent_page_id, access_token
+                   FROM public.business_meta_channels
                    WHERE business_id = %s::uuid AND platform = %s""",
-                (payload.enabled, status, business_id, platform),
+                (business_id, platform),
+            )
+            existing = cur.fetchone()
+            if not existing:
+                raise HTTPException(status_code=404, detail=f"Primero vincula tu cuenta de {_platform_label(platform)}.")
+            if enabled:
+                account_id, parent_page_id, access_token = str(existing[1] or ""), str(existing[2] or ""), str(existing[3] or "")
+                if platform in ("instagram", "facebook"):
+                    page_id = parent_page_id or (account_id if platform == "facebook" else "")
+                    ready, result_error = await _subscribe_meta_webhook(platform=platform, page_id=page_id, access_token=access_token)
+                    if not ready:
+                        enabled = False
+                        status = "pending_webhook"
+                    elif not access_token or not account_id:
+                        enabled = False
+                        status = "pending_webhook"
+                        result_error = "Falta el ID de la cuenta o el token de Meta. Desvincula y vuelve a autorizar el canal."
+                else:
+                    # WhatsApp Cloud has its own WABA subscription flow; leave its existing toggle semantics unchanged.
+                    result_error = None
+            else:
+                status = "paused"
+            cur.execute(
+                """UPDATE public.business_meta_channels
+                   SET enabled = %s, channel_status = %s, last_error = %s, updated_at = now()
+                   WHERE business_id = %s::uuid AND platform = %s""",
+                (enabled, status, result_error, business_id, platform),
             )
             cur.execute(
                 """SELECT enabled, channel_status, account_name, page_or_ig_id,
@@ -1339,12 +1450,16 @@ async def toggle_meta_channel(
             )
             row = cur.fetchone()
         conn.commit()
-    if not row:
-        raise HTTPException(status_code=404, detail=f"Primero vincula tu cuenta de {_platform_label(platform)}.")
+    if enabled:
+        message = f"{_platform_label(platform)} activado; Meta confirmó la suscripción del webhook."
+    elif payload.enabled:
+        message = f"La cuenta sigue guardada, pero no se activó porque Meta no confirmó el webhook: {result_error or 'verifica permisos y configuración.'}"
+    else:
+        message = f"{_platform_label(platform)} está en pausa."
     return {
         "success": True,
-        "enabled": payload.enabled,
-        "message": f"{_platform_label(platform)} {'activado' if payload.enabled else 'en pausa'}.",
+        "enabled": enabled,
+        "message": message,
         "channel": _channel_row_to_dict(business_id, platform, row, base_url),
     }
 
@@ -1597,7 +1712,7 @@ async def receive_global_meta_webhook_handler(
 ) -> PlainTextResponse:
     try:
         raw_body = await request.body()
-        app_secret = os.getenv("META_APP_SECRET", META_APP_SECRET).strip()
+        app_secret = os.getenv("META_APP_SECRET", "").strip() or META_APP_SECRET
         signature = request.headers.get("X-Hub-Signature-256", "").strip()
         if app_secret:
             expected = "sha256=" + hmac.new(app_secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()

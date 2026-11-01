@@ -3512,8 +3512,16 @@ async function loadMetaSocialChannels(fillInputs = false) {
             const toggleBtn = document.getElementById(`${prefix}-toggle-btn`);
             const disconnectBtn = document.getElementById(`${prefix}-disconnect-btn`);
 
+            const pendingMetaSetup = info.configured && info.channel_status === 'pending_webhook';
+            const hasMetaError = Boolean(info.last_error);
             if (badge) {
-                if (info.configured && info.enabled) {
+                if (pendingMetaSetup) {
+                    badge.textContent = 'Cuenta vinculada · Webhook pendiente';
+                    badge.className = 'badge warning';
+                } else if (info.configured && info.enabled && hasMetaError) {
+                    badge.textContent = 'Conectado · Revisar último error';
+                    badge.className = 'badge warning';
+                } else if (info.configured && info.enabled) {
                     badge.innerHTML = '<span class="status-dot-live"></span> Conectado · IA Activa';
                     badge.className = 'badge success';
                 } else if (info.configured && !info.enabled) {
@@ -3525,11 +3533,15 @@ async function loadMetaSocialChannels(fillInputs = false) {
                 }
             }
             if (summary) {
-                if (info.configured) {
+                if (pendingMetaSetup) {
+                    summary.innerHTML = `<strong style="color:#fbbf24;">Cuenta vinculada: ${escapeHtml(info.account_name)}</strong> · Meta no confirmó la suscripción de la Página. ${escapeHtml(info.last_error || 'Pulsa Reanudar IA para volver a intentarlo.')}`;
+                } else if (info.configured && hasMetaError) {
+                    summary.innerHTML = `<strong style="color:#fbbf24;">Cuenta vinculada: ${escapeHtml(info.account_name)}</strong> · ${info.enabled ? 'La IA está activa, pero el último envío a Meta falló:' : 'Último error de Meta:'} ${escapeHtml(info.last_error)}`;
+                } else if (info.configured) {
                     summary.innerHTML = `<strong style="color:#34d399;">✓ Cuenta vinculada:</strong> ${escapeHtml(info.account_name)} · ${info.enabled ? 'El Cerebro IA responde automáticamente los mensajes entrantes.' : 'Respuestas automáticas en pausa.'}`;
                 } else {
                     summary.innerHTML = platform === 'instagram'
-                        ? 'Pulsa <strong>Vincular Instagram</strong> para iniciar sesión con tu cuenta comercial y dejar activo el Cerebro IA.'
+                        ? 'Pulsa <strong>Vincular Instagram</strong> para autorizar la cuenta profesional mediante el inicio unificado de Meta.'
                         : 'Pulsa <strong>Vincular Facebook</strong> para iniciar sesión, seleccionar tu Página comercial y activar Messenger.';
                 }
             }
@@ -3540,7 +3552,7 @@ async function loadMetaSocialChannels(fillInputs = false) {
             }
             if (toggleBtn) {
                 toggleBtn.disabled = !info.configured;
-                toggleBtn.innerHTML = info.enabled ? '<i class="ph ph-pause"></i> Pausar IA' : '<i class="ph ph-play"></i> Reanudar IA';
+                toggleBtn.innerHTML = info.enabled ? '<i class="ph ph-pause"></i> Pausar IA' : (info.channel_status === 'pending_webhook' ? '<i class="ph ph-arrow-clockwise"></i> Reintentar webhook' : '<i class="ph ph-play"></i> Reanudar IA');
             }
             if (disconnectBtn) {
                 disconnectBtn.style.display = info.configured ? 'inline-flex' : 'none';
@@ -3651,7 +3663,7 @@ async function openMetaOAuthPopup(platform) {
 }
 
 window.addEventListener('message', async (event) => {
-    if (!event.data || event.data.type !== 'META_CONNECTED') return;
+    if (event.origin !== window.location.origin || !event.data || event.data.type !== 'META_CONNECTED') return;
     if (event.data.status === 'ok') {
         showToast(event.data.message || '✓ Cuenta de Meta conectada y respondiendo con IA.');
     } else {
@@ -3761,7 +3773,10 @@ async function toggleMetaChannelState(platform) {
             body: JSON.stringify({ enabled: !current.enabled })
         });
         showToast(data.message || 'Estado actualizado.');
-        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = '#6ee7b7'; }
+        if (msgEl) {
+            msgEl.textContent = data.message || '';
+            msgEl.style.color = data.enabled ? '#6ee7b7' : (data.channel?.channel_status === 'pending_webhook' ? '#fbbf24' : '#cbd5e1');
+        }
         await loadMetaSocialChannels(false);
         await loadDashboardChannels();
     } catch (e) {
@@ -4177,7 +4192,7 @@ async function toggleWhatsAppChannel() {
             body: JSON.stringify({ enabled: !current.enabled })
         });
         showToast(data.message || 'Estado de WhatsApp actualizado.');
-        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = '#6ee7b7'; }
+        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = data.enabled === false && current.enabled === false ? '#fbbf24' : (data.enabled === false ? '#fbbf24' : '#6ee7b7'); }
         await loadWhatsAppChannel();
         await loadDashboardChannels();
     } catch (e) {
