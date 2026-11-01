@@ -1,0 +1,22 @@
+CALYRISIA — Tu negocio, con inteligencia propia
+
+CALYRISIA es una plataforma de gestión con inteligencia artificial que conecta la atención al cliente con las operaciones del negocio. Ayuda a organizar productos y servicios, pedidos, clientes, inventario, citas, reservas y solicitudes de pago desde un mismo entorno, con una experiencia adaptada al tipo de empresa.
+
+¿Qué puede hacer CALYRISIA en esta versión?
+
+• Atender consultas comerciales en los canales configurados y consultar el catálogo e información disponible del negocio.
+• Detectar posibles oportunidades comerciales a partir de mensajes entrantes con señales de compra y registrarlas automáticamente en Clientes y ventas, sin exigir que el propietario cree cada prospecto a mano.
+• Conservar el contexto de las oportunidades detectadas, mostrar su origen y mantener el permiso de contacto sin confirmar hasta que el negocio lo revise.
+• Centralizar clientes, intereses, etapas de venta, recordatorios, notas e historial de actividad en un centro comercial sencillo.
+• Mostrar Prioridades: una lista breve de los asuntos que requieren atención, como productos bajos, pagos pendientes de revisión, citas por confirmar, recordatorios vencidos, conversaciones sin pedido registrado y caídas semanales de ventas cuando hay datos suficientes.
+• Explicar por qué aparece una alerta y enlazar al área donde se puede revisar. Las tareas delicadas se mantienen bajo control del propietario.
+• Preparar un mensaje de seguimiento en WhatsApp para contactos con teléfono y permiso de contacto registrado como autorizado. El mensaje se abre para que el usuario lo revise; CALYRISIA no asegura que haya sido enviado.
+• Analizar el inventario usando ventas registradas para estimar de forma aproximada cuántos días de existencias podrían quedar al ritmo reciente.
+• Gestionar citas y reservas mediante el módulo apropiado para el tipo de negocio, cuando esté disponible en el plan y configurado.
+• Recibir y organizar solicitudes de pago pendientes provenientes de canales compatibles para que el propietario las revise. La confirmación definitiva del dinero depende de la verificación en el proveedor de pago.
+• Permitir que el propietario consulte al Asistente de IA sobre la actividad, indicadores y señales del negocio usando los datos disponibles.
+• Importar productos o servicios mediante CSV, sujeto a los límites y herramientas del plan contratado.
+
+La propuesta de CALYRISIA es reducir tareas repetitivas, evitar que oportunidades comerciales se queden olvidadas y ayudar a reconocer los asuntos importantes sin revisar cada módulo por separado.
+
+La creación automática de oportunidades usa la intención guardada por el cerebro conversacional y reglas de detección comercial. Puede equivocarse y debe revisarse. No envía mensajes de seguimiento por sí sola, no confirma transferencias bancarias automáticamente y no garantiza ventas. La calidad de las alertas y previsiones depende de la información registrada y de los canales e integraciones conectados.

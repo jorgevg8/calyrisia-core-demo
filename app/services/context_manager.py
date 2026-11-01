@@ -4,8 +4,6 @@ from typing import Any
 import time
 from uuid import UUID
 
-from psycopg.errors import UndefinedTable
-
 from app.services.memory_service import MemoryService
 from app.services.business_type_profile_service import BusinessTypeProfileService
 from app.services.knowledge_policy_service import KnowledgePolicyService
@@ -13,13 +11,21 @@ from app.services.customer_360_service import Customer360Service
 
 
 _STATIC_CONTEXT_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
-_STATIC_CONTEXT_TTL_SECONDS = 30.0
+_STATIC_CONTEXT_TTL_SECONDS = 10.0
+
+
+def invalidate_business_context_cache(business_id: UUID | str | None = None) -> None:
+    """Immediately invalidate cached business profile/knowledge so changes take effect in real time."""
+    if business_id is None:
+        _STATIC_CONTEXT_CACHE.clear()
+    else:
+        _STATIC_CONTEXT_CACHE.pop(str(business_id), None)
 
 
 class ContextManager:
-    """Builds the minimum useful context for a Galaxy decision."""
+    """Builds the isolated, real-time Business Brain context for a tenant."""
 
-    def __init__(self, conn):
+    def __init__(self, conn: Any = None):
         self.conn = conn
         self.memory = MemoryService(conn)
         self.business_type_profiles = BusinessTypeProfileService(conn)
@@ -31,7 +37,8 @@ class ContextManager:
             cur.execute(
                 """
                 SELECT id, name, legal_name, business_type, description,
-                       phone, email, website, timezone, currency, status
+                       phone, email, website, timezone, currency, status,
+                       COALESCE(to_jsonb(businesses)->>'plan_code', 'free') AS plan_code
                 FROM businesses
                 WHERE id = %s
                 """,
@@ -52,6 +59,7 @@ class ContextManager:
             "timezone": row[8],
             "currency": row[9],
             "status": row[10],
+            "plan_code": row[11],
         }
 
     def _get_profile(self, business_id: UUID) -> dict[str, Any] | None:
@@ -91,7 +99,6 @@ class ContextManager:
         try:
             return self.knowledge_policy.for_context(business_id, limit=limit)
         except Exception:
-            # Context building must remain resilient if the Step 43 table is not migrated yet.
             return []
 
     def _get_customer(self, business_id: UUID, customer_id: UUID | None) -> dict[str, Any] | None:
@@ -186,7 +193,7 @@ class ContextManager:
         business_id: UUID,
         customer_id: UUID | None = None,
         conversation_id: UUID | None = None,
-        memory_limit: int = 5,
+        memory_limit: int = 8,
         include_customer_360: bool = False,
     ) -> dict[str, Any]:
         cache_key = str(business_id)

@@ -30,6 +30,22 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-3.8-flash
+      - key: TELEGRAM_API_ID
+        sync: false
+      - key: TELEGRAM_API_HASH
+        sync: false
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_CONFIG_ID
+        sync: false
+      - key: META_REDIRECT_URI
+        value: https://calyrisia.com/api/auth/meta/callback
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: META_GRAPH_API_VERSION
+        value: v26.0
       - key: GALAXY_JWT_SECRET
         generateValue: true
       - key: GALAXY_JWT_ALGORITHM

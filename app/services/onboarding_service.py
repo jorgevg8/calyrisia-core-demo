@@ -5,9 +5,20 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
-import psycopg
-from psycopg import sql
-from psycopg.types.json import Jsonb
+try:
+    import psycopg
+except Exception:
+    psycopg = None  # type: ignore
+try:
+    from psycopg import sql
+except Exception:
+    sql = None  # type: ignore
+try:
+    from psycopg.types.json import Jsonb
+except Exception:  # pragma: no cover
+    class Jsonb:  # type: ignore
+        def __init__(self, val):
+            self.val = val
 
 from app.core.security import get_password_hash
 from app.services.audit_service import AuditService

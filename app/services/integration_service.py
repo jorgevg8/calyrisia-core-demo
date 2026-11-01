@@ -1,6 +1,9 @@
 import json
 from uuid import UUID, uuid4
-from psycopg2.extras import RealDictCursor
+try:
+    from psycopg2.extras import RealDictCursor
+except Exception:
+    RealDictCursor = None  # type: ignore
 
 class IntegrationServiceError(Exception):
     pass

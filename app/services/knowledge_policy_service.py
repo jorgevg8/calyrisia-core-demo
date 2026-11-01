@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
-from psycopg.types.json import Jsonb
+try:
+    from psycopg.types.json import Jsonb
+except Exception:  # pragma: no cover
+    class Jsonb:  # type: ignore
+        def __init__(self, val):
+            self.val = val
 
 
 class KnowledgePolicyError(Exception):

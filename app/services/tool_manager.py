@@ -1,16 +1,22 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-import psycopg
-from psycopg.types.json import Jsonb
+try:
+    from psycopg.types.json import Jsonb
+except Exception:  # pragma: no cover
+    class Jsonb:  # type: ignore
+        def __init__(self, val):
+            self.val = val
 
-from app.services.tool_registry import get_tool
 from app.services.permission_service import PermissionService
 from app.services.tenant_guard import TenantGuard, TenantIsolationError
+from app.services.tool_registry import get_tool
 
 
 class ToolExecutionError(Exception):
@@ -33,9 +39,9 @@ def _json_safe(value: Any) -> Any:
 
 
 class ToolManager:
-    """Registry + permission validation + execution layer for Galaxy tools."""
+    """Registry + permission validation + idempotency + execution layer for CALYRISIA tools."""
 
-    def __init__(self, conn):
+    def __init__(self, conn: Any = None):
         self.conn = conn
         self.tenant = TenantGuard(conn)
 
@@ -48,6 +54,74 @@ class ToolManager:
             return UUID(str(value))
         except ValueError as exc:
             raise ToolExecutionError(f"Invalid UUID for {key}") from exc
+
+    def _check_idempotency(
+        self,
+        *,
+        business_id: UUID,
+        tool_name: str,
+        inputs: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """Prevent duplicate execution of the same non-read tool operation when an idempotency_key is provided."""
+        idem_key = str(inputs.get("idempotency_key") or "").strip()
+        if not idem_key:
+            return None
+        scoped_key = hashlib.sha256(f"{business_id}:{tool_name}:{idem_key}".encode("utf-8")).hexdigest()[:64]
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("SAVEPOINT sp_tool_idem")
+                cur.execute(
+                    """
+                    SELECT response_data FROM public.idempotency_keys
+                    WHERE business_id = %s AND idempotency_key = %s
+                    LIMIT 1
+                    """,
+                    (business_id, scoped_key),
+                )
+                row = cur.fetchone()
+                cur.execute("RELEASE SAVEPOINT sp_tool_idem")
+                if row and row[0]:
+                    data = row[0] if isinstance(row[0], dict) else json.loads(str(row[0]))
+                    return {**data, "idempotent_replay": True}
+        except Exception:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("ROLLBACK TO SAVEPOINT sp_tool_idem")
+            except Exception:
+                pass
+        return None
+
+    def _store_idempotency(
+        self,
+        *,
+        business_id: UUID,
+        tool_name: str,
+        inputs: dict[str, Any],
+        response_payload: dict[str, Any],
+    ) -> None:
+        idem_key = str(inputs.get("idempotency_key") or "").strip()
+        if not idem_key:
+            return
+        scoped_key = hashlib.sha256(f"{business_id}:{tool_name}:{idem_key}".encode("utf-8")).hexdigest()[:64]
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("SAVEPOINT sp_tool_idem_save")
+                cur.execute(
+                    """
+                    INSERT INTO public.idempotency_keys (business_id, idempotency_key, action_name, response_data)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (idempotency_key) DO NOTHING
+                    """,
+                    (business_id, scoped_key, tool_name, Jsonb(_json_safe(response_payload))),
+                )
+                cur.execute("RELEASE SAVEPOINT sp_tool_idem_save")
+            self.conn.commit()
+        except Exception:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("ROLLBACK TO SAVEPOINT sp_tool_idem_save")
+            except Exception:
+                pass
 
     def execute(
         self,
@@ -73,7 +147,9 @@ class ToolManager:
                 "get_inventory": ("product", inputs.get("product_id")),
                 "get_order": ("order", inputs.get("order_id")),
                 "create_order": ("customer", inputs.get("customer_id")),
-                # [PASO 35] Añadimos la protección del tenant para handoff
+                "prepare_order": ("customer", inputs.get("customer_id")),
+                "capture_customer_lead": ("customer", inputs.get("customer_id")),
+                "issue_refund": ("order", inputs.get("order_id")),
                 "request_human_handoff": ("conversation", inputs.get("conversation_id")),
             }
             for name, (rtype, rid) in resource_map.items():
@@ -81,21 +157,30 @@ class ToolManager:
                     self.tenant.require_resource(
                         business_id=business_id, resource_type=rtype, resource_id=UUID(str(rid))
                     )
-            if tool_name in {"get_product", "get_inventory", "create_order", "update_inventory"} and inputs.get("product_id") is not None:
+            if tool_name in {"get_product", "get_inventory", "create_order", "prepare_order", "update_inventory"} and inputs.get("product_id") is not None:
                 self.tenant.require_resource(
                     business_id=business_id, resource_type="product", resource_id=UUID(str(inputs["product_id"]))
                 )
         except (TenantIsolationError, ValueError) as exc:
             raise ToolExecutionError(f"Tenant isolation violation: {exc}") from exc
 
+        # Check idempotency before executing or creating duplicate approvals
+        if tool["action_type"] != "read":
+            cached_idem = self._check_idempotency(business_id=business_id, tool_name=tool_name, inputs=inputs)
+            if cached_idem is not None:
+                return cached_idem
+
         permission_service = PermissionService(self.conn)
         decision = permission_service.evaluate(
             business_id=business_id,
             resource_type=tool["resource_type"],
-            action_type=tool["action_type"],
+            action_type=tool["action_type"] if tool["action_type"] != "prepare" else "read",
             requested_by_user_id=requested_by_user_id,
             tool_requires_approval=bool(tool.get("requires_approval")),
         )
+
+        # Level 3 tools ALWAYS require human authorization even if a generic permission row exists
+        requires_human_approval = bool(decision.requires_approval or tool.get("autonomy_level") == "L3" or tool.get("requires_approval"))
 
         action_id = self._record_action_requested(
             business_id=business_id,
@@ -107,7 +192,7 @@ class ToolManager:
                 "rejected"
                 if not decision.allowed
                 else "waiting_approval"
-                if decision.requires_approval
+                if requires_human_approval
                 else "validated"
             ),
             reason=decision.reason,
@@ -127,16 +212,19 @@ class ToolManager:
                 reason=decision.reason,
                 before_data={},
                 after_data={},
-                metadata={"permission_id": str(decision.permission_id) if decision.permission_id else None},
+                metadata={
+                    "permission_id": str(decision.permission_id) if decision.permission_id else None,
+                    "autonomy_level": tool.get("autonomy_level", "L1"),
+                },
             )
             raise ToolExecutionError(decision.reason)
 
-        if decision.requires_approval:
+        if requires_human_approval:
             approval_id = self._create_approval(
                 business_id=business_id,
                 action_id=action_id,
                 requested_by_user_id=requested_by_user_id,
-                reason=decision.reason,
+                reason=decision.reason or f"Acción Nivel 3 ({tool_name}) requiere autorización humana.",
             )
             self._write_audit_log(
                 business_id=business_id,
@@ -154,12 +242,14 @@ class ToolManager:
                 metadata={
                     "permission_id": str(decision.permission_id) if decision.permission_id else None,
                     "approval_id": str(approval_id),
+                    "autonomy_level": tool.get("autonomy_level", "L3"),
                 },
             )
-            return {
+            waiting_payload = {
                 "success": True,
                 "action_id": action_id,
                 "status": "waiting_approval",
+                "autonomy_level": tool.get("autonomy_level", "L3"),
                 "approval_id": approval_id,
                 "permission": {
                     "allowed": True,
@@ -173,39 +263,60 @@ class ToolManager:
                 "resource_type": tool["resource_type"],
                 "resource_id": None,
             }
+            self._store_idempotency(business_id=business_id, tool_name=tool_name, inputs=inputs, response_payload=waiting_payload)
+            return waiting_payload
 
-        # [PASO 35] Permitimos la ejecución de la herramienta de handoff
-        if tool["action_type"] != "read" and tool_name != "request_human_handoff":
+        allowed_auto_tools = {
+            "get_business_profile",
+            "get_customer",
+            "get_product",
+            "search_catalog",
+            "get_inventory",
+            "get_order",
+            "request_human_handoff",
+            "prepare_order",
+            "capture_customer_lead",
+        }
+        if tool_name not in allowed_auto_tools:
             raise ToolExecutionError(
-                f"Tool '{tool_name}' is authorized but its execution is not implemented yet."
+                f"Tool '{tool_name}' is authorized but its execution requires explicit approval workflow."
             )
 
         self._set_action_validated_to_executing(action_id)
 
         try:
-            # [PASO 35] Lógica de ejecución del Handoff
             if tool_name == "request_human_handoff":
                 conversation_id = self._require_uuid(inputs, "conversation_id")
                 reason = inputs.get("reason", "El cliente ha solicitado hablar con un humano")
-                
                 from app.services.conversation_service import ConversationService
+
                 conv_service = ConversationService(self.conn)
-                
                 result = conv_service.handoff(
                     business_id=business_id,
                     conversation_id=conversation_id,
                     reason=reason,
-                    actor="galaxy_brain"
+                    actor="galaxy_brain",
                 )
                 resource_type = "conversation"
                 resource_id = conversation_id
+            elif tool_name == "prepare_order":
+                result, resource_type, resource_id = self._execute_prepare_order(
+                    business_id=business_id,
+                    inputs=inputs,
+                    requested_by_user_id=requested_by_user_id,
+                )
+            elif tool_name == "capture_customer_lead":
+                result, resource_type, resource_id = self._execute_capture_lead(
+                    business_id=business_id,
+                    inputs=inputs,
+                )
             else:
                 result, resource_type, resource_id = self._execute_read_tool(
                     business_id=business_id,
                     tool_name=tool_name,
                     inputs=inputs,
                 )
-                
+
             safe_result = _json_safe(result)
             self._complete_action(
                 action_id=action_id,
@@ -225,12 +336,16 @@ class ToolManager:
                 reason=decision.reason,
                 before_data={},
                 after_data=safe_result,
-                metadata={"permission_id": str(decision.permission_id) if decision.permission_id else None},
+                metadata={
+                    "permission_id": str(decision.permission_id) if decision.permission_id else None,
+                    "autonomy_level": tool.get("autonomy_level", "L1"),
+                },
             )
-            return {
+            completed_payload = {
                 "success": True,
                 "action_id": action_id,
                 "status": "completed",
+                "autonomy_level": tool.get("autonomy_level", "L1"),
                 "permission": {
                     "allowed": True,
                     "requires_approval": False,
@@ -243,6 +358,9 @@ class ToolManager:
                 "resource_type": resource_type,
                 "resource_id": resource_id,
             }
+            if tool["action_type"] != "read":
+                self._store_idempotency(business_id=business_id, tool_name=tool_name, inputs=inputs, response_payload=completed_payload)
+            return completed_payload
         except Exception as exc:
             self._complete_action(
                 action_id=action_id,
@@ -263,7 +381,10 @@ class ToolManager:
                 reason=str(exc),
                 before_data={},
                 after_data={},
-                metadata={"permission_id": str(decision.permission_id) if decision.permission_id else None},
+                metadata={
+                    "permission_id": str(decision.permission_id) if decision.permission_id else None,
+                    "autonomy_level": tool.get("autonomy_level", "L1"),
+                },
             )
             if isinstance(exc, ToolExecutionError):
                 raise
@@ -280,6 +401,13 @@ class ToolManager:
         initial_status: str,
         reason: str,
     ) -> UUID:
+        # Map L1/L2/L3 to DB check constraint values if actions table restricts autonomy_level
+        db_autonomy = tool.get("autonomy_level", "L1")
+        if db_autonomy not in {"L0", "L1", "L2", "L3", "L4"}:
+            db_autonomy = "L1"
+        db_action_type = tool["action_type"]
+        if db_action_type == "prepare":
+            db_action_type = "create"
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -304,10 +432,10 @@ class ToolManager:
                     business_id,
                     requested_by_user_id,
                     permission_id,
-                    tool["action_type"],
+                    db_action_type,
                     tool["resource_type"],
                     tool["name"],
-                    tool["autonomy_level"],
+                    db_autonomy,
                     tool["risk_level"],
                     initial_status,
                     Jsonb(inputs),
@@ -439,6 +567,39 @@ class ToolManager:
             )
         self.conn.commit()
 
+    def _execute_prepare_order(
+        self,
+        *,
+        business_id: UUID,
+        inputs: dict[str, Any],
+        requested_by_user_id: UUID | None,
+    ) -> tuple[dict[str, Any], str, UUID | None]:
+        customer_id = self._require_uuid(inputs, "customer_id")
+        items = inputs.get("items") or []
+        if not isinstance(items, list) or not items:
+            raise ToolExecutionError("prepare_order requires a non-empty items list")
+        from app.services.sales_service import SalesService
+
+        prep = SalesService(self.conn).prepare_order(
+            business_id=business_id,
+            customer_id=customer_id,
+            items=items,
+            source=str(inputs.get("source") or "webchat"),
+            requested_by_user_id=requested_by_user_id,
+        )
+        return prep, "order", customer_id
+
+    def _execute_capture_lead(
+        self,
+        *,
+        business_id: UUID,
+        inputs: dict[str, Any],
+    ) -> tuple[dict[str, Any], str, UUID | None]:
+        from app.services.growth_radar_service import GrowthRadarService
+
+        synced = GrowthRadarService(self.conn).sync_auto_opportunities(business_id=business_id)
+        return synced, "customer", None
+
     def _execute_read_tool(
         self,
         *,
@@ -454,6 +615,9 @@ class ToolManager:
         if tool_name == "get_product":
             product_id = self._require_uuid(inputs, "product_id")
             return self._get_product(business_id, product_id), "product", product_id
+        if tool_name == "search_catalog":
+            query = str(inputs.get("query") or "").strip()
+            return self._search_catalog(business_id, query), "product", None
         if tool_name == "get_inventory":
             product_id = self._require_uuid(inputs, "product_id")
             return self._get_inventory(business_id, product_id), "inventory", product_id
@@ -461,6 +625,67 @@ class ToolManager:
             order_id = self._require_uuid(inputs, "order_id")
             return self._get_order(business_id, order_id), "order", order_id
         raise ToolExecutionError(f"Read tool not implemented: {tool_name}")
+
+    def _search_catalog(self, business_id: UUID, query: str = "") -> dict[str, Any]:
+        with self.conn.cursor() as cur:
+            if query:
+                like_q = f"%{query}%"
+                cur.execute(
+                    """
+                    SELECT p.id, p.name, p.sku, p.description, p.category, p.brand,
+                           p.price, p.status, p.is_service,
+                           COALESCE(SUM(i.quantity), 0) AS stock,
+                           COALESCE(to_jsonb(p)->'variants', '[]'::jsonb) AS variants,
+                           COALESCE(to_jsonb(p)->'attributes', '{}'::jsonb) AS attributes
+                    FROM products p
+                    LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
+                    WHERE p.business_id = %s AND p.status = 'active'
+                      AND (p.name ILIKE %s OR COALESCE(p.sku, '') ILIKE %s OR COALESCE(p.category, '') ILIKE %s OR COALESCE(p.brand, '') ILIKE %s)
+                    GROUP BY p.id
+                    ORDER BY p.name
+                    LIMIT 25
+                    """,
+                    (business_id, like_q, like_q, like_q, like_q),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT p.id, p.name, p.sku, p.description, p.category, p.brand,
+                           p.price, p.status, p.is_service,
+                           COALESCE(SUM(i.quantity), 0) AS stock,
+                           COALESCE(to_jsonb(p)->'variants', '[]'::jsonb) AS variants,
+                           COALESCE(to_jsonb(p)->'attributes', '{}'::jsonb) AS attributes
+                    FROM products p
+                    LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
+                    WHERE p.business_id = %s AND p.status = 'active'
+                    GROUP BY p.id
+                    ORDER BY p.name
+                    LIMIT 25
+                    """,
+                    (business_id,),
+                )
+            rows = cur.fetchall()
+        return {
+            "query": query,
+            "count": len(rows),
+            "products": [
+                {
+                    "id": str(r[0]),
+                    "name": r[1],
+                    "sku": r[2],
+                    "description": r[3],
+                    "category": r[4],
+                    "brand": r[5],
+                    "price": float(r[6]) if r[6] is not None else 0.0,
+                    "status": r[7],
+                    "is_service": bool(r[8]),
+                    "stock": float(r[9] or 0),
+                    "variants": r[10] if isinstance(r[10], list) else [],
+                    "attributes": r[11] if isinstance(r[11], dict) else {},
+                }
+                for r in rows
+            ],
+        }
 
     def _get_business_profile(self, business_id: UUID) -> dict[str, Any]:
         with self.conn.cursor() as cur:
@@ -542,7 +767,9 @@ class ToolManager:
             cur.execute(
                 """
                 SELECT id, name, sku, description, category, brand,
-                       price, cost_price, status, is_service
+                       price, cost_price, status, is_service,
+                       COALESCE(to_jsonb(products)->'variants', '[]'::jsonb) AS variants,
+                       COALESCE(to_jsonb(products)->'attributes', '{}'::jsonb) AS attributes
                 FROM products
                 WHERE id = %s AND business_id = %s
                 """,
@@ -562,6 +789,8 @@ class ToolManager:
             "cost_price": float(row[7]) if row[7] is not None else None,
             "status": row[8],
             "is_service": row[9],
+            "variants": row[10] if isinstance(row[10], list) else [],
+            "attributes": row[11] if isinstance(row[11], dict) else {},
         }
 
     def _get_inventory(self, business_id: UUID, product_id: UUID) -> dict[str, Any]:

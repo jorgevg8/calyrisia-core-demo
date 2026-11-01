@@ -281,6 +281,175 @@
             .list-item .badge { align-self: flex-start; }
             input, select, textarea { font-size: 16px !important; }
         }
+
+        /* =====================================================================
+           MODERNIZACIÓN UI CONFIGURACIÓN, OMNICANAL, COPILOTO, CARGA RÁPIDA Y MOBILE
+           ===================================================================== */
+        @keyframes pulseGlowGreen {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+            50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        }
+        @keyframes floatSubtle {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+        @keyframes shimmerBorder {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .settings-filter-bar {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px;
+            padding: 6px; border-radius: 16px; background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08); width: fit-content; max-width: 100%;
+        }
+        .settings-filter-pill {
+            padding: 9px 16px; border-radius: 11px; font-size: 12px; font-weight: 600;
+            background: transparent; color: #94a3b8; border: 1px solid transparent;
+            cursor: pointer; transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            text-transform: none; letter-spacing: 0.2px;
+        }
+        .settings-filter-pill:hover { color: #f8fafc; background: rgba(255, 255, 255, 0.05); }
+        .settings-filter-pill.active {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(139, 92, 246, 0.18));
+            color: #fff; border-color: rgba(0, 242, 254, 0.38);
+            box-shadow: 0 6px 18px -6px rgba(0, 242, 254, 0.35);
+        }
+
+        .channels-modern-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px; width: 100%; max-width: 100%; margin-bottom: 22px;
+        }
+        .channel-card {
+            position: relative; overflow: hidden; border-radius: 20px; padding: 22px;
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.78) 0%, rgba(7, 11, 22, 0.88) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
+        }
+        .channel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.65);
+        }
+        .channel-card.ch-whatsapp:hover { border-color: rgba(37, 211, 102, 0.45); box-shadow: 0 18px 38px -12px rgba(37, 211, 102, 0.18); }
+        .channel-card.ch-instagram:hover { border-color: rgba(225, 48, 108, 0.45); box-shadow: 0 18px 38px -12px rgba(225, 48, 108, 0.2); }
+        .channel-card.ch-facebook:hover { border-color: rgba(24, 119, 242, 0.45); box-shadow: 0 18px 38px -12px rgba(24, 119, 242, 0.2); }
+        .channel-card.ch-telegram:hover { border-color: rgba(42, 171, 238, 0.45); box-shadow: 0 18px 38px -12px rgba(42, 171, 238, 0.2); }
+        .channel-card.ch-webchat:hover { border-color: rgba(0, 242, 254, 0.45); box-shadow: 0 18px 38px -12px rgba(0, 242, 254, 0.2); }
+
+        .channel-icon-box {
+            width: 52px; height: 52px; border-radius: 15px; display: flex;
+            align-items: center; justify-content: center; flex-shrink: 0;
+            box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.45);
+            transition: transform 0.35s ease;
+        }
+        .channel-card:hover .channel-icon-box { transform: scale(1.07) rotate(-2deg); }
+        .channel-icon-box svg { width: 30px; height: 30px; display: block; }
+
+        .status-dot-live {
+            width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+            background: #10b981; animation: pulseGlowGreen 2s infinite; margin-right: 5px;
+        }
+
+        /* Modern Toggle Switch */
+        .modern-switch {
+            position: relative; display: inline-flex; align-items: center; gap: 10px;
+            cursor: pointer; user-select: none; font-weight: 600; font-size: 13.5px; color: #f8fafc;
+        }
+        .modern-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .modern-switch-slider {
+            width: 44px; height: 24px; background: rgba(148, 163, 184, 0.25);
+            border-radius: 999px; position: relative; transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.14); flex-shrink: 0;
+        }
+        .modern-switch-slider::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 18px; height: 18px; border-radius: 50%; background: #fff;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+        }
+        .modern-switch input:checked + .modern-switch-slider {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: rgba(52, 211, 153, 0.6);
+        }
+        .modern-switch input:checked + .modern-switch-slider::after {
+            transform: translateX(20px);
+        }
+
+        /* Prompt Tone Pills & Quick Chips */
+        .tone-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 10px; margin: 14px 0;
+        }
+        .tone-card {
+            padding: 12px 14px; border-radius: 14px; background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08); cursor: pointer;
+            transition: all 0.25s ease; text-align: left;
+        }
+        .tone-card:hover, .tone-card.active {
+            border-color: rgba(0, 242, 254, 0.45);
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(139, 92, 246, 0.08));
+            transform: translateY(-2px);
+        }
+        .tone-card strong { display: block; font-size: 12.5px; color: #f8fafc; margin-bottom: 3px; }
+        .tone-card span { display: block; font-size: 11px; color: #94a3b8; line-height: 1.4; }
+
+        .prompt-chip-bar, .copilot-chip-bar {
+            display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 12px;
+        }
+        .prompt-chip, .copilot-chip {
+            padding: 7px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 500;
+            background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbd5e1; cursor: pointer; transition: all 0.22s ease;
+            text-transform: none; letter-spacing: 0;
+        }
+        .prompt-chip:hover, .copilot-chip:hover {
+            background: rgba(0, 242, 254, 0.12); border-color: rgba(0, 242, 254, 0.4);
+            color: #fff; transform: translateY(-1px);
+        }
+
+        /* Quick Bulk Upload Tabs */
+        .bulk-tab-bar {
+            display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 10px;
+        }
+        .bulk-tab-btn {
+            padding: 8px 14px; border-radius: 10px; font-size: 12px; font-weight: 600;
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8; cursor: pointer; text-transform: none;
+        }
+        .bulk-tab-btn.active {
+            background: rgba(0, 242, 254, 0.14); border-color: rgba(0, 242, 254, 0.4); color: #00f2fe;
+        }
+
+        /* Mobile Bottom Navigation Bar */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed; bottom: 0; left: 0; right: 0; height: 66px;
+            background: rgba(5, 9, 20, 0.94); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 999; justify-content: space-around; align-items: center;
+            padding: 4px 8px env(safe-area-inset-bottom, 6px);
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
+        }
+        .mobile-bottom-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 3px; color: #94a3b8; font-size: 10px; font-weight: 600;
+            padding: 6px 10px; border-radius: 12px; cursor: pointer; transition: all 0.2s ease;
+            border: none; background: transparent; text-transform: none; letter-spacing: 0;
+        }
+        .mobile-bottom-item i { font-size: 20px; }
+        .mobile-bottom-item.active {
+            color: #00f2fe; background: rgba(0, 242, 254, 0.1);
+        }
+
+        @media (max-width: 900px) {
+            .channels-modern-grid { grid-template-columns: 1fr; }
+            .mobile-bottom-nav { display: flex; }
+            .view-section { padding-bottom: 92px !important; }
+            #floating-toast { bottom: 78px !important; right: 16px !important; left: 16px !important; }
+        }
+
     </style>
 </head>
 <body>
@@ -362,24 +531,24 @@
         </div>
         
         <div style="padding: 10px 0; flex: 1; display: flex; flex-direction: column; gap: 2px;">
-            <div class="sidebar-label">Vista de Negocio</div>
-            <div class="nav-item active" onclick="switchView('overview')"><i class="ph ph-chart-line-up"></i> Panel Ejecutivo</div>
-            <div class="nav-item" onclick="switchView('crm')"><i class="ph ph-users"></i> Clientes & Riesgo</div>
-            <div class="nav-item" id="catalog-nav-item" onclick="switchView('catalog')"><i class="ph ph-package"></i> <span>Catálogo de Productos</span></div>
-            <div class="nav-item" id="specialized-nav-item" onclick="switchView('specialized')"><i id="specialized-nav-icon" class="ph ph-storefront"></i> <span id="specialized-nav-label">Gestión del Negocio</span></div>
+            <div class="sidebar-label">Operación del Negocio</div>
+            <div class="nav-item active" onclick="switchView('overview')"><i class="ph ph-chart-line-up"></i> Resumen del Negocio</div>
+            <div class="nav-item" onclick="switchView('radar')"><i class="ph ph-radar"></i> Business Radar <span id="radar-signals-nav-badge" class="badge ai hidden" style="margin-left:auto;">0</span></div>
+            <div class="nav-item" onclick="switchView('crm')"><i class="ph ph-users"></i> Clientes & Oportunidades</div>
+            <div class="nav-item" id="catalog-nav-item" onclick="switchView('catalog')"><i class="ph ph-package"></i> <span>Productos e Inventario</span></div>
+            <div class="nav-item" id="specialized-nav-item" onclick="switchView('specialized')"><i id="specialized-nav-icon" class="ph ph-storefront"></i> <span id="specialized-nav-label">Pedidos y Solicitudes</span></div>
             <div class="nav-item" onclick="switchView('operations')"><i class="ph ph-check-square-offset"></i> Aprobaciones <span id="pending-payments-nav-badge" class="badge danger hidden" style="margin-left:auto;">0</span></div>
             
             <div class="sidebar-divider"></div>
             
-            <div class="sidebar-label">Asistencia</div>
+            <div class="sidebar-label">Inteligencia y Automatización</div>
+            <div class="nav-item" onclick="switchView('autonomy')"><i class="ph ph-cpu"></i> Operaciones Autónomas</div>
             <div class="nav-item" onclick="switchView('copilot')"><i class="ph ph-sparkle"></i> Copiloto Ejecutivo</div>
             
             <div style="margin-top: auto;">
                 <div class="sidebar-divider"></div>
-                <div class="sidebar-label">Configuración & Logs</div>
-                <div class="nav-item plan-enterprise-only" onclick="switchView('team')"><i class="ph ph-users-three"></i> Equipo</div>
-                <div class="nav-item" onclick="switchView('settings')"><i class="ph ph-plugs"></i> Canales</div>
-                <div class="nav-item plan-enterprise-only" onclick="switchView('autonomy')" style="font-size: 12px;"><i class="ph ph-terminal"></i> Developer / Auditoría IA</div>
+                <div class="sidebar-label">Sistema</div>
+                <div class="nav-item" onclick="switchView('settings')"><i class="ph ph-gear-six"></i> Configuración y Suscripción</div>
                 <div class="nav-item" onclick="window.open('/feedback', '_blank')" style="color: #c084fc; font-size: 13px;"><i class="ph-bold ph-star"></i> Dejar Feedback</div>
             </div>
         </div>
@@ -392,8 +561,9 @@
                 <span>Tenant Actual</span>
                 <strong id="display-business-id" style="font-family: monospace; font-weight: normal; color: var(--text-muted);">Cargando...</strong>
             </div>
-            <div style="display: flex; gap: 12px; align-items: center;">
-                <button class="btn-action" onclick="openBusinessWebchat()" style="padding: 8px 16px; font-size: 11px;"><i class="ph ph-chat-circle-dots"></i> Probar Webchat IA</button>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-secondary" onclick="exportExecutiveDailyCloseCsv()" style="padding: 8px 14px; font-size: 11px; border-color: rgba(52, 211, 153, 0.35); color: #6ee7b7;" title="Descargar cierre diario en CSV para Excel sin copiar datos a mano"><i class="ph ph-file-csv"></i> Cierre Diario CSV</button>
+                <button class="btn-action" onclick="openBusinessWebchat()" style="padding: 8px 16px; font-size: 11px;"><i class="ph ph-chat-circle-dots"></i> Abrir Webchat IA</button>
                 <span class="badge success" id="roleBadge" style="background: rgba(16, 185, 129, 0.1); border: none; color: #34d399;"><i class="ph ph-circle-fill" style="font-size: 8px;"></i> ONLINE</span>
                 <button class="btn-secondary" onclick="loadDashboard()" style="padding: 8px 16px;" title="Actualizar datos"><i class="ph ph-arrows-clockwise"></i></button>
                 <button class="btn-logout" onclick="logout()" style="padding: 8px 16px;" title="Cerrar sesión"><i class="ph ph-sign-out"></i></button>
@@ -461,81 +631,119 @@
             <div id="catalog-workspace"><div class="panel glass-panel"><p class="muted">Cargando catálogo oficial del negocio...</p></div></div>
         </div>
 
+        <!-- VISTA BUSINESS RADAR (INTELIGENCIA PROACTIVA VERIFICABLE) -->
+        <div id="view-radar" class="view-section">
+            <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+                <div>
+                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#00f2fe;font-weight:700;display:block;margin-bottom:6px;">INTELIGENCIA PROACTIVA Y DETECCIÓN DE OPORTUNIDADES</span>
+                    <h2>Business Radar</h2>
+                    <p class="muted">Análisis continuo basado en datos reales de tu catálogo, inventario, conversaciones, pagos y tendencias.</p>
+                </div>
+                <button class="btn-secondary" onclick="loadBusinessRadarWorkspace()"><i class="ph ph-arrows-clockwise"></i> Analizar ahora</button>
+            </div>
+            <div class="vertical-grid" id="radar-kpi-grid">
+                <div class="vertical-card">
+                    <h3><i class="ph ph-warning-octagon"></i> Stock Crítico / Agotado</h3>
+                    <div class="vertical-number" id="radar-count-stock" style="color:#fbbf24;">0</div>
+                    <p class="vertical-small">Productos que requieren reposición</p>
+                </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-Fire"></i> Alta Demanda / Catálogo</h3>
+                    <div class="vertical-number" id="radar-count-catalog" style="color:#7cecf5;">0</div>
+                    <p class="vertical-small">Artículos líderes y fichas por completar</p>
+                </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-user-focus"></i> Seguimientos y Pagos</h3>
+                    <div class="vertical-number" id="radar-count-followups" style="color:#34d399;">0</div>
+                    <p class="vertical-small">Oportunidades y cobros por atender</p>
+                </div>
+            </div>
+            <div id="radar-signals-container" class="panel glass-panel" style="padding:22px;">
+                <p class="muted">Ejecutando análisis de Business Radar...</p>
+            </div>
+        </div>
+
+        <!-- VISTA OPERACIONES AUTÓNOMAS (NIVELES DE AUTONOMÍA 1, 2 Y 3) -->
         <div id="view-autonomy" class="view-section">
-            <div class="section-header animate-fade-up">
-                <h2>Cerebro Autónomo & Logs</h2>
-                <p class="muted">Trazabilidad técnica profunda de la Inteligencia Artificial.</p>
+            <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+                <div>
+                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#c084fc;font-weight:700;display:block;margin-bottom:6px;">TRAZABILIDAD E IDEMPOTENCIA OPERATIVA</span>
+                    <h2>Automatizaciones y Operaciones Ejecutadas</h2>
+                    <p class="muted">Registro verificable de cada acción ejecutada o preparada por CALYRISIA según los 3 niveles de autonomía.</p>
+                </div>
+                <button class="btn-secondary" onclick="loadAutonomyData()"><i class="ph ph-arrows-clockwise"></i> Actualizar registro</button>
             </div>
 
-            <div class="panel-grid animate-fade-up delay-1">
-                <div class="panel glass-panel">
-                    <h3><i class="ph ph-cpu"></i> Orquestador & Optimización CFO</h3>
-                    <div class="list-item">
-                        <div class="list-item-content">
-                            <h4>Enrutamiento de Petición</h4>
-                            <p class="muted" style="margin-top: 4px; font-style: italic; font-size: 11px;">"Necesito comprar urgentemente 50 pantalones..."</p>
-                            <p style="margin-top: 6px; font-size: 11px;"><i class="ph ph-arrow-elbow-down-right"></i> Delegado a: <strong style="color: var(--primary-color);">Sales Agent</strong></p>
-                        </div>
-                    </div>
-                    <div class="list-item">
-                        <div class="list-item-content">
-                            <h4>Auditoría de Costos IA</h4>
-                            <p class="muted" style="margin-top: 4px; font-size: 11px;">Costo Token: <strong>$0.0042</strong> | Valor Retorno: <strong>$1500</strong></p>
-                        </div>
-                        <span class="badge success">EXECUTE</span>
-                    </div>
+            <div class="vertical-grid">
+                <div class="vertical-card">
+                    <h3><i class="ph ph-lightning"></i> Nivel 1 · Automático</h3>
+                    <p class="vertical-small" style="margin-top:6px;">Consultas de catálogo, precios, stock en vivo, horarios, políticas y clasificación de intención.</p>
                 </div>
-
-                <div class="panel glass-panel" style="border-color: rgba(139, 92, 246, 0.3);">
-                    <h3 style="color: #c4b5fd;"><i class="ph ph-graduation-cap"></i> Evolución y Aprendizaje</h3>
-                    <div class="list-item" style="border-color: rgba(139, 92, 246, 0.2);">
-                        <div class="list-item-content">
-                            <h4 style="font-size: 12px;">Nueva regla inyectada en memoria</h4>
-                            <p class="muted" style="margin-top: 4px; font-size: 11px;">"Las respuestas en tiempo real aumentan la conversión de ventas B2B un 40%."</p>
-                        </div>
-                        <span class="badge ai">APPLIED</span>
-                    </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-clipboard-text"></i> Nivel 2 · Preparación Automática</h3>
+                    <p class="vertical-small" style="margin-top:6px;">Preparación de órdenes, captura de citas/reservas pendientes y creación automática de oportunidades CRM.</p>
                 </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-shield-check"></i> Nivel 3 · Requiere Autorización</h3>
+                    <p class="vertical-small" style="margin-top:6px;">Confirmación de pagos, descuento definitivo de inventario, devoluciones y modificaciones sensibles.</p>
+                </div>
+            </div>
 
-                <div class="panel glass-panel" style="grid-column: 1 / -1;">
-                    <h3><i class="ph ph-terminal"></i> Terminal de Auditoría Cruda</h3>
-                    <div id="audit-container" style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); height: 250px; overflow-y: auto;">
-                        <p class="muted" style="font-family: monospace; font-size: 11px;">[SYSTEM] Initializing audit stream...</p>
-                    </div>
+            <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;">
+                <h3 style="margin-bottom:12px;"><i class="ph ph-list-Bullets"></i> Registro de Operaciones Ejecutadas por CALYRISIA</h3>
+                <div id="autonomous-operations-list" class="booking-list"><p class="muted">Cargando historial de operaciones autónomas...</p></div>
+            </div>
+
+            <div class="panel glass-panel" style="padding:22px;">
+                <h3 style="margin-bottom:12px;"><i class="ph ph-terminal"></i> Auditoría Técnica del Sistema</h3>
+                <div id="audit-container" style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); max-height: 240px; overflow-y: auto;">
+                    <p class="muted" style="font-family: monospace; font-size: 11px;">[SYSTEM] Sincronizando registros de auditoría...</p>
                 </div>
             </div>
         </div>
 
-        <!-- LAS DEMÁS VISTAS MANTIENEN SU ESTRUCTURA BÁSICA -->
+        <!-- VISTA CRM INTELIGENTE 100% AUTOMÁTICO (SIN FORMULARIOS MANUALES) -->
         <div id="view-crm" class="view-section">
-            <div class="section-header">
-                <h2 id="crm-view-title">Directorio de Clientes & Retención</h2>
-                <p id="crm-view-subtitle" class="muted">Base consolidada de clientes y pacientes atendidos por los canales automatizados de tu negocio.</p>
+            <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+                <div>
+                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#34d399;font-weight:700;display:block;margin-bottom:6px;">CAPTURA Y SEGUIMIENTO AUTOMÁTICO SIN CARGA MANUAL</span>
+                    <h2 id="crm-view-title">Clientes & Oportunidades (CRM Inteligente)</h2>
+                    <p id="crm-view-subtitle" class="muted">CALYRISIA detecta y registra automáticamente clientes y oportunidades comerciales a partir de tus conversaciones, pedidos y citas.</p>
+                </div>
+                <button class="btn-secondary" onclick="loadCrmWorkspace()"><i class="ph ph-arrows-clockwise"></i> Sincronizar ahora</button>
             </div>
             <div class="vertical-grid">
                 <div class="vertical-card">
-                    <h3><i class="ph ph-users"></i> Clientes / Pacientes Únicos</h3>
+                    <h3><i class="ph ph-sparkle"></i> Oportunidades Activas</h3>
+                    <div class="vertical-number" id="crm-active-opportunities" style="color:#00f2fe;">0</div>
+                    <p class="vertical-small">Detectadas automáticamente por IA</p>
+                </div>
+                <div class="vertical-card">
+                    <h3><i class="ph ph-users"></i> Clientes Identificados</h3>
                     <div class="vertical-number" id="crm-total-customers">0</div>
-                    <p class="vertical-small">Identificados en transacciones o citas</p>
+                    <p class="vertical-small">En conversaciones, pagos o citas</p>
                 </div>
                 <div class="vertical-card">
-                    <h3><i class="ph ph-repeat"></i> Clientes Recurrentes</h3>
+                    <h3><i class="ph ph-repeat"></i> Clientes Recurrentes / Ganados</h3>
                     <div class="vertical-number" id="crm-repeat-customers" style="color:#34d399;">0</div>
-                    <p class="vertical-small">Con 2 o más registros en el negocio</p>
+                    <p class="vertical-small">Con compras o cierres confirmados</p>
                 </div>
-                <div class="vertical-card">
-                    <h3><i class="ph ph-shield-Warning"></i> Solicitudes Canceladas / Rechazadas</h3>
-                    <div class="vertical-number" id="crm-risk-count" style="color:#fbbf24;">0</div>
-                    <p class="vertical-small">Casos para seguimiento preventivo</p>
+            </div>
+            <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;">
+                <div class="vertical-intro">
+                    <div>
+                        <h3><i class="ph ph-target"></i> Oportunidades Comerciales Detectadas Automáticamente</h3>
+                        <p class="muted">Generadas por CALYRISIA cuando un cliente consulta precios, solicita pago, agenda o requiere seguimiento.</p>
+                    </div>
                 </div>
+                <div id="crm-opportunities-list" class="booking-list"><p class="muted">Analizando interacciones para detectar oportunidades...</p></div>
             </div>
             <div class="panel glass-panel" style="padding:22px;">
                 <div class="vertical-intro">
                     <div>
-                        <h3><i class="ph ph-address-book"></i> Base Consolidada de Clientes / Pacientes</h3>
-                        <p class="muted">Registro automático unificado a partir de pagos y citas del negocio.</p>
+                        <h3><i class="ph ph-address-book"></i> Historial Consolidado de Clientes</h3>
+                        <p class="muted">Registro automático unificado a partir de pagos, órdenes y citas del negocio.</p>
                     </div>
-                    <button class="btn-secondary" onclick="loadCrmWorkspace()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
                 </div>
                 <div id="crm-customers-list" class="booking-list"><p class="muted">Sincronizando cartera de clientes...</p></div>
             </div>
@@ -562,114 +770,452 @@
         </div>
         
         <div id="view-settings" class="view-section">
-            <div class="section-header"><h2>Conexión de Canales</h2><p class="muted">Telegram ejecuta el mismo cerebro, catálogo, clientes y flujo de pedidos de CALYRISIA.</p></div>
-            <div class="panel glass-panel" style="max-width: 980px;">
+            <div class="section-header animate-fade-up" style="width:100%;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:24px;">
+                <div>
+                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#00f2fe;font-weight:700;display:block;margin-bottom:6px;">CENTRO DE CONTROL OMNICANAL Y FINANCIERO</span>
+                    <h2>Configuración, Canales y Cerebro IA</h2>
+                    <p class="muted">Conecta tus redes sociales y mensajería, configura tus métodos de cobro y personaliza el comportamiento de tu agente.</p>
+                </div>
+                <div class="settings-filter-bar" style="margin-bottom:0;">
+                    <button type="button" class="settings-filter-pill active" data-settings-tab="channels" onclick="filterSettingsSections('channels', this)"><i class="ph ph-share-network"></i> Canales</button>
+                    <button type="button" class="settings-filter-pill" data-settings-tab="payments" onclick="filterSettingsSections('payments', this)"><i class="ph ph-wallet"></i> Métodos de Pago</button>
+                    <button type="button" class="settings-filter-pill" data-settings-tab="prompt" onclick="filterSettingsSections('prompt', this)"><i class="ph ph-brain"></i> Prompt IA</button>
+                    <button type="button" class="settings-filter-pill" data-settings-tab="plan" onclick="filterSettingsSections('plan', this)"><i class="ph ph-crown-simple"></i> Plan y Cuenta</button>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 1: HUB OMNICANAL (ACTIVA POR DEFECTO) -->
+            <div id="settings-block-channels" class="animate-fade-up" style="width:100%;margin-bottom:22px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+                    <div>
+                        <h3 style="font-size:18px;color:#fff;display:flex;align-items:center;gap:8px;"><i class="ph ph-share-network" style="color:#00f2fe;"></i> Canales de Atención y Redes Sociales</h3>
+                        <p id="channels-summary" class="muted" style="font-size:12.5px;margin-top:2px;">Conecta WhatsApp, Instagram, Facebook Messenger, Telegram y Webchat al mismo Cerebro IA.</p>
+                    </div>
+                </div>
+
+                <div class="channels-modern-grid">
+                    <!-- CANAL 1: WHATSAPP QR -->
+                    <div class="channel-card ch-whatsapp glass-panel">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                            <div style="display:flex;gap:13px;align-items:center;">
+                                <div class="channel-icon-box" style="background:linear-gradient(135deg,#25D366,#128C7E);">
+                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12.031 2c-5.508 0-9.987 4.479-9.987 9.988 0 1.763.459 3.479 1.332 4.992L2 22l5.143-1.349c1.467.8 3.12 1.224 4.885 1.224h.004c5.507 0 9.987-4.479 9.987-9.988 0-2.669-1.039-5.178-2.926-7.064C17.207 3.038 14.698 2 12.031 2zm5.828 14.122c-.246.693-1.434 1.325-1.995 1.409-.51.076-1.155.108-1.868-.118-.434-.137-.991-.325-1.703-.633-2.999-1.295-4.957-4.316-5.107-4.516-.15-.2-1.22-1.623-1.22-3.097 0-1.474.772-2.198 1.046-2.498.275-.3.599-.375.799-.375.2 0 .4.002.574.01.184.009.431-.07.674.514.25.6.849 2.073.924 2.223.075.15.125.325.025.525-.1.2-.15.325-.3.5-.15.175-.314.391-.45.525-.15.15-.306.313-.131.613.175.3.776 1.281 1.666 2.074 1.145 1.021 2.11 1.337 2.41 1.487.3.15.475.125.65-.075.175-.2.749-.874.949-1.174.2-.3.4-.25.674-.15.275.1 1.748.824 2.048.974.3.15.499.225.574.35.075.125.075.724-.171 1.417z"/></svg>
+                                </div>
+                                <div>
+                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#4ade80;font-weight:700;">VINCULACIÓN DIRECTA POR QR</span>
+                                    <h3 style="margin:2px 0;font-size:1.1rem;">WhatsApp Business</h3>
+                                    <p class="muted" style="font-size:12px;margin:0;">Escanea el código QR desde tu celular o vincula con código de 8 dígitos.</p>
+                                </div>
+                            </div>
+                            <div id="whatsapp-status-badge" class="badge">Desconectado</div>
+                        </div>
+                        <div id="whatsapp-summary" class="muted" style="font-size:12px;line-height:1.55;margin-bottom:14px;">
+                            Tu sesión se mantiene sincronizada de forma segura para responder a tus clientes con tu catálogo actualizado.
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                            <input id="whatsapp-pairing-phone" type="text" placeholder="Número de teléfono opcional para código de 8 dígitos" style="padding:11px 14px;font-size:12.5px;">
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button type="button" class="btn-action" id="whatsapp-connect-btn" onclick="connectWhatsAppQr()" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#4ade80,#16a34a);color:#042f1a;"><i class="ph ph-qr-code"></i> Generar Código QR</button>
+                                <button type="button" class="btn-secondary" id="whatsapp-toggle-btn" onclick="toggleWhatsAppChannel()" disabled style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-pause"></i> Pausar IA</button>
+                                <button type="button" class="btn-payment-reject" id="whatsapp-disconnect-btn" onclick="disconnectWhatsAppChannel()" style="display:none;padding:10px 14px;font-size:11.5px;"><i class="ph ph-plugs"></i> Desvincular</button>
+                            </div>
+                        </div>
+                        <div id="whatsapp-qr-wrap" class="hidden" style="margin-top:12px;padding:16px;border-radius:14px;background:rgba(15,23,42,.85);border:1px solid rgba(74,222,128,.35);display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;">
+                            <span class="badge success" style="font-size:10px;">ESCANEA EN WHATSAPP → DISPOSITIVOS VINCULADOS</span>
+                            <div style="background:#fff;padding:12px;border-radius:14px;">
+                                <img id="whatsapp-qr-image" src="" alt="Código QR de WhatsApp" style="width:200px;height:200px;display:block;">
+                            </div>
+                            <div id="whatsapp-pairing-box" class="hidden" style="padding:8px 14px;border-radius:9px;background:rgba(0,242,254,.12);border:1px solid rgba(0,242,254,.35);color:#7cecf5;font-family:monospace;font-size:16px;font-weight:800;letter-spacing:2px;"></div>
+                        </div>
+                        <div id="whatsapp-channel-message" role="status" style="margin-top:8px;font-size:12px;"></div>
+                    </div>
+
+                    <!-- CANAL 2: INSTAGRAM DIRECT (VINCULACIÓN EN 1 CLIC SIN TOKENS) -->
+                    <div class="channel-card ch-instagram glass-panel">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                            <div style="display:flex;gap:13px;align-items:center;">
+                                <div class="channel-icon-box" style="background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);">
+                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                                </div>
+                                <div>
+                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#f472b6;font-weight:700;">VINCULACIÓN RÁPIDA EN 1 CLIC</span>
+                                    <h3 style="margin:2px 0;font-size:1.1rem;">Instagram Direct</h3>
+                                    <p class="muted" style="font-size:12px;margin:0;">Atiende mensajes directos, cotiza catálogo y toma pedidos en Instagram.</p>
+                                </div>
+                            </div>
+                            <div id="instagram-status-badge" class="badge">Desconectado</div>
+                        </div>
+                        <p id="instagram-summary" class="muted" style="font-size:12px;line-height:1.55;margin-bottom:14px;">
+                            Ingresa el usuario de tu cuenta comercial de Instagram para activar la atención automática del asistente.
+                        </p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                            <input id="ig-account-name" type="text" placeholder="Usuario de Instagram (ej. @tu_negocio)" style="padding:11px 14px;font-size:12.5px;">
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button type="button" class="btn-action" id="ig-connect-btn" onclick="openMetaOAuthPopup('instagram')" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff;"><i class="ph ph-sign-in"></i> Conectar con Instagram</button>
+                                <button type="button" class="btn-secondary" id="ig-toggle-btn" onclick="toggleMetaChannelState('instagram')" disabled style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-pause"></i> Pausar IA</button>
+                                <button type="button" class="btn-payment-reject" id="ig-disconnect-btn" onclick="disconnectMetaChannel('instagram')" style="display:none;padding:10px 14px;font-size:11.5px;"><i class="ph ph-plugs"></i> Desvincular</button>
+                            </div>
+                        </div>
+                        <div id="instagram-channel-message" style="margin-top:8px;font-size:12px;"></div>
+                    </div>
+
+                    <!-- CANAL 3: FACEBOOK MESSENGER (VINCULACIÓN EN 1 CLIC SIN TOKENS) -->
+                    <div class="channel-card ch-facebook glass-panel">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                            <div style="display:flex;gap:13px;align-items:center;">
+                                <div class="channel-icon-box" style="background:linear-gradient(135deg,#00B2FF,#006AFF);">
+                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.44 3.14 7.17.16.13.26.35.27.57l.05 1.78c.02.57.61.94 1.13.71l1.98-.87c.17-.08.36-.1.55-.06.88.24 1.86.37 2.88.37 5.64 0 10-4.13 10-9.7C22 6.13 17.64 2 12 2zm5.89 7.64l-2.9 4.61c-.46.73-1.45.91-2.13.4l-2.31-1.73a.6.6 0 0 0-.72 0l-3.12 2.37c-.41.31-.95-.18-.68-.61l2.9-4.61c.46-.73 1.45-.91 2.13-.4l2.31 1.73a.6.6 0 0 0 .72 0l3.12-2.37c.41-.31.95.18.68.61z"/></svg>
+                                </div>
+                                <div>
+                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#60a5fa;font-weight:700;">VINCULACIÓN RÁPIDA EN 1 CLIC</span>
+                                    <h3 style="margin:2px 0;font-size:1.1rem;">Facebook Messenger</h3>
+                                    <p class="muted" style="font-size:12px;margin:0;">Atiende el inbox de tu Página de Facebook 24/7 con tu catálogo en vivo.</p>
+                                </div>
+                            </div>
+                            <div id="facebook-status-badge" class="badge">Desconectado</div>
+                        </div>
+                        <p id="facebook-summary" class="muted" style="font-size:12px;line-height:1.55;margin-bottom:14px;">
+                            Escribe el nombre o usuario de tu Página comercial de Facebook para activar la respuesta automática en Messenger.
+                        </p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                            <input id="fb-account-name" type="text" placeholder="Nombre o usuario de tu Página de Facebook" style="padding:11px 14px;font-size:12.5px;">
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                <button type="button" class="btn-action" id="fb-connect-btn" onclick="openMetaOAuthPopup('facebook')" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;"><i class="ph ph-sign-in"></i> Conectar con Facebook</button>
+                                <button type="button" class="btn-secondary" id="fb-toggle-btn" onclick="toggleMetaChannelState('facebook')" disabled style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-pause"></i> Pausar IA</button>
+                                <button type="button" class="btn-payment-reject" id="fb-disconnect-btn" onclick="disconnectMetaChannel('facebook')" style="display:none;padding:10px 14px;font-size:11.5px;"><i class="ph ph-plugs"></i> Desvincular</button>
+                            </div>
+                        </div>
+                        <div id="facebook-channel-message" style="margin-top:8px;font-size:12px;"></div>
+                    </div>
+
+                    <!-- CANAL 4: TELEGRAM BOT -->
+                    <div class="channel-card ch-telegram glass-panel">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                            <div style="display:flex;gap:13px;align-items:center;">
+                                <div class="channel-icon-box" style="background:linear-gradient(135deg,#2AABEE,#229ED9);">
+                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                                </div>
+                                <div>
+                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#38bdf8;font-weight:700;">BOT OFICIAL & ALERTAS AL DUEÑO</span>
+                                    <h3 style="margin:2px 0;font-size:1.1rem;">Telegram Business</h3>
+                                    <p id="telegram-bot-summary" class="muted" style="font-size:12px;margin:0;">Atiende clientes y recibe notificaciones de pagos en tu celular.</p>
+                                </div>
+                            </div>
+                            <div id="telegram-status-badge" class="badge">Desconectado</div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px;">
+                            <div style="display:flex;gap:8px;">
+                                <input id="telegram-phone-number" type="text" placeholder="Número de teléfono con país (ej. +584121234567)" style="flex:1;padding:11px 14px;font-size:12.5px;">
+                                <button type="button" class="btn-action" id="telegram-send-code-btn" onclick="sendTelegramOtpCode()" style="padding:10px 14px;font-size:11.5px;white-space:nowrap;"><i class="ph ph-paper-plane-Right"></i> Enviar código</button>
+                            </div>
+                            <div id="telegram-otp-box" class="hidden" style="display:none;gap:8px;flex-wrap:wrap;padding:10px;border-radius:10px;background:rgba(15,23,42,0.6);border:1px solid rgba(56,189,248,0.3);">
+                                <input id="telegram-otp-code" type="text" inputmode="numeric" placeholder="Código de 5 dígitos" style="flex:1;min-width:140px;padding:10px 12px;font-size:12.5px;">
+                                <input id="telegram-2fa-password" type="password" placeholder="Clave 2FA (solo si tienes verificación en 2 pasos)" style="flex:1;min-width:160px;padding:10px 12px;font-size:12.5px;display:none;">
+                                <button type="button" class="btn-action" id="telegram-verify-code-btn" onclick="verifyTelegramOtpCode()" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;">Verificar y conectar</button>
+                            </div>
+                        </div>
+                        <details style="margin-bottom:10px;font-size:11.5px;color:#94a3b8;">
+                            <summary style="cursor:pointer;margin-bottom:6px;">Opcional: Conectar mediante Token de @BotFather y Chat ID</summary>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+                                <input id="telegram-bot-token" type="password" autocomplete="off" placeholder="Token de @BotFather" style="padding:10px 12px;font-size:12px;">
+                                <input id="telegram-owner-chat-id" inputmode="numeric" placeholder="Chat ID del Dueño" style="padding:10px 12px;font-size:12px;">
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                                <button class="btn-secondary" id="telegram-save-btn" onclick="saveTelegramChannel()" style="padding:8px 12px;font-size:11px;">Guardar BotToken</button>
+                                <button class="btn-secondary" id="telegram-test-btn" onclick="testTelegramChannel()" style="padding:8px 12px;font-size:11px;">Verificar alerta</button>
+                            </div>
+                        </details>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn-secondary" id="telegram-toggle-btn" onclick="toggleTelegramChannel()" style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-power"></i> Desactivar</button>
+                        </div>
+                        <div id="telegram-channel-message" role="status" style="margin-top:8px;font-size:12px;"></div>
+                    </div>
+
+                    <!-- CANAL 5: WEBCHAT OFICIAL IA -->
+                    <div class="channel-card ch-webchat glass-panel" style="grid-column: 1 / -1;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+                            <div style="display:flex;gap:13px;align-items:center;">
+                                <div class="channel-icon-box" style="background:linear-gradient(135deg,#00f2fe,#7c3aed);">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/><circle cx="9.5" cy="11.5" r="1" fill="#fff"/><circle cx="14.5" cy="11.5" r="1" fill="#fff"/></svg>
+                                </div>
+                                <div>
+                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#5eead4;font-weight:700;">CANAL WEB INTERACTIVO CON CARRITO Y PAGOS</span>
+                                    <h3 style="margin:2px 0;font-size:1.1rem;">Webchat Oficial · Enlace Directo para Clientes y Biografía</h3>
+                                    <p class="muted" style="font-size:12px;margin:0;">Comparte tu enlace directo en tu biografía de Instagram, estados de WhatsApp o intégralo en tu sitio web.</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <div id="webchat-status-badge" class="badge">Activo</div>
+                                <button class="btn-action" id="webchat-toggle-btn" onclick="toggleDashboardWebchat()" style="padding:10px 16px;font-size:11.5px;"><i class="ph ph-power"></i> Activar Webchat</button>
+                                <button class="btn-secondary" onclick="openBusinessWebchat()" style="padding:10px 16px;font-size:11.5px;"><i class="ph ph-arrow-square-out"></i> Abrir Webchat</button>
+                                <button class="btn-secondary" onclick="copyBusinessWebchatLink()" style="padding:10px 16px;font-size:11.5px;border-color:rgba(0,242,254,.35);color:#7cecf5;"><i class="ph ph-link"></i> Copiar Link de Tienda</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 2: BÓVEDA DE MÉTODOS DE PAGO (5 MÉTODOS) Y TASA DEL DÍA -->
+            <div id="settings-block-payments" class="panel glass-panel animate-fade-up hidden" style="width:100%;margin-bottom:22px;border-color:rgba(167,139,250,.3);">
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
-                    <div style="display:flex;gap:12px;align-items:center;">
-                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(56,189,248,.12);display:flex;align-items:center;justify-content:center;color:#38bdf8;font-size:25px;"><i class="ph ph-telegram-logo"></i></div>
-                        <div><h3 style="margin:0 0 4px;">Telegram · Canal del negocio</h3><p class="muted" style="margin:0;font-size:12px;">Conecta Telegram para atender clientes y recibir avisos de pedidos o pagos pendientes.</p></div>
-                    </div>
-                    <div id="telegram-status-badge" class="badge" style="padding:8px 12px;">No configurado</div>
-                </div>
-                <div id="telegram-bot-summary" class="muted" style="margin-bottom:18px;font-size:13px;">El bot queda vinculado a este negocio. Configura solo canales incluidos en tu plan.</div>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
-                    <div><label for="telegram-bot-token" style="display:block;margin-bottom:8px;font-size:12px;color:#cbd5e1;">Token del bot (desde @BotFather)</label><input id="telegram-bot-token" type="password" autocomplete="off" placeholder="Pega aquí el token de Telegram" style="width:100%;"></div>
-                    <div><label for="telegram-owner-chat-id" style="display:block;margin-bottom:8px;font-size:12px;color:#cbd5e1;">Chat ID de Telegram del dueño</label><input id="telegram-owner-chat-id" inputmode="numeric" placeholder="Ej. 123456789" style="width:100%;"></div>
-                </div>
-                <p class="muted" style="font-size:12px;line-height:1.7;margin-top:12px;">Para obtener tu Chat ID, abre el bot en Telegram, pulsa <strong>Iniciar</strong> y envíale <code>/id</code>. Copia el número que responda y pégalo aquí. El dueño debe haber iniciado el bot para que Telegram permita enviarle alertas.</p>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
-                    <button class="btn-action" id="telegram-save-btn" onclick="saveTelegramChannel()"><i class="ph ph-floppy-disk"></i> Guardar y activar Telegram</button>
-                    <button class="btn-secondary" id="telegram-test-btn" onclick="testTelegramChannel()"><i class="ph ph-paper-plane-tilt"></i> Probar notificación</button>
-                    <button class="btn-secondary" id="telegram-toggle-btn" onclick="toggleTelegramChannel()"><i class="ph ph-power"></i> Desactivar canal</button>
-                </div>
-                <div id="telegram-channel-message" role="status" style="margin-top:14px;font-size:13px;"></div>
-                <div style="margin-top:18px;padding:13px 15px;border-radius:12px;background:rgba(15,23,42,.65);border:1px solid rgba(148,163,184,.15);font-size:12px;color:#cbd5e1;line-height:1.7;">
-                    <strong style="color:#e2e8f0;">Revisión de pagos</strong><br>
-                    CALYRISIA puede registrar referencias o detalles enviados por el cliente como solicitudes pendientes y avisar al dueño. Antes de aprobar cualquier solicitud, verifica el ingreso del dinero directamente en tu cuenta o proveedor de pago. CALYRISIA no verifica automáticamente transferencias bancarias.
-                </div>
-            </div>
-            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-                    <div style="display:flex;gap:12px;align-items:center;">
-                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(45,212,191,.12);display:flex;align-items:center;justify-content:center;color:#5eead4;font-size:25px;"><i class="ph ph-globe"></i></div>
-                        <div><h3 style="margin:0 0 4px;">Webchat · Tu página web</h3><p class="muted" style="margin:0;font-size:12px;">Activa o desactiva Webchat según los canales incluidos en tu plan. Al activarlo, el asistente podrá atender a quienes visiten tu página.</p></div>
-                    </div>
-                    <div id="webchat-status-badge" class="badge" style="padding:8px 12px;">Consultando estado…</div>
-                </div>
-                <div id="channels-summary" class="muted" style="font-size:13px;line-height:1.7;margin-top:15px;">Consultando los canales incluidos en tu plan…</div>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-                    <button class="btn-action" id="webchat-toggle-btn" onclick="toggleDashboardWebchat()"><i class="ph ph-power"></i> Activar Webchat</button>
-                    <button class="btn-secondary" onclick="openBusinessWebchat()"><i class="ph ph-arrow-square-out"></i> Abrir Webchat del negocio</button>
-                </div>
-            </div>
-            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
-                    <div style="width:48px;height:48px;border-radius:14px;background:rgba(167,139,250,.12);display:flex;align-items:center;justify-content:center;color:#c4b5fd;font-size:25px;"><i class="ph ph-wallet"></i></div>
-                    <div><h3 style="margin:0 0 4px;">Métodos de cobro del negocio</h3><p class="muted" style="margin:0;font-size:12px;">Configura las instrucciones reales que recibirá el cliente por los canales conectados.</p></div>
-                </div>
-                <p class="muted" style="font-size:12px;line-height:1.7;margin:12px 0 16px;">CALYRISIA registra las referencias para que el equipo las revise. No valida automáticamente transferencias ni movimientos bancarios. Nunca escribas contraseñas, códigos de acceso ni claves privadas.</p>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;">
-                    <div style="padding:16px;border:1px solid rgba(148,163,184,.15);border-radius:14px;background:rgba(15,23,42,.35);">
-                        <label style="display:flex;align-items:center;gap:9px;font-weight:650;margin-bottom:10px;"><input id="pay-mobile-enabled" type="checkbox" style="width:auto;"> Pago Móvil</label>
-                        <textarea id="pay-mobile-instructions" rows="5" maxlength="3000" placeholder="Banco, teléfono, cédula/RIF y nombre del titular…" style="width:100%;resize:vertical;"></textarea>
-                    </div>
-                    <div style="padding:16px;border:1px solid rgba(148,163,184,.15);border-radius:14px;background:rgba(15,23,42,.35);">
-                        <label style="display:flex;align-items:center;gap:9px;font-weight:650;margin-bottom:10px;"><input id="pay-binance-enabled" type="checkbox" style="width:auto;"> Binance Pay</label>
-                        <textarea id="pay-binance-instructions" rows="5" maxlength="3000" placeholder="Identificador de pago público e instrucciones para transferir…" style="width:100%;resize:vertical;"></textarea>
-                    </div>
-                </div>
-                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px;"><button class="btn-action" onclick="savePaymentInstructions()"><i class="ph ph-floppy-disk"></i> Guardar métodos de cobro</button><span class="muted" id="payment-instructions-message" role="status" style="font-size:12px;"></span></div>
-            </div>
-            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
-                    <div style="display:flex;gap:12px;align-items:center;">
-                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(0,242,254,.12);display:flex;align-items:center;justify-content:center;color:#00f2fe;font-size:25px;"><i class="ph ph-sparkle"></i></div>
+                    <div style="display:flex;gap:13px;align-items:center;">
+                        <div style="width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,rgba(16,185,129,.22),rgba(5,150,105,.18));border:1px solid rgba(52,211,153,.4);display:flex;align-items:center;justify-content:center;color:#34d399;font-size:25px;">
+                            <i class="ph ph-wallet"></i>
+                        </div>
                         <div>
-                            <h3 style="margin:0 0 4px;">Comportamiento e Instrucciones del Asistente IA</h3>
-                            <p class="muted" style="margin:0;font-size:12px;">Define las políticas, horarios y reglas de atención que seguirá tu asistente en Webchat y Telegram.</p>
+                            <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#34d399;font-weight:700;">MÉTODOS DE COBRO Y MULTIMONEDA</span>
+                            <h3 style="margin:2px 0;font-size:1.2rem;">Configuración de Pagos del Negocio</h3>
+                            <p class="muted" style="margin:0;font-size:12.5px;">Activa los métodos de pago que recibes y escribe tus datos bancarios reales para tus clientes.</p>
+                        </div>
+                    </div>
+                    <button class="btn-action" onclick="savePaymentInstructions()" style="padding:11px 20px;font-size:12px;"><i class="ph ph-floppy-disk"></i> Guardar Métodos y Tasa</button>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:18px;">
+                    <!-- 1. PAGO MÓVIL -->
+                    <div style="padding:18px;border:1px solid rgba(52,211,153,.24);border-radius:16px;background:linear-gradient(160deg,rgba(15,23,42,.7),rgba(6,78,59,.14));">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+                            <label class="modern-switch">
+                                <input id="pay-mobile-enabled" type="checkbox">
+                                <span class="modern-switch-slider"></span>
+                                <span><i class="ph ph-device-mobile" style="color:#34d399;"></i> Pago Móvil</span>
+                            </label>
+                        </div>
+                        <textarea id="pay-mobile-instructions" rows="4" maxlength="3000" placeholder="Banco, número de teléfono, cédula o RIF y nombre del titular..." style="width:100%;border-radius:12px;padding:12px;background:rgba(0,0,0,0.38);border:1px solid var(--glass-border);color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
+                    </div>
+
+                    <!-- 2. TRANSFERENCIA BANCARIA -->
+                    <div style="padding:18px;border:1px solid rgba(56,189,248,.24);border-radius:16px;background:linear-gradient(160deg,rgba(15,23,42,.7),rgba(12,74,110,.15));">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+                            <label class="modern-switch">
+                                <input id="pay-transferencia-enabled" type="checkbox">
+                                <span class="modern-switch-slider"></span>
+                                <span><i class="ph ph-bank" style="color:#38bdf8;"></i> Transferencia Bancaria</span>
+                            </label>
+                        </div>
+                        <textarea id="pay-transferencia-instructions" rows="4" maxlength="3000" placeholder="Banco, número de cuenta, tipo de cuenta, cédula o RIF y titular..." style="width:100%;border-radius:12px;padding:12px;background:rgba(0,0,0,0.38);border:1px solid var(--glass-border);color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
+                    </div>
+
+                    <!-- 3. ZELLE -->
+                    <div style="padding:18px;border:1px solid rgba(168,85,247,.28);border-radius:16px;background:linear-gradient(160deg,rgba(15,23,42,.7),rgba(88,28,135,.16));">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+                            <label class="modern-switch">
+                                <input id="pay-zelle-enabled" type="checkbox">
+                                <span class="modern-switch-slider"></span>
+                                <span><i class="ph ph-currency-dollar" style="color:#c084fc;"></i> Zelle (USD)</span>
+                            </label>
+                        </div>
+                        <textarea id="pay-zelle-instructions" rows="4" maxlength="3000" placeholder="Correo electrónico o teléfono afiliado a Zelle y nombre del titular..." style="width:100%;border-radius:12px;padding:12px;background:rgba(0,0,0,0.38);border:1px solid var(--glass-border);color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
+                    </div>
+
+                    <!-- 4. BINANCE PAY -->
+                    <div style="padding:18px;border:1px solid rgba(250,204,21,.25);border-radius:16px;background:linear-gradient(160deg,rgba(15,23,42,.7),rgba(113,63,18,.15));">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+                            <label class="modern-switch">
+                                <input id="pay-binance-enabled" type="checkbox">
+                                <span class="modern-switch-slider"></span>
+                                <span><i class="ph ph-currency-btc" style="color:#facc15;"></i> Binance Pay (USDT)</span>
+                            </label>
+                        </div>
+                        <textarea id="pay-binance-instructions" rows="4" maxlength="3000" placeholder="Binance Pay ID o correo electrónico afiliado a Binance y titular..." style="width:100%;border-radius:12px;padding:12px;background:rgba(0,0,0,0.38);border:1px solid var(--glass-border);color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
+                    </div>
+
+                    <!-- 5. PAYPAL -->
+                    <div style="padding:18px;border:1px solid rgba(96,165,250,.28);border-radius:16px;background:linear-gradient(160deg,rgba(15,23,42,.7),rgba(30,58,138,.18));">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;">
+                            <label class="modern-switch">
+                                <input id="pay-paypal-enabled" type="checkbox">
+                                <span class="modern-switch-slider"></span>
+                                <span><i class="ph ph-credit-card" style="color:#60a5fa;"></i> PayPal</span>
+                            </label>
+                        </div>
+                        <textarea id="pay-paypal-instructions" rows="4" maxlength="3000" placeholder="Correo electrónico de PayPal o enlace PayPal.me y nombre del titular..." style="width:100%;border-radius:12px;padding:12px;background:rgba(0,0,0,0.38);border:1px solid var(--glass-border);color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
+                    </div>
+                </div>
+
+                <!-- SINCRONIZADOR DE TASA DEL DÍA -->
+                <div style="padding:18px;border:1px solid rgba(0,242,254,.24);border-radius:16px;background:rgba(0,242,254,.04);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <h4 style="margin:0 0 3px;font-size:13.5px;color:#7cecf5;"><i class="ph ph-arrows-left-right"></i> Tasa de Cambio del Día y Contacto Humano</h4>
+                            <p class="muted" style="font-size:11.5px;margin:0;">Si ingresas una tasa mayor a 0, el asistente mostrará el monto en USD y su equivalente en moneda local.</p>
+                        </div>
+                        <div id="live-rate-preview-pill" style="padding:7px 13px;border-radius:999px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);color:#6ee7b7;font-size:11.5px;font-weight:700;">
+                            Conversión activa: Solo USD
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">
+                        <div>
+                            <label for="pay-exchange-rate" style="display:block;margin-bottom:6px;font-size:11px;color:#cbd5e1;">Tasa del día (Moneda local por 1 USD)</label>
+                            <input id="pay-exchange-rate" type="number" step="0.01" min="0" placeholder="0.00 (0 = solo USD)" oninput="updateLiveRatePreview()">
+                        </div>
+                        <div>
+                            <label for="pay-local-currency" style="display:block;margin-bottom:6px;font-size:11px;color:#cbd5e1;">Moneda Local</label>
+                            <select id="pay-local-currency" onchange="updateLiveRatePreview()">
+                                <option value="VES">VES (Bolívares · Bs.)</option>
+                                <option value="COP">COP (Pesos Colombianos)</option>
+                                <option value="ARS">ARS (Pesos Argentinos)</option>
+                                <option value="MXN">MXN (Pesos Mexicanos)</option>
+                                <option value="CLP">CLP (Pesos Chilenos)</option>
+                                <option value="PEN">PEN (Soles Peruanos)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="pay-owner-whatsapp" style="display:block;margin-bottom:6px;font-size:11px;color:#cbd5e1;">WhatsApp de Atención Humana</label>
+                            <input id="pay-owner-whatsapp" type="text" placeholder="Número con código de país">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <span class="muted" style="font-size:11px;">🔒 Verifica siempre el ingreso en tu cuenta antes de aprobar un pedido en Aprobaciones.</span>
+                        <span class="muted" id="payment-instructions-message" role="status" style="font-size:12px;color:#34d399;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 3: ESTUDIO DE PROMPT IA Y PERSONALIDAD COMERCIAL -->
+            <div id="settings-block-prompt" class="panel glass-panel animate-fade-up hidden" style="width:100%;margin-bottom:22px;border-color:rgba(192,132,252,.3);">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
+                    <div style="display:flex;gap:13px;align-items:center;">
+                        <div style="width:50px;height:50px;border-radius:15px;background:linear-gradient(135deg,rgba(192,132,252,.22),rgba(0,242,254,.18));border:1px solid rgba(192,132,252,.4);display:flex;align-items:center;justify-content:center;color:#e9d5ff;font-size:25px;">
+                            <i class="ph ph-brain"></i>
+                        </div>
+                        <div>
+                            <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:#c084fc;font-weight:700;">ENTRENAMIENTO DEL CEREBRO IA</span>
+                            <h3 style="margin:2px 0;font-size:1.2rem;">Prompt Operativo, Tono y Reglas de Negocio</h3>
+                            <p class="muted" style="margin:0;font-size:12.5px;">Elige la personalidad de tu agente y define las reglas comerciales para todos tus canales conectados.</p>
                         </div>
                     </div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <button type="button" class="btn-secondary" style="padding:9px 14px;font-size:11px;" onclick="fillWorkspaceDefaultAiPrompt(false)"><i class="ph ph-magic-wand"></i> Generar plantilla según mi giro</button>
-                        <button type="button" class="btn-action" style="padding:9px 16px;font-size:11px;" onclick="saveWorkspaceAiInstructions()"><i class="ph ph-floppy-disk"></i> Guardar instrucciones IA</button>
+                        <button type="button" class="btn-secondary" style="padding:10px 16px;font-size:11.5px;" onclick="fillWorkspaceDefaultAiPrompt(false)"><i class="ph ph-magic-wand"></i> Generar según mi giro</button>
+                        <button type="button" class="btn-action" style="padding:10px 18px;font-size:11.5px;" onclick="saveWorkspaceAiInstructions()"><i class="ph ph-floppy-disk"></i> Guardar Prompt IA</button>
                     </div>
                 </div>
-                <textarea id="workspace-ai-prompt" rows="6" maxlength="3000" placeholder="Escribe o genera las instrucciones operativas para el asistente IA de tu negocio..." style="width:100%;border-radius:12px;padding:14px;background:rgba(0,0,0,0.35);border:1px solid var(--glass-border);color:#f8fafc;font-size:13px;line-height:1.55;resize:vertical;"></textarea>
+
+                <!-- SELECTOR DE PERSONALIDAD / TONO -->
+                <div class="tone-grid">
+                    <div class="tone-card active" onclick="applyPromptTonePreset('consultivo', this)">
+                        <strong>🎯 Consultivo y Preciso</strong>
+                        <span>Asesora con datos exactos, clasifica por categoría y guía al cierre.</span>
+                    </div>
+                    <div class="tone-card" onclick="applyPromptTonePreset('vendedor', this)">
+                        <strong>⚡ Cierre Rápido y Directo</strong>
+                        <span>Respuestas breves enfocadas en concretar el pedido y pago inmediato.</span>
+                    </div>
+                    <div class="tone-card" onclick="applyPromptTonePreset('cercano', this)">
+                        <strong>🤝 Cálido y Empático</strong>
+                        <span>Trato cercano y amigable ideal para tiendas, restaurantes y servicios.</span>
+                    </div>
+                    <div class="tone-card" onclick="applyPromptTonePreset('mayorista', this)">
+                        <strong>📦 Corporativo / Mayorista</strong>
+                        <span>Enfocado en compras por volumen, bultos, SKU y despacho logístico.</span>
+                    </div>
+                </div>
+
+                <!-- BLOQUES RÁPIDOS DE REGLAS (+1 CLIC) -->
+                <div class="prompt-chip-bar">
+                    <button type="button" class="prompt-chip" onclick="appendPromptSnippet('horario')">＋ Horario de Atención</button>
+                    <button type="button" class="prompt-chip" onclick="appendPromptSnippet('delivery')">＋ Política de Delivery y Envíos</button>
+                    <button type="button" class="prompt-chip" onclick="appendPromptSnippet('garantia')">＋ Garantía Oficial</button>
+                    <button type="button" class="prompt-chip" onclick="appendPromptSnippet('mayorista')">＋ Descuento al Mayor</button>
+                    <button type="button" class="prompt-chip" onclick="appendPromptSnippet('pagos')">＋ Regla de Verificación de Pago</button>
+                </div>
+
+                <textarea id="workspace-ai-prompt" rows="8" maxlength="3000" oninput="updatePromptCharCount()" placeholder="Escribe las instrucciones operativas, horarios y políticas para el asistente IA de tu negocio..." style="width:100%;border-radius:14px;padding:14px 16px;background:rgba(0,0,0,0.42);border:1px solid rgba(192,132,252,0.28);color:#f8fafc;font-size:13px;line-height:1.6;resize:vertical;"></textarea>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px;">
-                    <span class="muted" style="font-size:11px;">El motor autónomo combina estas reglas con tu catálogo/tarifario activo y la captura automática de citas o pagos.</span>
-                    <span id="workspace-ai-prompt-status" style="font-size:12px;font-weight:600;color:#94a3b8;">Sincronizado con todos los canales</span>
+                    <span id="workspace-ai-prompt-counter" class="muted" style="font-size:11px;">Sincronizado con el catálogo e inventario en vivo</span>
+                    <span id="workspace-ai-prompt-status" style="font-size:12px;font-weight:600;color:#34d399;">✓ Activo en Webchat, WhatsApp, Instagram, Facebook y Telegram</span>
                 </div>
             </div>
-            <div class="panel glass-panel" style="max-width:980px;margin-top:18px;">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <div style="width:48px;height:48px;border-radius:14px;background:rgba(34,197,94,.10);display:flex;align-items:center;justify-content:center;color:#86efac;font-size:25px;"><i class="ph ph-whatsapp-logo"></i></div>
-                    <div><h3 style="margin:0 0 4px;">WhatsApp Business</h3><p class="muted" style="margin:0;font-size:12px;">Integración sujeta a validación de cuenta, proveedor y plan contratado.</p></div>
+
+            <!-- PESTAÑA 4: SUSCRIPCIÓN, PLAN Y MANTENIMIENTO DE CUENTA -->
+            <div id="settings-block-plan" class="panel glass-panel animate-fade-up hidden" style="width:100%;margin-bottom:22px;border-color:rgba(0,242,254,.32);background:linear-gradient(135deg,rgba(10,18,36,.88),rgba(18,12,38,.82));">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+                    <div style="display:flex;align-items:center;gap:14px;">
+                        <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,rgba(0,242,254,.2),rgba(168,85,247,.25));border:1px solid rgba(0,242,254,.4);display:flex;align-items:center;justify-content:center;font-size:26px;color:#00f2fe;">
+                            <i class="ph ph-crown-simple"></i>
+                        </div>
+                        <div>
+                            <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#00f2fe;font-weight:700;">SUSCRIPCIÓN Y CAPACIDAD OPERATIVA</span>
+                            <h3 id="settings-plan-title" style="margin:3px 0 2px;font-size:1.3rem;">Plan Actual</h3>
+                            <p id="settings-plan-subtitle" class="muted" style="margin:0;font-size:12.5px;">Consultando límites y uso mensual de tu cuenta...</p>
+                        </div>
+                    </div>
+                    <div id="settings-plan-action"></div>
                 </div>
-                <p class="muted" style="font-size:13px;line-height:1.7;margin:14px 0;">La conexión de WhatsApp no se activa desde este panel todavía. Solicita una evaluación comercial para revisar compatibilidad, configuración y posibles costes del proveedor.</p>
-                <a class="btn-secondary" href="https://wa.me/584128418550?text=Hola%20CALYRISIA%2C%20quiero%20consultar%20la%20integraci%C3%B3n%20de%20WhatsApp%20Business." target="_blank" rel="noopener"><i class="ph ph-chat-circle-text"></i> Consultar integración</a>
+                <div id="settings-plan-usage-bars" class="vertical-grid" style="margin-bottom:18px;"></div>
+                <div style="padding-top:16px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <strong style="font-size:13px;color:#f8fafc;">Reinicio de Datos Operativos</strong>
+                        <p class="muted" style="font-size:11.5px;margin:2px 0 0;">Limpia a cero todos los productos, clientes, oportunidades y pagos registrados en este negocio para comenzar desde cero.</p>
+                    </div>
+                    <button type="button" class="btn-payment-reject" onclick="resetBusinessWorkspaceClean()" style="padding:9px 15px;font-size:11.5px;"><i class="ph ph-broom"></i> Limpiar Cuenta a Cero</button>
+                </div>
             </div>
         </div>
 
-        <!-- VISTA COPILOT (Clean) -->
+        <!-- VISTA COPILOT EJECUTIVO (CONECTADO Y EJECUTOR DE TAREAS) -->
         <div id="view-copilot" class="view-section">
-            <div class="section-header animate-fade-up">
-                <h2>Copiloto Ejecutivo</h2>
-                <p class="muted">Tu asistente personal conectado a los datos de la empresa.</p>
+            <div class="section-header animate-fade-up" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+                <div>
+                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#00f2fe;font-weight:700;display:block;margin-bottom:5px;">ASISTENTE EJECUTIVO CON EJECUCIÓN REAL EN BASE DE DATOS</span>
+                    <h2>Copiloto Ejecutivo de tu Negocio</h2>
+                    <p class="muted">Pídele resúmenes en vivo o **ordénale tareas operativas** (ej. <code>"agrégame 5 teclados rgb"</code>, <code>"cambia el precio de X a $30"</code>).</p>
+                </div>
+                <span class="badge success" style="padding:7px 12px;"><span class="status-dot-live"></span> MODO EJECUTOR ACTIVO</span>
             </div>
-            <div class="chat-container glass-panel animate-fade-up delay-1">
+
+            <div class="copilot-chip-bar animate-fade-up">
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Agrégame 5 Teclados RGB')">➕ "Agrégame 5 Teclados RGB"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('¿Qué productos tienen poco stock?')">📦 "¿Qué productos tienen poco stock?"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Reabastece todos los productos con poco stock')">⚡ "Reabastecer +10 a stock bajo"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Crea el producto Monitor Gamer 27 a $195 con 8 en stock')">🆕 "Crear Monitor Gamer 27 a $195"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Dame un resumen ejecutivo de ventas e inventario')">📊 "Resumen ejecutivo del negocio"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Actualiza la tasa del día a 46.50')">💱 "Actualizar tasa a 46.50"</button>
+            </div>
+
+            <div class="chat-container glass-panel animate-fade-up delay-1" style="height:calc(100vh - 270px);min-height:420px;">
                 <div class="chat-box" id="copilot-chat-box">
                     <div class="chat-msg chat-bot">
-                        <strong>Hola Jefe.</strong> Soy el Copiloto de CALYRISIA. Pídeme resúmenes de ventas, estatus de inventario o que redacte un reporte.
+                        <strong>Hola Jefe 👋</strong> Soy tu Copiloto Ejecutivo de CALYRISIA.<br><br>
+                        Estoy conectado en tiempo real a tu inventario, ventas y configuración. Puedes escribirme o tocar cualquiera de los botones de arriba para:<br>
+                        • <strong>Sumar stock o crear artículos al instante:</strong> <code>"agrégame 5 teclados rgb"</code> o <code>"suma 10 mouse inalámbrico"</code>;<br>
+                        • <strong>Reponer todo el stock bajo en 1 orden:</strong> <code>"reabastece todos los productos con poco stock"</code>;<br>
+                        • <strong>Cambiar precios o tasa del día:</strong> <code>"cambia el precio de auriculares a $28"</code>;<br>
+                        • <strong>Consultar métricas reales:</strong> <code>"¿qué productos tienen poco stock?"</code> o <code>"resumen de ventas"</code>.
                     </div>
                 </div>
                 <div class="chat-input-area">
-                    <input type="text" id="copilot-input" placeholder="Comanda a tu IA..." onkeypress="if(event.key === 'Enter') sendCopilotMessage()">
-                    <button class="btn-action" style="padding: 12px 18px;" onclick="sendCopilotMessage()"><i class="ph ph-paper-plane-right"></i></button>
+                    <input type="text" id="copilot-input" placeholder="Ej: Agrégame 5 teclados rgb · ¿Qué productos tienen poco stock? · Cambia el precio de..." onkeypress="if(event.key === 'Enter') sendCopilotMessage()">
+                    <button class="btn-action" style="padding: 12px 20px;" onclick="sendCopilotMessage()"><i class="ph ph-paper-plane-right"></i> Ejecutar</button>
                 </div>
             </div>
         </div>
 
     </div>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR MÓVIL / TABLET -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación rápida móvil">
+        <button type="button" class="mobile-bottom-item active" data-view="overview" onclick="switchView('overview')">
+            <i class="ph ph-chart-line-up"></i>
+            <span>Resumen</span>
+        </button>
+        <button type="button" class="mobile-bottom-item" data-view="catalog" onclick="switchView('catalog')">
+            <i class="ph ph-package"></i>
+            <span>Catálogo</span>
+        </button>
+        <button type="button" class="mobile-bottom-item" data-view="copilot" onclick="switchView('copilot')">
+            <i class="ph ph-sparkle"></i>
+            <span>Copiloto IA</span>
+        </button>
+        <button type="button" class="mobile-bottom-item" data-view="operations" onclick="switchView('operations')">
+            <i class="ph ph-check-square-offset"></i>
+            <span>Pagos</span>
+        </button>
+        <button type="button" class="mobile-bottom-item" data-view="settings" onclick="switchView('settings')">
+            <i class="ph ph-gear-six"></i>
+            <span>Canales</span>
+        </button>
+    </nav>
 </div>
 
 <script>
@@ -681,13 +1227,15 @@ const tokenKey = 'galaxy_access_token';
 const roleKey = 'galaxy_role';
 let currentBusinessId = null;
 let currentBusiness = null;
-let currentPlanCode = 'emprendedor';
+let currentPlanCode = 'free';
+let currentExchangeRate = 0;
+let currentLocalCurrency = 'VES';
+let currentOwnerWhatsapp = '';
 let currentRestaurantTableCount = 12;
 let currentRestaurantBookings = [];
 const CALYRISIA_PLAN_LIMITS = {
-    emprendedor: { label:'Emprendedor', price:19, products:100, images:100, imagesPerProduct:1, ai:600, channels:1 },
-    smart_business: { label:'Smart Business', price:49, products:1000, images:2000, imagesPerProduct:3, ai:2500, channels:2 },
-    enterprise: { label:'Enterprise', price:99, products:10000, images:10000, imagesPerProduct:5, ai:10000, channels:3 }
+    free: { label:'Plan Free', price:0, products:50, images:50, imagesPerProduct:1, ai:150, channels:1 },
+    pro: { label:'Plan PRO', price:39, products:5000, images:10000, imagesPerProduct:5, ai:3500, channels:3 }
 };
 
 function escapeHtml(value) {
@@ -704,22 +1252,23 @@ function normalizeBusinessText(value) {
 }
 function normalizePlanCode(value) {
     const valueNorm = normalizeBusinessText(value).replace(/ /g, '_');
-    if (['enterprise'].includes(valueNorm)) return 'enterprise';
-    if (['smart','smart_business','pro','business'].includes(valueNorm)) return 'smart_business';
-    return 'emprendedor';
+    if (['pro','smart','smart_business','business','enterprise','premium'].includes(valueNorm)) return 'pro';
+    return 'free';
 }
-function planRank(plan) { return ({emprendedor:0, smart_business:1, enterprise:2})[normalizePlanCode(plan)] ?? 0; }
+function planRank(plan) { return ({free:0, pro:1})[normalizePlanCode(plan)] ?? 0; }
 const BUSINESS_TYPE_TO_KIND = {
-    sales_small:'retail', appointments_small:'appointments', local_store:'retail', bodega:'retail',
-    minimarket:'retail', restaurant:'restaurant', consultorio:'appointments', clinic:'appointments',
-    service_team:'appointments', supermarket:'enterprise', hypermarket:'enterprise',
-    large_store:'enterprise', large_company:'enterprise'
+    tech_store:'retail', clothing_store:'retail', distributor:'retail', auto_parts:'retail',
+    hardware_store:'retail', variety_store:'retail', sales_small:'retail', appointments_small:'appointments',
+    local_store:'retail', bodega:'retail', minimarket:'retail', restaurant:'restaurant',
+    consultorio:'appointments', clinic:'appointments', service_team:'appointments',
+    supermarket:'retail', hypermarket:'retail', large_store:'retail', large_company:'retail'
 };
 const BUSINESS_TYPE_TO_PLAN = {
-    sales_small:'emprendedor', appointments_small:'emprendedor',
-    local_store:'smart_business', bodega:'smart_business', minimarket:'smart_business',
-    restaurant:'smart_business', consultorio:'smart_business', clinic:'smart_business', service_team:'smart_business',
-    supermarket:'enterprise', hypermarket:'enterprise', large_store:'enterprise', large_company:'enterprise'
+    tech_store:'free', clothing_store:'free', distributor:'free', auto_parts:'free',
+    hardware_store:'free', variety_store:'free', sales_small:'free', appointments_small:'free',
+    local_store:'free', bodega:'free', minimarket:'free', restaurant:'free',
+    consultorio:'free', clinic:'free', service_team:'free',
+    supermarket:'pro', hypermarket:'pro', large_store:'pro', large_company:'pro'
 };
 function canonicalBusinessType(value) {
     return normalizeBusinessText(value).replace(/ /g, '_');
@@ -728,7 +1277,7 @@ function businessKind(value) {
     if (value && typeof value === 'object') {
         const exactType = canonicalBusinessType(value.business_type);
         if (BUSINESS_TYPE_TO_KIND[exactType]) return BUSINESS_TYPE_TO_KIND[exactType];
-        return businessKind([value.business_type, value.industry, value.name].filter(Boolean).join(' '));
+        return businessKind([value?.business_type, value?.industry, value?.name, value?.business_name].filter(Boolean).join(' '));
     }
     const t = normalizeBusinessText(value);
     const exactType = t.replace(/ /g, '_');
@@ -742,7 +1291,7 @@ function requiredPlanForBusiness(value) {
     if (value && typeof value === 'object') {
         const exactType = canonicalBusinessType(value.business_type);
         if (BUSINESS_TYPE_TO_PLAN[exactType]) return BUSINESS_TYPE_TO_PLAN[exactType];
-        return requiredPlanForBusiness([value.business_type, value.industry, value.name].filter(Boolean).join(' '));
+        return requiredPlanForBusiness([value?.business_type, value?.industry, value?.name, value?.business_name].filter(Boolean).join(' '));
     }
     const t = normalizeBusinessText(value);
     const exactType = t.replace(/ /g, '_');
@@ -776,7 +1325,7 @@ function setupBusinessNavigation(business) {
     const teamNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'team'"));
     if (teamNav) teamNav.classList.toggle('hidden', currentPlanCode !== 'enterprise');
     const copilotNav = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'copilot'"));
-    if (copilotNav) copilotNav.classList.toggle('hidden', currentPlanCode === 'emprendedor');
+    if (copilotNav) copilotNav.classList.remove('hidden');
     const catalogNav = document.getElementById('catalog-nav-item') || Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'catalog'"));
     if (catalogNav) {
         if (kind === 'appointments') {
@@ -827,8 +1376,12 @@ function switchView(viewId) {
     if (navItem) navItem.classList.add('active');
     if (viewId === 'overview') applyBusinessOverview(currentBusiness);
     if (viewId === 'crm') loadCrmWorkspace();
+    if (viewId === 'radar') loadBusinessRadarWorkspace();
+    if (viewId === 'autonomy') loadAutonomyData();
+    if (viewId === 'settings') loadSubscriptionSettings();
     if (viewId === 'operations') loadPendingWebchatPayments();
-    if (viewId === 'settings') { loadTelegramChannel(true); loadDashboardChannels(); loadPaymentInstructions(); loadWorkspaceAiInstructions(); }
+    document.querySelectorAll('.mobile-bottom-item').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-view') === viewId));
+    if (viewId === 'settings') { loadTelegramChannel(true); loadWhatsAppChannel(); loadMetaSocialChannels(true); loadDashboardChannels(); loadPaymentInstructions(); loadWorkspaceAiInstructions(); }
     if (viewId === 'specialized') renderSpecializedWorkspace(currentBusiness);
     if (viewId === 'catalog') renderCatalogWorkspace(currentBusiness);
 }
@@ -859,25 +1412,198 @@ async function api(path, options = {}) {
 --------------------------------------------------------- */
 async function loadAutonomyData() {
     try {
-        const auditData = await api('/api/v1/autonomy/audit?limit=20');
-        const auditContainer = document.getElementById('audit-container');
-        if (auditData && auditData.length > 0) {
-            auditContainer.innerHTML = '';
-            auditData.forEach(log => {
-                const dateObj = new Date(log.created_at);
-                const timeStr = dateObj.toLocaleTimeString();
-                let colorStr = log.actor === 'AI_AGENT' ? '#c4b5fd' : '#34d399';
-                
-                auditContainer.innerHTML += `
-                    <div style="margin-bottom: 8px; font-family: monospace; font-size: 11px; line-height: 1.4;">
-                        <span style="color: var(--text-muted);">[${timeStr}]</span> 
-                        <span style="color: ${colorStr};">[${escapeHtml(log.actor)}]</span> 
-                        <strong style="color: #fff;">${escapeHtml(log.action)}</strong> 
-                        <span style="color: var(--text-muted); opacity: 0.7;">> ${escapeHtml(JSON.stringify(log.details))}</span>
+        const [opsRes, logs] = await Promise.all([
+            api("/api/v1/dashboard/autonomous-operations?limit=40").catch(() => ({ operations: [] })),
+            api("/api/v1/autonomy/audit?limit=20").catch(() => [])
+        ]);
+        const opsList = document.getElementById("autonomous-operations-list");
+        if (opsList) {
+            const ops = opsRes.operations || [];
+            if (!ops.length) {
+                opsList.innerHTML = '<div class="upgrade-lock" style="padding:18px;"><h3 style="font-size:14px;">Sin operaciones registradas aún</h3><p class="muted" style="font-size:12px;">Cada vez que el Cerebro IA consulte inventario (Nivel 1), prepare una orden o cita (Nivel 2) o solicite aprobación de pago (Nivel 3), quedará registrado aquí con trazabilidad completa.</p></div>';
+            } else {
+                opsList.innerHTML = ops.map(op => {
+                    const statusBadge = op.status === 'completed' ? 'success' : (op.status === 'waiting_approval' ? 'warning' : 'danger');
+                    const dateStr = op.requested_at ? new Date(op.requested_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : 'Reciente';
+                    return `<div class="booking-row">
+                        <div>
+                            <h4>${escapeHtml(op.tool_name)} · <span style="color:#7cecf5;font-size:11px;">${escapeHtml(op.autonomy_label)}</span></h4>
+                            <p>${escapeHtml(op.reason || 'Operación ejecutada por Business Brain.')} · <span class="muted">${escapeHtml(dateStr)}</span></p>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span class="badge ${statusBadge}">${escapeHtml(op.status)}</span>
+                        </div>
                     </div>`;
-            });
+                }).join('');
+            }
         }
-    } catch (e) { console.error("Error cargando Audit Data:", e); }
+
+        const container = document.getElementById("audit-container");
+        if (!container) return;
+        container.innerHTML = "";
+        if (!Array.isArray(logs) || logs.length === 0) {
+            container.innerHTML = `<p class="muted" style="font-family: monospace; font-size: 11px;">[SYSTEM] Sin eventos adicionales en la cola de auditoría.</p>`;
+            return;
+        }
+        logs.forEach(log => {
+            const date = log.created_at ? new Date(log.created_at).toLocaleTimeString() : '';
+            const act = String(log.action || log.action_type || 'ACTION');
+            let color = "#94a3b8";
+            if(act.includes("BLOCKED") || act.includes("FAILED")) color = "#f43f5e";
+            if(act.includes("COMPLETED") || act.includes("APPROVED") || act.includes("success")) color = "#10b981";
+            container.innerHTML += `
+                <div style="font-family: monospace; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                    <span style="color: #64748b;">[${escapeHtml(date)}]</span> 
+                    <strong style="color: #e2e8f0;">[${escapeHtml(log.actor || log.actor_type || 'SYSTEM')}]</strong> 
+                    <span style="color: ${color};">${escapeHtml(act)}</span> 
+                    <span style="color: #cbd5e1;">-> ${escapeHtml(log.target_id || log.reason || 'OK')}</span>
+                </div>
+            `;
+        });
+    } catch (e) { console.error("Error cargando logs:", e); }
+}
+
+async function loadBusinessRadarWorkspace() {
+    const container = document.getElementById('radar-signals-container');
+    const insightsOverview = document.getElementById('insights-container');
+    try {
+        const data = await api('/api/v1/dashboard/radar', { cache: 'no-store' });
+        const signals = Array.isArray(data.signals) ? data.signals : [];
+        const counters = data.counters || {};
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = String(v); };
+        set('radar-count-stock', Number(counters.low_stock || 0));
+        set('radar-count-catalog', Number(counters.high_demand || 0) + Number(counters.incomplete_products || 0));
+        set('radar-count-followups', Number(counters.pending_payments || 0) + Number(counters.due_follow_ups || 0) + Number(counters.unconverted_conversations || 0));
+
+        const navBadge = document.getElementById('radar-signals-nav-badge');
+        if (navBadge) {
+            navBadge.textContent = String(signals.length);
+            navBadge.classList.toggle('hidden', signals.length === 0);
+        }
+
+        if (insightsOverview) {
+            if (!signals.length) {
+                insightsOverview.innerHTML = '<div class="list-item"><p class="muted">Operación saludable. Business Radar no detecta alertas críticas en este momento.</p></div>';
+            } else {
+                insightsOverview.innerHTML = signals.slice(0, 4).map(sig => `
+                    <div class="list-item" style="align-items:flex-start;gap:12px;">
+                        <div class="list-item-content">
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
+                                <span class="badge ${sig.priority === 'high' ? 'danger' : 'ai'}">${sig.priority === 'high' ? 'Prioridad Alta' : 'Oportunidad'}</span>
+                                <span style="font-size:11px;color:#7cecf5;font-weight:600;">${escapeHtml(sig.finding_kind_label || 'Observación verificada')}</span>
+                            </div>
+                            <h4 style="font-size:13px;margin:0 0 4px;">${escapeHtml(sig.what_detected || sig.title)}</h4>
+                            <p style="font-size:12px;color:#cbd5e1;margin:0;">${escapeHtml(sig.supporting_evidence || sig.description)}</p>
+                        </div>
+                        <button type="button" class="btn-secondary" style="padding:6px 11px;font-size:11px;white-space:nowrap;" onclick="switchView('radar')">Ver en Radar →</button>
+                    </div>`).join('');
+            }
+        }
+
+        if (!container) return;
+        const proBanner = !data.radar_enabled ? `
+            <div style="padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(0,242,254,.1),rgba(168,85,247,.1));border:1px solid rgba(0,242,254,.3);margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div style="font-size:12px;color:#e2e8f0;"><strong>Vista previa de Business Radar:</strong> Activa el Plan PRO ($${Number(data.pro_price_usd || 39)}/mes) para desbloquear alertas continuas, automatizaciones proactivas y CRM completo.</div>
+                <a href="/contratar/?plan=pro" class="btn-action" style="padding:7px 14px;font-size:11px;text-decoration:none;">Actualizar a PRO →</a>
+            </div>` : '';
+
+        if (!signals.length) {
+            container.innerHTML = proBanner + '<div class="upgrade-lock" style="padding:22px;"><h3 style="font-size:15px;">Sin hallazgos pendientes en Business Radar</h3><p class="muted" style="font-size:12px;">CALYRISIA continuará monitoreando tus ventas, inventario, catálogo y conversaciones en tiempo real.</p></div>';
+            return;
+        }
+
+        container.innerHTML = proBanner + signals.map(sig => `
+            <div style="padding:16px 18px;border-radius:14px;background:rgba(15,23,42,.65);border:1px solid ${sig.priority === 'high' ? 'rgba(244,63,94,.35)' : 'rgba(148,163,184,.18)'};margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+                    <div>
+                        <span class="badge ${sig.priority === 'high' ? 'danger' : 'ai'}" style="margin-right:6px;">${sig.priority === 'high' ? 'Prioridad Alta' : 'Prioridad Media'}</span>
+                        <span class="badge" style="background:rgba(0,242,254,.08);color:#7cecf5;border:1px solid rgba(0,242,254,.25);">${escapeHtml(sig.finding_kind_label || 'Observación verificada')}</span>
+                        <h3 style="margin:8px 0 2px;font-size:1rem;color:#fff;">1. Qué detectó: ${escapeHtml(sig.what_detected || sig.title)}</h3>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        ${sig.destination ? `<button type="button" class="btn-action" style="padding:6px 12px;font-size:11px;" onclick="switchView('${escapeHtml(sig.destination)}')">Abrir módulo →</button>` : ''}
+                        <button type="button" class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="markRadarSignalReviewed('${escapeHtml(sig.signal_key)}','reviewed')">Marcar revisado ✓</button>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;font-size:12px;color:#cbd5e1;line-height:1.55;">
+                    <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.025);">
+                        <strong style="color:#93c5fd;display:block;margin-bottom:3px;">2. Evidencia verificada:</strong>
+                        ${escapeHtml(sig.supporting_evidence || sig.description)}
+                    </div>
+                    <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.025);">
+                        <strong style="color:#fde047;display:block;margin-bottom:3px;">3. Por qué es importante:</strong>
+                        ${escapeHtml(sig.why_it_matters || '')}
+                    </div>
+                    <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.025);">
+                        <strong style="color:#6ee7b7;display:block;margin-bottom:3px;">4. Acción recomendada:</strong>
+                        ${escapeHtml(sig.recommended_action || sig.suggested_action || '')}
+                    </div>
+                    <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.025);">
+                        <strong style="color:#c4b5fd;display:block;margin-bottom:3px;">5. Qué hace CALYRISIA / 6. Autorización:</strong>
+                        <div><em>Automático:</em> ${escapeHtml(sig.auto_capability || '')}</div>
+                        <div style="margin-top:3px;"><em>Requiere tu decisión:</em> ${escapeHtml(sig.authorization_required || '')}</div>
+                    </div>
+                </div>
+            </div>`).join('');
+    } catch (e) {
+        if (container) container.innerHTML = `<p class="muted">No se pudo cargar Business Radar: ${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function markRadarSignalReviewed(signalKey, state = 'reviewed') {
+    try {
+        await api('/api/v1/dashboard/radar/review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ signal_key: signalKey, state })
+        });
+        showToast('Hallazgo marcado como revisado.');
+        await loadBusinessRadarWorkspace();
+    } catch (e) {
+        showToast(e.message, true);
+    }
+}
+
+async function loadSubscriptionSettings() {
+    try {
+        const data = await api('/api/v1/dashboard/plan-usage');
+        const plan = data.plan || {};
+        const usage = data.usage || {};
+        const titleEl = document.getElementById('settings-plan-title');
+        const subEl = document.getElementById('settings-plan-subtitle');
+        const actEl = document.getElementById('settings-plan-action');
+        const barsEl = document.getElementById('settings-plan-usage-bars');
+        const isPro = normalizePlanCode(data.plan_code) === 'pro';
+        if (titleEl) titleEl.textContent = `${plan.label || (isPro ? 'Plan PRO' : 'Plan Free')} · $${Number(plan.price_usd || 0)} USD / mes`;
+        if (subEl) subEl.textContent = isPro
+            ? 'Suscripción PRO activa con WhatsApp QR, Telegram, Business Radar, CRM Inteligente e importación CSV habilitados.'
+            : 'Cuenta gratuita activa. Actualiza al Plan PRO para conectar WhatsApp QR, Telegram, Business Radar completo y ampliar tu capacidad.';
+        if (actEl) {
+            actEl.innerHTML = isPro
+                ? '<span class="badge success" style="padding:8px 14px;">PLAN PRO ACTIVO ✓</span>'
+                : '<a href="/contratar/?plan=pro" class="btn-action" style="padding:9px 16px;font-size:12px;text-decoration:none;"><i class="ph ph-rocket-launch"></i> Actualizar a Plan PRO →</a>';
+        }
+        if (barsEl) {
+            const pUsed = Number(usage.products || 0), pMax = Math.max(1, Number(plan.products || 50));
+            const aiUsed = Number(usage.ai_responses || 0), aiMax = Math.max(1, Number(plan.ai_responses_month || 150));
+            barsEl.innerHTML = `
+                <div class="vertical-card" style="padding:14px;">
+                    <h3>Productos en Catálogo</h3>
+                    <div class="vertical-number" style="font-size:1.3rem;">${pUsed} / ${pMax}</div>
+                    <div class="usage-track"><div class="usage-fill" style="width:${Math.min(100, Math.round((pUsed/pMax)*100))}%"></div></div>
+                </div>
+                <div class="vertical-card" style="padding:14px;">
+                    <h3>Operaciones IA este mes</h3>
+                    <div class="vertical-number" style="font-size:1.3rem;">${aiUsed} / ${aiMax}</div>
+                    <div class="usage-track"><div class="usage-fill" style="width:${Math.min(100, Math.round((aiUsed/aiMax)*100))}%"></div></div>
+                </div>
+                <div class="vertical-card" style="padding:14px;">
+                    <h3>Canales Simultáneos</h3>
+                    <div class="vertical-number" style="font-size:1.3rem;">Hasta ${Number(plan.channels || 1)}</div>
+                    <p class="vertical-small">${isPro ? 'Webchat + WhatsApp QR + Telegram' : 'Canal Webchat incluido'}</p>
+                </div>`;
+        }
+    } catch (_) {}
 }
 
 /* ---------------------------------------------------------
@@ -889,25 +1615,49 @@ function paymentDate(value) {
     return Number.isNaN(date.getTime()) ? 'Fecha no disponible' : date.toLocaleString();
 }
 
+function notifyCustomerPaymentWhatsApp(customerName, customerPhone, amountUsd, orderId, status) {
+    const bizName = currentBusiness?.name || 'nuestro negocio';
+    const cleanPhone = String(customerPhone || '').replace(/\D/g, '');
+    const msg = status === 'approved'
+        ? `¡Hola ${customerName || 'cliente'}! Te escribimos de ${bizName}. Confirmamos que tu pago por $${Number(amountUsd || 0).toFixed(2)} USD ha sido verificado y aprobado${orderId ? ` (Orden #${String(orderId).slice(0, 8)})` : ''}. ¡Ya estamos preparando tu pedido!`
+        : `Hola ${customerName || 'cliente'}, te escribimos de ${bizName} respecto a tu reporte de pago por $${Number(amountUsd || 0).toFixed(2)} USD.`;
+    const url = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener');
+}
+
 function renderPaymentRow(payment, isPending) {
-    const amount = `$${Number(payment.amount || 0).toFixed(2)} ${escapeHtml(payment.currency || 'USD')}`;
+    const usdVal = Number(payment.amount || 0);
+    const localEq = currentExchangeRate > 0 ? ` <span style="color:#7cecf5;font-weight:600;font-size:.82rem;">(≈ ${escapeHtml(currentLocalCurrency)} ${(usdVal * currentExchangeRate).toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>` : '';
+    const amount = `$${usdVal.toFixed(2)} ${escapeHtml(payment.currency || 'USD')}${localEq}`;
     const rawM = String(payment.payment_method || '').toLowerCase();
-    const method = rawM.includes('binance') ? 'Binance Pay' : ((rawM.includes('telegram') && (rawM.includes('movil') || rawM.includes('pago_movil'))) ? 'Pago Móvil · Telegram' : ((rawM.includes('movil') || rawM.includes('pago_movil')) ? 'Pago Móvil' : escapeHtml(payment.payment_method || 'Pago Webchat')));
+    const method = rawM.includes('binance') ? 'Binance Pay'
+        : rawM.includes('zelle') ? 'Zelle'
+        : rawM.includes('paypal') ? 'PayPal'
+        : rawM.includes('transferencia') ? 'Transferencia Bancaria'
+        : (rawM.includes('movil') || rawM.includes('pago_movil')) ? 'Pago Móvil'
+        : escapeHtml(payment.payment_method || 'Pago Registrado');
     const statusLabel = payment.status === 'approved' ? 'Aprobado' : (payment.status === 'rejected' ? 'Rechazado' : 'Pendiente');
+    const dupAlert = payment.duplicate_reference_warning
+        ? `<div style="margin-top:8px;padding:8px 12px;border-radius:9px;background:rgba(244,63,94,.16);border:1px solid rgba(244,63,94,.45);color:#fda4af;font-size:12px;font-weight:700;"><i class="ph ph-warning-octagon"></i> ALERTA ANTI-FRAUDE: La referencia "${escapeHtml(payment.extracted_reference)}" aparece ${Number(payment.duplicate_reference_count || 2)} veces en el historial. Verifica en tu banco antes de aprobar.</div>`
+        : '';
+    const waBtn = `<button type="button" class="btn-secondary" style="padding:7px 11px;font-size:11px;border-color:rgba(52,211,153,.35);color:#6ee7b7;" onclick="notifyCustomerPaymentWhatsApp('${escapeHtml(payment.customer_name || 'Cliente')}','${escapeHtml(payment.customer_phone || '')}',${usdVal},'${escapeHtml(payment.order_id || '')}','${escapeHtml(payment.status || 'approved')}')"><i class="ph ph-whatsapp-logo"></i> Notificar WhatsApp</button>`;
     const actions = isPending ? `
         <div class="payment-row-actions">
             <button class="btn-payment-approve" onclick="decideWebchatPayment('${escapeHtml(payment.id)}','approve')"><i class="ph ph-check"></i> Aprobar pago</button>
             <button class="btn-payment-reject" onclick="decideWebchatPayment('${escapeHtml(payment.id)}','reject')"><i class="ph ph-x"></i> Rechazar</button>
-        </div>` : `<span class="payment-status">${statusLabel}</span>`;
+            ${waBtn}
+        </div>` : `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;"><span class="payment-status">${statusLabel}</span>${waBtn}</div>`;
     const orderNote = payment.order_id ? `<p>Pedido generado: ${escapeHtml(payment.order_id).slice(0, 8)}…</p>` : '';
     const detailText = String(payment.customer_payment_details || '').trim();
     const customerPaymentDetails = detailText ? `<p style="white-space:pre-wrap;overflow-wrap:anywhere;padding:10px 12px;margin-top:8px;border-radius:9px;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.16);"><strong>Referencia / datos enviados por el cliente:</strong> ${escapeHtml(detailText)}</p>` : '';
-    return `<div class="payment-row">
+    return `<div class="payment-row" style="${payment.duplicate_reference_warning ? 'border-color:rgba(244,63,94,.45);' : ''}">
         <div class="payment-row-main">
             <h4>${amount} · ${escapeHtml(payment.customer_name || 'Cliente Webchat')}</h4>
             <p>${method} · Solicitud ${escapeHtml(payment.id).slice(0, 8)}…</p>
             <p>Solicitado: ${escapeHtml(paymentDate(payment.created_at))}</p>
-            ${orderNote}${customerPaymentDetails}${actions}
+            ${orderNote}${dupAlert}${customerPaymentDetails}${actions}
         </div>
     </div>`;
 }
@@ -1122,50 +1872,105 @@ async function toggleTelegramChannel() {
 async function loadDashboard() {
     try {
         const me = await api('/api/v1/auth/me');
-        const user = me.user;
-        if (!['OWNER', 'ADMIN'].includes(user.role)) throw new Error('Credencial sin privilegios de acceso ejecutivo.');
+        const user = me?.user || me || {};
+        const role = String(user.role || localStorage.getItem(roleKey) || 'OWNER').toUpperCase();
+        if (!['OWNER', 'ADMIN'].includes(role)) throw new Error('Credencial sin privilegios de acceso ejecutivo.');
         
-        currentBusinessId = user.business_id;
-        localStorage.setItem('calyrisia_current_business_id', currentBusinessId);
-        document.getElementById('display-business-id').textContent = currentBusinessId.split('-')[0] + '...';
+        currentBusinessId = String(user.business_id || me?.business?.id || localStorage.getItem('calyrisia_current_business_id') || '');
+        if (currentBusinessId) {
+            localStorage.setItem('calyrisia_current_business_id', currentBusinessId);
+        }
+        const displayBidEl = document.getElementById('display-business-id');
+        if (displayBidEl) {
+            displayBidEl.textContent = currentBusinessId ? (currentBusinessId.split('-')[0] + '...') : 'Activo';
+        }
         
-        const data = await api('/api/v1/dashboard/overview');
-        currentBusiness = data.business || {};
-        currentPlanCode = normalizePlanCode(currentBusiness.plan_code);
-        document.getElementById('businessName').textContent = currentBusiness.name || 'Panel de Control';
-        const kindLabel = ({restaurant:'Restaurante', appointments:'Citas y servicios', enterprise:'Operación de alto volumen', retail:'Comercio minorista'})[businessKind(currentBusiness)];
-        document.getElementById('businessMeta').textContent = `${kindLabel} · Panel adaptado a tu operación`;
+        let data = {};
+        try {
+            data = await api('/api/v1/dashboard/overview');
+        } catch (ovErr) {
+            console.warn('Fallback overview from /auth/me:', ovErr);
+            data = { business: me?.business || user?.business || {} };
+        }
+
+        const fallbackBiz = me?.business || user?.business || {};
+        currentBusiness = Object.assign(
+            {
+                id: currentBusinessId,
+                name: fallbackBiz?.name || user?.name || 'Panel de Control',
+                business_type: fallbackBiz?.business_type || 'sales_small',
+                plan_code: fallbackBiz?.plan_code || 'emprendedor',
+                currency: 'USD',
+                timezone: 'America/Caracas'
+            },
+            data?.business || {}
+        );
+        if (!currentBusiness.name) {
+            currentBusiness.name = fallbackBiz?.name || data?.name || 'Panel de Control';
+        }
+        currentPlanCode = normalizePlanCode(currentBusiness?.plan_code);
+        currentExchangeRate = Number(currentBusiness?.exchange_rate || 0);
+        currentLocalCurrency = String(currentBusiness?.local_currency_code || 'VES');
+        currentOwnerWhatsapp = String(currentBusiness?.owner_whatsapp || '');
+
+        const bizNameEl = document.getElementById('businessName');
+        if (bizNameEl) bizNameEl.textContent = currentBusiness?.name || 'Panel de Control';
+        const kindLabel = ({restaurant:'Restaurante', appointments:'Citas y servicios', enterprise:'Operación de alto volumen', retail:'Comercio minorista'})[businessKind(currentBusiness)] || 'Comercio';
+        const bizMetaEl = document.getElementById('businessMeta');
+        if (bizMetaEl) bizMetaEl.textContent = `${kindLabel} · Panel adaptado a tu operación`;
         setupBusinessNavigation(currentBusiness);
 
-        const a = data.analytics || {};
-        document.getElementById('kpi-sales').textContent = `$${Number(a.orders?.sales_total || 0).toFixed(2)}`;
-        document.getElementById('kpi-sales-today').textContent = `$${Number(a.orders?.sales_today || 0).toFixed(2)}`;
-        document.getElementById('kpi-chats').textContent = Number(a.conversations_total || 0);
-        document.getElementById('kpi-handoffs').textContent = Number(a.handoffs_total || 0);
-        
-        const insights = document.getElementById('insights-container');
-        insights.innerHTML = '';
-        (data.insights || []).forEach(item => {
-            insights.innerHTML += `
-                <div class="list-item">
-                    <div class="list-item-content"><h4 style="font-size: 13px;">${escapeHtml(item.title || item.focus)}</h4></div>
-                    <span class="badge ${item.status === 'open' ? 'danger' : 'success'}">${escapeHtml(item.status)}</span>
-                </div>`;
-        });
-        
-        if (!insights.children.length) insights.innerHTML = '<div class="list-item"><p class="muted">Telemetría normal. Sin alertas operativas.</p></div>';
-
-        await loadAutonomyData();
-        await loadPendingWebchatPayments();
-        await loadTelegramChannel(true);
-        await loadDashboardChannels();
-        await renderSpecializedWorkspace(currentBusiness);
-        await renderCatalogWorkspace(currentBusiness);
-        await applyBusinessOverview(currentBusiness);
+        // Mostrar el Dashboard inmediatamente para no bloquear el inicio de sesión
         showDashboard();
 
+        const a = data?.analytics || {};
+        const kpiSalesEl = document.getElementById('kpi-sales');
+        if (kpiSalesEl) kpiSalesEl.textContent = `$${Number(a.orders?.sales_total || 0).toFixed(2)}`;
+        const kpiTodayEl = document.getElementById('kpi-sales-today');
+        if (kpiTodayEl) kpiTodayEl.textContent = `$${Number(a.orders?.sales_today || 0).toFixed(2)}`;
+        const kpiChatsEl = document.getElementById('kpi-chats');
+        if (kpiChatsEl) kpiChatsEl.textContent = Number(a.conversations_total || 0);
+        const kpiHandoffsEl = document.getElementById('kpi-handoffs');
+        if (kpiHandoffsEl) kpiHandoffsEl.textContent = Number(a.handoffs_total || 0);
+        
+        const insights = document.getElementById('insights-container');
+        if (insights) {
+            insights.innerHTML = '';
+            (data?.insights || []).forEach(item => {
+                if (!item) return;
+                insights.innerHTML += `
+                    <div class="list-item">
+                        <div class="list-item-content"><h4 style="font-size: 13px;">${escapeHtml(item.title || item.focus || 'Señal operativa')}</h4></div>
+                        <span class="badge ${item.status === 'open' ? 'danger' : 'success'}">${escapeHtml(item.status || 'activo')}</span>
+                    </div>`;
+            });
+            if (!insights.children.length) {
+                insights.innerHTML = '<div class="list-item"><p class="muted">Telemetría normal. Sin alertas operativas.</p></div>';
+            }
+        }
+
+        await Promise.allSettled([
+            loadAutonomyData(),
+            loadBusinessRadarWorkspace(),
+            loadCrmWorkspace(),
+            loadSubscriptionSettings(),
+            loadPendingWebchatPayments(),
+            loadTelegramChannel(true),
+            loadWhatsAppChannel(),
+            loadMetaSocialChannels(true),
+            loadDashboardChannels(),
+            loadWorkspaceAiInstructions(),
+            loadPaymentInstructions(),
+            renderSpecializedWorkspace(currentBusiness),
+            renderCatalogWorkspace(currentBusiness),
+            applyBusinessOverview(currentBusiness)
+        ]);
+
     } catch (err) {
-        if (err.message !== 'unauthorized') alert(err.message);
+        if (err && err.message !== 'unauthorized') {
+            console.error('Error en loadDashboard:', err);
+            showToast(err.message || 'Error cargando datos del panel.', true);
+        }
     }
 }
 
@@ -1207,31 +2012,53 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
 --------------------------------------------------------- */
 async function sendCopilotMessage(forcedMessage = null) {
     const inputEl = document.getElementById('copilot-input');
-    const message = forcedMessage || inputEl.value.trim();
+    const message = forcedMessage || (inputEl ? inputEl.value.trim() : '');
     if (!message) return;
 
     const chatBox = document.getElementById('copilot-chat-box');
     chatBox.innerHTML += `<div class="chat-msg chat-user">${escapeHtml(message)}</div>`;
-    if (!forcedMessage) inputEl.value = '';
+    if (!forcedMessage && inputEl) inputEl.value = '';
     chatBox.scrollTop = chatBox.scrollHeight;
 
     const loadingId = 'loading-' + Date.now();
-    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-style: italic;"><i class="ph ph-spinner ph-spin"></i> Pensando...</div>`;
+    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-style: italic;"><i class="ph ph-spinner ph-spin"></i> Analizando y ejecutando en tu negocio...</div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
         const data = await api("/api/v1/owner/copilot", {
-            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: message })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: message })
         });
-        
-        document.getElementById(loadingId).remove();
-        let formattedText = escapeHtml(data.response).replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fff;">$1</strong>');
-        chatBox.innerHTML += `<div class="chat-msg chat-bot">${formattedText}</div>`;
+
+        const loader = document.getElementById(loadingId);
+        if (loader) loader.remove();
+
+        let formattedText = escapeHtml(data.response || 'Operación completada.')
+            .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fff;">$1</strong>')
+            .replace(/`([^`]+)`/g, '<code style="background:rgba(0,242,254,.12);color:#7cecf5;padding:2px 6px;border-radius:6px;font-size:12px;">$1</code>')
+            .replace(/\n/g, '<br>');
+
+        const actionBadge = data.action_executed
+            ? `<div style="margin-bottom:8px;"><span class="badge success" style="font-size:10px;"><i class="ph ph-check-circle"></i> ACCIÓN EJECUTADA EN BASE DE DATOS</span></div>`
+            : '';
+
+        chatBox.innerHTML += `<div class="chat-msg chat-bot" style="${data.action_executed ? 'border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.08);' : ''}">${actionBadge}${formattedText}</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
-        
+
+        if (data.action_executed) {
+            showToast('✓ El Copiloto ejecutó la tarea y actualizó tu inventario.');
+            await Promise.allSettled([
+                refreshActiveWorkspaceCatalog(),
+                applyBusinessOverview(currentBusiness),
+                loadBusinessRadarWorkspace(),
+                loadPaymentInstructions()
+            ]);
+        }
     } catch (error) {
-        document.getElementById(loadingId).remove();
-        chatBox.innerHTML += `<div class="chat-msg chat-bot error" style="background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3);">Fallo de conexión: ${error.message}</div>`;
+        const loader = document.getElementById(loadingId);
+        if (loader) loader.remove();
+        chatBox.innerHTML += `<div class="chat-msg chat-bot error" style="background: rgba(244, 63, 94, 0.1); border-color: rgba(244, 63, 94, 0.3);">No se pudo procesar: ${escapeHtml(error.message)}</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 }
@@ -1298,13 +2125,73 @@ INFORMACIÓN OPERATIVA DEL NEGOCIO:
 };
 
 function canCurrentPlanUseCsv() {
-    return currentPlanCode === 'smart_business' || currentPlanCode === 'enterprise';
+    return true;
 }
 
 function getBusinessProfileMeta(business) {
     const bType = canonicalBusinessType(business?.business_type || '');
-    const isBasic = currentPlanCode === 'emprendedor';
+    const isBasic = currentPlanCode === 'free';
     const profiles = {
+        tech_store: {
+            planBadge: 'TIENDA DE TECNOLOGÍA',
+            overviewSub: 'Control de inventario tecnológico, modelos, capacidades, garantías y conversión de pedidos IA',
+            opTitle: 'Centro Operativo de Inventario y Pedidos',
+            opSubtitle: 'Supervisa existencias por modelo/SKU, alertas de agotamiento y órdenes capturadas por el Chat IA.',
+            catTitle: 'Catálogo de Equipos, Accesorios y Variantes',
+            catSubtitle: 'Administra tus productos con SKU, marca, capacidad/color y precios en tiempo real.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
+            showStock: true, allowCsv: true, defaultCategory: 'Tecnología'
+        },
+        clothing_store: {
+            planBadge: 'TIENDA DE ROPA Y MODA',
+            overviewSub: 'Gestión de prendas, tallas, colores, rotación de inventario y pedidos por chat',
+            opTitle: 'Control de Prendas, Reposición y Pedidos',
+            opSubtitle: 'Monitorea artículos con pocas unidades, ajusta stock y gestiona pedidos confirmados.',
+            catTitle: 'Catálogo de Ropa, Calzado y Tallas',
+            catSubtitle: 'Registra prendas indicando tallas y colores disponibles para que la IA informe con exactitud.',
+            itemNoun: 'prenda o artículo', itemNounPlural: 'prendas y artículos', priceLabel: 'Precio (USD)', stockLabel: 'Unidades en stock',
+            showStock: true, allowCsv: true, defaultCategory: 'Ropa y Moda'
+        },
+        distributor: {
+            planBadge: 'DISTRIBUIDORA / MAYORISTA',
+            overviewSub: 'Operación mayorista y detal · Valor de almacén, cotizaciones por volumen y seguimiento B2B',
+            opTitle: 'Centro de Despacho, Almacén y Pedidos Mayoristas',
+            opSubtitle: 'Supervisa inventario por presentación (unidad, caja, bulto) y órdenes en curso.',
+            catTitle: 'Catálogo de Distribución, Presentaciones y CSV',
+            catSubtitle: 'Configura productos, códigos SKU, presentaciones mayoristas o importa lotes por CSV.',
+            itemNoun: 'producto o bulto', itemNounPlural: 'productos de distribución', priceLabel: 'Precio (USD)', stockLabel: 'Existencia en almacén',
+            showStock: true, allowCsv: true, defaultCategory: 'Distribución'
+        },
+        auto_parts: {
+            planBadge: 'REPUESTOS AUTOMOTRICES',
+            overviewSub: 'Catálogo técnico por código de parte SKU, marca, compatibilidad vehicular y stock en vivo',
+            opTitle: 'Control de Repuestos, Stock Crítico y Despacho',
+            opSubtitle: 'Monitorea repuestos de alta rotación, existencias mínimas y pedidos del chat.',
+            catTitle: 'Catálogo de Autopartes, Códigos SKU y Marcas',
+            catSubtitle: 'Registra repuestos con código OEM/SKU, marca y modelos de vehículos compatibles.',
+            itemNoun: 'repuesto', itemNounPlural: 'repuestos', priceLabel: 'Precio (USD)', stockLabel: 'Unidades disponibles',
+            showStock: true, allowCsv: true, defaultCategory: 'Autopartes'
+        },
+        hardware_store: {
+            planBadge: 'FERRETERÍA Y MATERIALES',
+            overviewSub: 'Control de herramientas, materiales eléctricos, plomería, medidas y cotizaciones rápidas',
+            opTitle: 'Operación Ferretera, Reposición y Pedidos',
+            opSubtitle: 'Supervisa artículos por medida/calibre, alertas de stock bajo y despachos.',
+            catTitle: 'Catálogo de Ferretería, Medidas y Carga CSV',
+            catSubtitle: 'Administra herramientas y materiales con código SKU, marca y especificaciones.',
+            itemNoun: 'artículo ferretero', itemNounPlural: 'artículos ferreteros', priceLabel: 'Precio (USD)', stockLabel: 'Stock en tienda',
+            showStock: true, allowCsv: true, defaultCategory: 'Ferretería'
+        },
+        variety_store: {
+            planBadge: 'PRODUCTOS VARIADOS',
+            overviewSub: 'Comercio multirubro · Rotación por departamento, valor de inventario y atención inmediata',
+            opTitle: 'Control de Inventario Multirubro y Pedidos',
+            opSubtitle: 'Supervisa existencias reales, artículos más vendidos y órdenes generadas por IA.',
+            catTitle: 'Catálogo Multirubro, Variantes y Precios',
+            catSubtitle: 'Registra productos de cualquier categoría con variantes, SKU e imagen.',
+            itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
+            showStock: true, allowCsv: true, defaultCategory: 'Variedades'
+        },
         sales_small: {
             planBadge: 'PLAN EMPRENDEDOR · $19/MES',
             overviewSub: 'Análisis comercial esencial · Ventas, conversión de chats y estado de catálogo',
@@ -1466,11 +2353,11 @@ function closeCatalogModal() {
 async function applyBusinessOverview(business) {
     if (!business) return;
     const kind = businessKind(business);
-    const isBasic = currentPlanCode === 'emprendedor';
+    const isBasic = currentPlanCode === 'free';
     const meta = getBusinessProfileMeta(business);
 
     const kicker = document.getElementById('overview-plan-kicker');
-    if (kicker) kicker.textContent = `${meta.planBadge} · PANEL DE ANÁLISIS EJECUTIVO`;
+    if (kicker) kicker.textContent = `PANEL EJECUTIVO EN TIEMPO REAL · ${(currentBusiness?.business_type || 'COMERCIO').toUpperCase()}`;
     const metaEl = document.getElementById('businessMeta');
     if (metaEl) metaEl.textContent = meta.overviewSub;
 
@@ -1861,7 +2748,7 @@ async function renderSpecializedWorkspace(business) {
     const root = document.getElementById('specialized-workspace');
     if (!root || !business) return;
     const kind = businessKind(business);
-    const isBasicPlan = currentPlanCode === 'emprendedor';
+    const isBasicPlan = currentPlanCode === 'free';
 
     if (kind === 'appointments') {
         root.innerHTML = isBasicPlan
@@ -2195,22 +3082,6 @@ async function renderCatalogWorkspace(business) {
     const root = document.getElementById('catalog-workspace');
     if (!root || !business) return;
     const meta = getBusinessProfileMeta(business);
-    const allowCsv = canCurrentPlanUseCsv() && meta.allowCsv;
-
-    const csvPanelHtml = allowCsv ? `
-      <div class="panel glass-panel" style="padding:22px;margin-bottom:18px;border-color:rgba(0,242,254,.22);">
-        <div class="vertical-intro" style="margin-bottom:10px;">
-          <div>
-            <h3><i class="ph ph-file-csv" style="color:#00f2fe;"></i> Importación Corporativa por Lotes (CSV)</h3>
-            <p class="muted" style="font-size:12px;">Carga o actualiza decenas de ${escapeHtml(meta.itemNounPlural)} en segundos desde un archivo CSV o Excel exportado.</p>
-          </div>
-          <button type="button" class="btn-secondary" onclick="downloadCatalogCsvTemplate()"><i class="ph ph-download-simple"></i> Descargar plantilla CSV</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 16px;border-radius:12px;background:rgba(0,242,254,.05);border:1px dashed rgba(0,242,254,.35);">
-          <input type="file" accept=".csv,text/csv" onchange="importCatalogCsv(event)" style="max-width:380px;padding:8px;font-size:12px;">
-          <span class="muted" style="font-size:12px;">Columnas admitidas: <code>name, price, ${meta.showStock ? 'stock, ' : ''}category, image_urls</code></span>
-        </div>
-      </div>` : '';
 
     const stockInputHtml = meta.showStock ? `
       <label>${escapeHtml(meta.stockLabel)} *
@@ -2218,12 +3089,62 @@ async function renderCatalogWorkspace(business) {
       </label>` : '';
 
     root.innerHTML = `
-      <div class="section-header">
-        <h2>${escapeHtml(meta.catTitle)}</h2>
-        <p class="muted">${escapeHtml(meta.catSubtitle)}</p>
+      <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
+        <div>
+          <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#00f2fe;font-weight:700;display:block;margin-bottom:5px;">GESTIÓN DE INVENTARIO Y SUBIDA EXPRÉS</span>
+          <h2>${escapeHtml(meta.catTitle)}</h2>
+          <p class="muted">${escapeHtml(meta.catSubtitle)}</p>
+        </div>
       </div>
 
-      ${csvPanelHtml}
+      <!-- CENTRO DE CARGA RÁPIDA DE ARTÍCULOS (3 MODOS SIN PERDER TIEMPO) -->
+      <div class="panel glass-panel" style="padding:22px;margin-bottom:20px;border-color:rgba(0,242,254,.3);background:linear-gradient(145deg,rgba(12,20,38,.88),rgba(8,13,26,.92));">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+          <div>
+            <h3 style="margin:0 0 4px;font-size:1.08rem;color:#fff;"><i class="ph ph-lightning" style="color:#00f2fe;"></i> Subida Rápida de Artículos (Ahorra Tiempo)</h3>
+            <p class="muted" style="font-size:12px;margin:0;">Sube decenas de ${escapeHtml(meta.itemNounPlural)} de una sola vez pegando tu lista de precios, usando la tabla rápida o subiendo un archivo Excel/CSV.</p>
+          </div>
+          <div class="bulk-tab-bar" style="margin:0;border:none;padding:0;">
+            <button type="button" class="bulk-tab-btn active" onclick="switchBulkUploadTab('paste', this)"><i class="ph ph-clipboard-text"></i> 1. Pegado Inteligente</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('grid', this)"><i class="ph ph-table"></i> 2. Tabla Multi-Fila</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('csv', this)"><i class="ph ph-file-csv"></i> 3. Archivo CSV / Excel</button>
+          </div>
+        </div>
+
+        <!-- MODO 1: PEGADO INTELIGENTE -->
+        <div id="bulk-tab-paste">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+            <span class="muted" style="font-size:11.5px;">Escribe o pega un artículo por línea desde Excel, WhatsApp o Notas (formato: <code>Nombre | Precio | Stock | Categoría</code>):</span>
+          </div>
+          <textarea id="quick-bulk-textarea" rows="4" oninput="previewQuickBulkPaste()" placeholder="Nombre del Artículo | Precio USD | Stock | Categoría" style="width:100%;border-radius:12px;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,242,254,0.25);color:#f8fafc;font-size:12.5px;line-height:1.55;resize:vertical;font-family:monospace;"></textarea>
+          <div id="quick-bulk-preview-box" class="hidden" style="margin-top:10px;padding:10px 14px;border-radius:11px;background:rgba(0,242,254,.06);border:1px solid rgba(0,242,254,.2);font-size:12px;color:#cbd5e1;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px;">
+            <span class="muted" style="font-size:11px;">Si un producto ya existe con el mismo nombre, se actualizará su precio y stock automáticamente.</span>
+            <button type="button" class="btn-action" id="quick-bulk-submit-btn" onclick="submitQuickBulkPaste()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-rocket-launch"></i> Subir todos los artículos ahora</button>
+          </div>
+        </div>
+
+        <!-- MODO 2: TABLA MULTI-FILA TIPO EXCEL -->
+        <div id="bulk-tab-grid" class="hidden">
+          <p class="muted" style="font-size:11.5px;margin-bottom:10px;">Llena varios artículos a la vez como en una hoja de cálculo y guárdalos todos en un solo clic:</p>
+          <div id="quick-grid-rows" style="display:grid;gap:8px;margin-bottom:12px;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <button type="button" class="btn-secondary" onclick="addQuickGridRow()" style="padding:8px 14px;font-size:11.5px;"><i class="ph ph-plus"></i> Agregar otra fila</button>
+            <button type="button" class="btn-action" onclick="submitQuickGridRows()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-floppy-disk"></i> Guardar todas las filas</button>
+          </div>
+        </div>
+
+        <!-- MODO 3: ARCHIVO CSV / EXCEL -->
+        <div id="bulk-tab-csv" class="hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;border-radius:12px;background:rgba(0,242,254,.05);border:1px dashed rgba(0,242,254,.35);">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <input type="file" accept=".csv,text/csv" onchange="importCatalogCsv(event)" style="max-width:340px;padding:8px;font-size:12px;">
+              <span class="muted" style="font-size:11.5px;">Acepta CSV separado por comas (<code>,</code>) o punto y coma (<code>;</code>) de Excel.</span>
+            </div>
+            <button type="button" class="btn-secondary" onclick="downloadCatalogCsvTemplate()" style="padding:8px 14px;font-size:11.5px;"><i class="ph ph-download-simple"></i> Descargar plantilla CSV</button>
+          </div>
+        </div>
+      </div>
 
       <div class="vertical-layout">
         <div class="panel glass-panel" style="padding:22px;">
@@ -2234,13 +3155,13 @@ async function renderCatalogWorkspace(business) {
             </div>
             <button class="btn-secondary" onclick="loadWorkspaceCatalogItems()"><i class="ph ph-arrows-clockwise"></i> Actualizar</button>
           </div>
-          <input id="ws-catalog-search" placeholder="Buscar por nombre o categoría..." oninput="filterWorkspaceCatalogItems()" style="margin-bottom:14px;">
+          <input id="ws-catalog-search" placeholder="Buscar por nombre, categoría o SKU..." oninput="filterWorkspaceCatalogItems()" style="margin-bottom:14px;">
           <div id="workspace-catalog-list" class="booking-list" style="max-height:520px;overflow-y:auto;"><p class="muted">Cargando registros...</p></div>
         </div>
 
         <div class="panel glass-panel" style="padding:22px;">
-          <h3 style="margin-bottom:6px;"><i class="ph ph-plus-circle"></i> Registrar ${escapeHtml(meta.itemNoun)} manualmente</h3>
-          <p class="muted" style="font-size:12px;margin-bottom:16px;">Cada ${escapeHtml(meta.itemNoun)} guardado queda inmediatamente disponible para que el Chat IA lo consulte y cotice.</p>
+          <h3 style="margin-bottom:6px;"><i class="ph ph-plus-circle"></i> Registrar ${escapeHtml(meta.itemNoun)} individual</h3>
+          <p class="muted" style="font-size:12px;margin-bottom:16px;">Con detalles opcionales de SKU, marca, variantes e imagen.</p>
           <form class="vertical-form" onsubmit="createManualCatalogItem(event,'ws')">
             <label>Nombre del ${escapeHtml(meta.itemNoun)} *
               <input id="wsItemName" required maxlength="200" placeholder="Escribe el nombre claro...">
@@ -2251,9 +3172,22 @@ async function renderCatalogWorkspace(business) {
               </label>
               ${stockInputHtml}
             </div>
-            <label>Categoría / Especialidad
-              <input id="wsItemCategory" maxlength="100" placeholder="Ej. ${escapeHtml(meta.defaultCategory)}">
-            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <label>Categoría / Rubro
+                <input id="wsItemCategory" maxlength="100" placeholder="Ej. ${escapeHtml(meta.defaultCategory)}">
+              </label>
+              <label>Código SKU / Parte (opcional)
+                <input id="wsItemSku" maxlength="100" placeholder="Ej. SKU-104">
+              </label>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <label>Marca (opcional)
+                <input id="wsItemBrand" maxlength="100" placeholder="Ej. Logitech, Samsung">
+              </label>
+              <label>Variantes / Tallas
+                <input id="wsItemVariants" maxlength="300" placeholder="Ej. Negro, Blanco">
+              </label>
+            </div>
             <label>URL de imagen de referencia (opcional)
               <input id="wsItemImage" placeholder="https://...">
             </label>
@@ -2262,6 +3196,7 @@ async function renderCatalogWorkspace(business) {
         </div>
       </div>`;
 
+    initQuickGridRows();
     await loadWorkspaceCatalogItems();
 }
 
@@ -2277,10 +3212,16 @@ async function createManualCatalogItem(event, sourcePrefix = 'ws') {
     const imageEl = document.getElementById(`${sourcePrefix}ItemImage`);
     const meta = getBusinessProfileMeta(currentBusiness);
 
+    const skuEl = document.getElementById(`${sourcePrefix}ItemSku`);
+    const brandEl = document.getElementById(`${sourcePrefix}ItemBrand`);
+    const variantsEl = document.getElementById(`${sourcePrefix}ItemVariants`);
     const name = (nameEl?.value || '').trim();
     const price = Number(priceEl?.value || 0);
     const stock = meta.showStock ? Number(stockEl?.value || 0) : 0;
     const category = (categoryEl?.value || '').trim() || meta.defaultCategory;
+    const sku = (skuEl?.value || '').trim() || null;
+    const brand = (brandEl?.value || '').trim() || null;
+    const variants = (variantsEl?.value || '').trim() || null;
     const imageUrl = (imageEl?.value || '').trim() || null;
 
     if (!name) {
@@ -2291,12 +3232,15 @@ async function createManualCatalogItem(event, sourcePrefix = 'ws') {
         const result = await api('/api/v1/dashboard/catalog/item', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, price, stock, category, image_url: imageUrl })
+            body: JSON.stringify({ name, price, stock, category, sku, brand, variants, image_url: imageUrl })
         });
         showToast(result.message || 'Guardado correctamente.');
         if (nameEl) nameEl.value = '';
         if (priceEl) priceEl.value = '';
         if (stockEl && meta.showStock) stockEl.value = '15';
+        if (skuEl) skuEl.value = '';
+        if (brandEl) brandEl.value = '';
+        if (variantsEl) variantsEl.value = '';
         if (imageEl) imageEl.value = '';
         await refreshActiveWorkspaceCatalog();
         await applyBusinessOverview(currentBusiness);
@@ -2375,9 +3319,14 @@ function renderCatalogItemRow(p, showStockControls = true) {
     const kind = businessKind(currentBusiness || {});
     const appointmentMode = kind === 'appointments';
     const restaurantMode = kind === 'restaurant';
+    const skuBadge = p.sku ? ` · <span style="color:#7cecf5;">SKU: ${escapeHtml(p.sku)}</span>` : '';
+    const brandBadge = p.brand ? ` · ${escapeHtml(p.brand)}` : '';
+    const varLabels = Array.isArray(p.variants) && p.variants.length
+        ? ' · Variantes: ' + p.variants.map(v => escapeHtml(typeof v === 'object' ? (v.label || v.name || '') : String(v))).filter(Boolean).join(', ')
+        : '';
     const metaLabel = appointmentMode
-        ? `${escapeHtml(p.category || 'Consulta / Servicio')}`
-        : `${escapeHtml(p.category || 'General')} · ${restaurantMode ? 'Porciones' : 'Stock'}: <strong style="color:${stockColor};font-size:.82rem;">${stockVal}</strong>`;
+        ? `${escapeHtml(p.category || 'Consulta / Servicio')}${skuBadge}`
+        : `${escapeHtml(p.category || 'General')}${brandBadge}${skuBadge} · ${restaurantMode ? 'Porciones' : 'Stock'}: <strong style="color:${stockColor};font-size:.82rem;">${stockVal}</strong>${varLabels}`;
     const img = Array.isArray(p.images) && p.images[0]
         ? `<img class="catalog-preview-img" src="${escapeHtml(p.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'">`
         : `<span class="catalog-preview-img" style="display:grid;place-items:center;color:#38bdf8;background:rgba(56,189,248,.08);"><i class="ph ${appointmentMode ? 'ph-stethoscope' : restaurantMode ? 'ph-bowl-food' : 'ph-package'}"></i></span>`;
@@ -2478,6 +3427,454 @@ async function saveWorkspaceAiInstructions() {
     }
 }
 
+
+let cachedMetaChannels = { instagram: null, facebook: null };
+
+function filterSettingsSections(sectionKey, btnEl) {
+    const validKey = ['channels', 'payments', 'prompt', 'plan'].includes(sectionKey) ? sectionKey : 'channels';
+    document.querySelectorAll('.settings-filter-pill').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-settings-tab') === validKey || b === btnEl);
+    });
+    const blocks = {
+        channels: document.getElementById('settings-block-channels'),
+        payments: document.getElementById('settings-block-payments'),
+        prompt: document.getElementById('settings-block-prompt'),
+        plan: document.getElementById('settings-block-plan')
+    };
+    Object.entries(blocks).forEach(([k, el]) => {
+        if (!el) return;
+        el.classList.toggle('hidden', k !== validKey);
+    });
+}
+
+async function loadMetaSocialChannels(fillInputs = false) {
+    try {
+        const data = await api('/api/v1/dashboard/channels/meta');
+        ['instagram', 'facebook'].forEach(platform => {
+            const info = data[platform] || {};
+            cachedMetaChannels[platform] = info;
+            const badge = document.getElementById(`${platform}-status-badge`);
+            const summary = document.getElementById(`${platform}-summary`);
+            const prefix = platform === 'instagram' ? 'ig' : 'fb';
+            const connectBtn = document.getElementById(`${prefix}-connect-btn`);
+            const toggleBtn = document.getElementById(`${prefix}-toggle-btn`);
+            const disconnectBtn = document.getElementById(`${prefix}-disconnect-btn`);
+
+            if (badge) {
+                if (info.configured && info.enabled) {
+                    badge.innerHTML = '<span class="status-dot-live"></span> Conectado · IA Activa';
+                    badge.className = 'badge success';
+                } else if (info.configured && !info.enabled) {
+                    badge.textContent = 'Conectado · IA en Pausa';
+                    badge.className = 'badge warning';
+                } else {
+                    badge.textContent = 'Desconectado';
+                    badge.className = 'badge';
+                }
+            }
+            if (summary) {
+                if (info.configured) {
+                    summary.innerHTML = `<strong style="color:#34d399;">✓ Cuenta vinculada:</strong> ${escapeHtml(info.account_name)} · ${info.enabled ? 'El Cerebro IA responde automáticamente los mensajes entrantes.' : 'Respuestas automáticas en pausa.'}`;
+                } else {
+                    summary.textContent = platform === 'instagram'
+                        ? 'Ingresa el usuario de tu cuenta comercial de Instagram para activar la atención automática del asistente.'
+                        : 'Escribe el nombre o usuario de tu Página comercial de Facebook para activar la respuesta automática en Messenger.';
+                }
+            }
+            if (connectBtn) {
+                connectBtn.innerHTML = info.configured
+                    ? `<i class="ph ph-arrows-clockwise"></i> Actualizar ${platform === 'instagram' ? 'Instagram' : 'Facebook'}`
+                    : `<i class="ph ph-link"></i> Vincular ${platform === 'instagram' ? 'Instagram' : 'Facebook'}`;
+            }
+            if (toggleBtn) {
+                toggleBtn.disabled = !info.configured;
+                toggleBtn.innerHTML = info.enabled ? '<i class="ph ph-pause"></i> Pausar IA' : '<i class="ph ph-play"></i> Reanudar IA';
+            }
+            if (disconnectBtn) {
+                disconnectBtn.style.display = info.configured ? 'inline-flex' : 'none';
+            }
+            if (fillInputs) {
+                const accInput = document.getElementById(`${prefix}-account-name`);
+                if (accInput) accInput.value = info.account_name || '';
+            }
+        });
+    } catch (e) {
+        console.warn('No se pudieron cargar los canales Meta:', e);
+    }
+}
+
+async function saveMetaChannel(platform) {
+    const prefix = platform === 'instagram' ? 'ig' : 'fb';
+    const label = platform === 'instagram' ? 'Instagram' : 'Facebook';
+    const inputEl = document.getElementById(`${prefix}-account-name`);
+    let accountName = (inputEl?.value || '').trim();
+    if (!accountName) {
+        showToast(`Escribe el usuario o nombre de tu cuenta de ${label} para vincularla.`, true);
+        if (inputEl) inputEl.focus();
+        return;
+    }
+    if (platform === 'instagram' && !accountName.startsWith('@')) {
+        accountName = '@' + accountName;
+        if (inputEl) inputEl.value = accountName;
+    }
+    const msgEl = document.getElementById(`${platform}-channel-message`);
+    const btn = document.getElementById(`${prefix}-connect-btn`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Vinculando...'; }
+    try {
+        const data = await api(`/api/v1/dashboard/channels/meta/${platform}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                account_name: accountName,
+                enabled: true
+            })
+        });
+        if (msgEl) {
+            msgEl.textContent = data.message || `Cuenta de ${label} vinculada.`;
+            msgEl.style.color = '#34d399';
+            async function openMetaOAuthPopup(platform) {
+    const label = platform === 'instagram' ? 'Instagram' : 'Facebook';
+    const msgEl = document.getElementById(`${platform}-channel-message`);
+    try {
+        const data = await api(`/api/v1/dashboard/channels/meta/oauth-url?platform=${encodeURIComponent(platform)}`);
+        if (!data || !data.auth_url) {
+            throw new Error(`No se pudo generar la ventana de conexión para ${label}.`);
+        }
+        const width = 620, height = 720;
+        const left = Math.max(0, (window.screen.width - width) / 2);
+        const top = Math.max(0, (window.screen.height - height) / 2);
+        window.open(
+            data.auth_url,
+            `CalyrisiaMeta_${platform}`,
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+        if (msgEl) {
+            msgEl.textContent = `Inicia sesión con tu cuenta de ${label} en la ventana emergente para completar la vinculación...`;
+            msgEl.style.color = '#38bdf8';
+        }
+    } catch (e) {
+        showToast(e.message, true);
+    }
+}
+
+window.addEventListener('message', async (event) => {
+    if (!event.data || event.data.type !== 'META_CONNECTED') return;
+    if (event.data.status === 'ok') {
+        showToast(event.data.message || '✓ Cuenta de Meta conectada y respondiendo con IA.');
+    } else {
+        showToast(event.data.message || 'No se completó la conexión con Meta.', true);
+    }
+    await loadMetaSocialChannels(true);
+    await loadDashboardChannels();
+});
+
+async function sendTelegramOtpCode() {
+    const phoneInput = document.getElementById('telegram-phone-number');
+    const otpBox = document.getElementById('telegram-otp-box');
+    const msgEl = document.getElementById('telegram-channel-message');
+    const btn = document.getElementById('telegram-send-code-btn');
+    const phone = (phoneInput?.value || '').trim();
+    if (!phone) {
+        showToast('Ingresa tu número de teléfono con código de país (ej. +58412...).', true);
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando código...'; }
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram/send-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: phone })
+        });
+        if (otpBox) {
+            otpBox.classList.remove('hidden');
+            otpBox.style.display = 'flex';
+        }
+        if (msgEl) {
+            msgEl.textContent = data.message || 'Código enviado a tu Telegram.';
+            msgEl.style.color = '#38bdf8';
+        }
+        showToast(data.message || 'Código enviado a tu app de Telegram.');
+    } catch (e) {
+        if (msgEl) { msgEl.textContent = e.message; msgEl.style.color = '#fda4af'; }
+        showToast(e.message, true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Enviar código'; }
+    }
+}
+
+async function verifyTelegramOtpCode() {
+    const phone = (document.getElementById('telegram-phone-number')?.value || '').trim();
+    const code = (document.getElementById('telegram-otp-code')?.value || '').trim();
+    const password = (document.getElementById('telegram-2fa-password')?.value || '').trim();
+    const pwInput = document.getElementById('telegram-2fa-password');
+    const otpBox = document.getElementById('telegram-otp-box');
+    const msgEl = document.getElementById('telegram-channel-message');
+    const btn = document.getElementById('telegram-verify-code-btn');
+    if (!code) {
+        showToast('Ingresa el código de 5 dígitos que recibiste en Telegram.', true);
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; }
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram/verify-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone_number: phone, code, password: password || null })
+        });
+        if (data.requires_2fa) {
+            if (pwInput) pwInput.style.display = 'block';
+            if (msgEl) { msgEl.textContent = data.message; msgEl.style.color = '#fbbf24'; }
+            showToast(data.message, true);
+            return;
+        }
+        if (otpBox) otpBox.style.display = 'none';
+        if (msgEl) { msgEl.textContent = data.message; msgEl.style.color = '#34d399'; }
+        showToast(data.message || '✓ Telegram conectado.');
+        await loadTelegramChannel(true);
+        await loadDashboardChannels();
+    } catch (e) {
+        if (msgEl) { msgEl.textContent = e.message; msgEl.style.color = '#fda4af'; }
+        showToast(e.message, true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Verificar y conectar'; }
+    }
+}
+        }
+        showToast(data.message || `✓ ${label} vinculado correctamente.`);
+        await loadMetaSocialChannels(true);
+        await loadDashboardChannels();
+    } catch (e) {
+        if (msgEl) {
+            msgEl.textContent = e.message;
+            msgEl.style.color = '#fda4af';
+        }
+        showToast(e.message, true);
+    } finally {
+        if (btn) btn.disabled = false;
+        await loadMetaSocialChannels(false);
+    }
+}
+
+async function toggleMetaChannelState(platform) {
+    const current = cachedMetaChannels[platform] || {};
+    const msgEl = document.getElementById(`${platform}-channel-message`);
+    try {
+        const data = await api(`/api/v1/dashboard/channels/meta/${platform}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: !current.enabled })
+        });
+        showToast(data.message || 'Estado actualizado.');
+        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = '#6ee7b7'; }
+        await loadMetaSocialChannels(false);
+        await loadDashboardChannels();
+    } catch (e) {
+        showToast(e.message, true);
+    }
+}
+
+async function disconnectMetaChannel(platform) {
+    const label = platform === 'instagram' ? 'Instagram Direct' : 'Facebook Messenger';
+    if (!confirm(`¿Desvincular la cuenta de ${label} de este negocio?`)) return;
+    const msgEl = document.getElementById(`${platform}-channel-message`);
+    try {
+        const data = await api(`/api/v1/dashboard/channels/meta/${platform}/disconnect`, { method: 'POST' });
+        const prefix = platform === 'instagram' ? 'ig' : 'fb';
+        const accInput = document.getElementById(`${prefix}-account-name`);
+        if (accInput) accInput.value = '';
+        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = '#cbd5e1'; }
+        showToast(data.message || `${label} desvinculado.`);
+        await loadMetaSocialChannels(true);
+        await loadDashboardChannels();
+    } catch (e) {
+        showToast('No se pudo desvincular: ' + e.message, true);
+    }
+}
+
+function copyBusinessWebchatLink() {
+    if (!currentBusinessId) return;
+    const link = `${window.location.origin}/webchat?business_id=${encodeURIComponent(currentBusinessId)}`;
+    navigator.clipboard?.writeText(link).then(() => {
+        showToast('✓ Link directo de tu Webchat copiado al portapapeles.');
+    }).catch(() => {
+        prompt('Copia el enlace directo de tu Webchat:', link);
+    });
+}
+
+async function resetBusinessWorkspaceClean() {
+    if (!confirm('¿Estás seguro de limpiar todos los productos, clientes, oportunidades y pagos de esta cuenta para dejarla en cero?')) return;
+    try {
+        const res = await api('/api/v1/dashboard/reset-clean', { method: 'POST' });
+        showToast(res.message || '✓ Cuenta limpiada a cero.');
+        await loadDashboard();
+    } catch (e) {
+        showToast('No se pudo limpiar la cuenta: ' + e.message, true);
+    }
+}
+
+function updateLiveRatePreview() {
+    const rate = Number(document.getElementById('pay-exchange-rate')?.value || 0);
+    const curr = document.getElementById('pay-local-currency')?.value || 'VES';
+    const pill = document.getElementById('live-rate-preview-pill');
+    if (!pill) return;
+    if (rate > 0) {
+        pill.textContent = `Tasa activa: 1 USD = ${rate.toFixed(2)} ${curr}`;
+    } else {
+        pill.textContent = 'Conversión activa: Solo USD';
+    }
+}
+
+function applyPromptTonePreset(tone, cardEl) {
+    document.querySelectorAll('.tone-card').forEach(c => c.classList.remove('active'));
+    if (cardEl) cardEl.classList.add('active');
+    const textarea = document.getElementById('workspace-ai-prompt');
+    if (!textarea) return;
+    const bizName = currentBusiness?.name || 'nuestro negocio';
+    const toneMap = {
+        consultivo: `TONO COMERCIAL: Consultivo, experto y estructurado. Clasifica siempre los productos por categoría (▸ Categoría:), usa punto y coma (;) al listar opciones y punto final (.).`,
+        vendedor: `TONO COMERCIAL: Cierre rápido y directo al grano. Presenta disponibilidad y precio exacto sin rodeos, sugiere confirmar el pedido de inmediato y muestra el botón de pago.`,
+        cercano: `TONO COMERCIAL: Cálido, amable y cercano con el cliente, manteniendo orden milimétrico en precios, subtotales y modalidad de entrega.`,
+        mayorista: `TONO COMERCIAL: Ejecutivo B2B / Mayorista. Destaca existencias en almacén, presentaciones por unidad o lote, códigos SKU y despacho ágil.`
+    };
+    const rule = toneMap[tone] || toneMap.consultivo;
+    const current = textarea.value.trim();
+    const cleaned = current.replace(/^TONO COMERCIAL:.*(?:\n|$)/m, '').trim();
+    textarea.value = `${rule}\n\n${cleaned || DASHBOARD_AI_PROMPTS.sales_small(bizName)}`.trim();
+    updatePromptCharCount();
+    showToast('✓ Tono comercial aplicado al Prompt IA.');
+}
+
+function appendPromptSnippet(snippetKey) {
+    const textarea = document.getElementById('workspace-ai-prompt');
+    if (!textarea) return;
+    const snippets = {
+        horario: '\n- HORARIO DE ATENCIÓN: Lunes a Sábado de 8:30 am a 7:00 pm.',
+        delivery: '\n- POLÍTICA DE ENTREGA: Retiro inmediato en tienda física y servicio de delivery exprés en toda la ciudad.',
+        garantia: '\n- GARANTÍA OFICIAL: Todos nuestros artículos cuentan con garantía verificada por defecto de fábrica.',
+        mayorista: '\n- COMPRAS AL MAYOR: A partir de 6 unidades ofrecemos atención y cotización preferencial.',
+        pagos: '\n- REGLA DE COBRO: Todo pago requiere enviar el número de referencia para verificación.'
+    };
+    const textToAdd = snippets[snippetKey] || '';
+    if (textToAdd && !textarea.value.includes(textToAdd.trim())) {
+        textarea.value = (textarea.value.trim() + textToAdd).slice(0, 3000);
+        updatePromptCharCount();
+        showToast('＋ Regla agregada al Prompt IA.');
+    }
+}
+
+function updatePromptCharCount() {
+    const textarea = document.getElementById('workspace-ai-prompt');
+    const counter = document.getElementById('workspace-ai-prompt-counter');
+    if (textarea && counter) {
+        counter.textContent = `${textarea.value.length} / 3000 caracteres · Sincronizado con todos los canales`;
+    }
+}
+
+function switchBulkUploadTab(tabId, btnEl) {
+    document.querySelectorAll('.bulk-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    ['paste', 'grid', 'csv'].forEach(k => {
+        const el = document.getElementById(`bulk-tab-${k}`);
+        if (el) el.classList.toggle('hidden', k !== tabId);
+    });
+}
+
+function previewQuickBulkPaste() {
+    const ta = document.getElementById('quick-bulk-textarea');
+    const box = document.getElementById('quick-bulk-preview-box');
+    if (!ta || !box) return;
+    const lines = ta.value.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    if (!lines.length) {
+        box.classList.add('hidden');
+        return;
+    }
+    box.classList.remove('hidden');
+    box.innerHTML = `<strong style="color:#00f2fe;">✓ ${lines.length} artículo(s) detectado(s) listos para subir en 1 clic.</strong>`;
+}
+
+async function submitQuickBulkPaste() {
+    const ta = document.getElementById('quick-bulk-textarea');
+    const btn = document.getElementById('quick-bulk-submit-btn');
+    const rawText = (ta?.value || '').trim();
+    if (!rawText) {
+        showToast('Pega o escribe al menos una línea con el nombre y precio del artículo.', true);
+        return;
+    }
+    const meta = getBusinessProfileMeta(currentBusiness);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Subiendo artículos...'; }
+    try {
+        const res = await api('/api/v1/dashboard/catalog/quick-bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ raw_text: rawText, default_category: meta.defaultCategory })
+        });
+        showToast(res.message || '✓ Artículos cargados.');
+        if (ta) ta.value = '';
+        const box = document.getElementById('quick-bulk-preview-box');
+        if (box) box.classList.add('hidden');
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast(e.message, true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-rocket-launch"></i> Subir todos los artículos ahora'; }
+    }
+}
+
+function initQuickGridRows() {
+    const container = document.getElementById('quick-grid-rows');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < 3; i++) addQuickGridRow();
+}
+
+function addQuickGridRow() {
+    const container = document.getElementById('quick-grid-rows');
+    if (!container) return;
+    const meta = getBusinessProfileMeta(currentBusiness);
+    const row = document.createElement('div');
+    row.className = 'quick-grid-row';
+    row.style.cssText = 'display:grid;grid-template-columns:2fr 1fr 1fr 1.2fr auto;gap:8px;align-items:center;';
+    row.innerHTML = `
+        <input type="text" class="qg-name" placeholder="Nombre del artículo *" style="padding:9px 12px;font-size:12px;">
+        <input type="number" step="0.01" min="0" class="qg-price" placeholder="Precio USD *" style="padding:9px 12px;font-size:12px;">
+        <input type="number" step="1" min="0" class="qg-stock" value="15" placeholder="Stock" style="padding:9px 12px;font-size:12px;">
+        <input type="text" class="qg-cat" placeholder="${escapeHtml(meta.defaultCategory)}" style="padding:9px 12px;font-size:12px;">
+        <button type="button" class="btn-payment-reject" onclick="this.parentElement.remove()" style="padding:8px 10px;" title="Quitar fila"><i class="ph ph-trash"></i></button>
+    `;
+    container.appendChild(row);
+}
+
+async function submitQuickGridRows() {
+    const rows = Array.from(document.querySelectorAll('.quick-grid-row'));
+    const meta = getBusinessProfileMeta(currentBusiness);
+    const items = [];
+    rows.forEach(r => {
+        const name = (r.querySelector('.qg-name')?.value || '').trim();
+        const price = Number(r.querySelector('.qg-price')?.value || 0);
+        const stock = Number(r.querySelector('.qg-stock')?.value || 15);
+        const category = (r.querySelector('.qg-cat')?.value || '').trim() || meta.defaultCategory;
+        if (name) items.push({ name, price, stock, category });
+    });
+    if (!items.length) {
+        showToast('Completa al menos un artículo en la tabla rápida.', true);
+        return;
+    }
+    try {
+        const res = await api('/api/v1/dashboard/catalog/quick-bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items, default_category: meta.defaultCategory })
+        });
+        showToast(res.message || '✓ Filas guardadas en el catálogo.');
+        initQuickGridRows();
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast(e.message, true);
+    }
+}
+
 function downloadCatalogCsvTemplate() {
     const kind = businessKind(currentBusiness || {});
     const appointmentMode = kind === 'appointments';
@@ -2505,16 +3902,30 @@ async function loadPaymentInstructions() {
     const message = document.getElementById('payment-instructions-message');
     try {
         const data = await api('/api/v1/dashboard/payment-instructions');
-        const mobile = data.methods?.pago_movil || {};
-        const binance = data.methods?.binance || {};
-        const mobileEnabled = document.getElementById('pay-mobile-enabled');
-        const mobileText = document.getElementById('pay-mobile-instructions');
-        const binanceEnabled = document.getElementById('pay-binance-enabled');
-        const binanceText = document.getElementById('pay-binance-instructions');
-        if (mobileEnabled) mobileEnabled.checked = Boolean(mobile.enabled);
-        if (mobileText) mobileText.value = mobile.instructions || '';
-        if (binanceEnabled) binanceEnabled.checked = Boolean(binance.enabled);
-        if (binanceText) binanceText.value = binance.instructions || '';
+        const mapIds = [
+            ['pago_movil', 'pay-mobile-enabled', 'pay-mobile-instructions'],
+            ['transferencia', 'pay-transferencia-enabled', 'pay-transferencia-instructions'],
+            ['zelle', 'pay-zelle-enabled', 'pay-zelle-instructions'],
+            ['binance', 'pay-binance-enabled', 'pay-binance-instructions'],
+            ['paypal', 'pay-paypal-enabled', 'pay-paypal-instructions'],
+        ];
+        mapIds.forEach(([code, chkId, txtId]) => {
+            const m = data.methods?.[code] || {};
+            const chk = document.getElementById(chkId);
+            const txt = document.getElementById(txtId);
+            if (chk) chk.checked = Boolean(m.enabled);
+            if (txt) txt.value = m.instructions || '';
+        });
+        const rateInput = document.getElementById('pay-exchange-rate');
+        const currSelect = document.getElementById('pay-local-currency');
+        const ownerWaInput = document.getElementById('pay-owner-whatsapp');
+        currentExchangeRate = Number(data.exchange_rate || 0);
+        currentLocalCurrency = String(data.local_currency_code || 'VES');
+        currentOwnerWhatsapp = String(data.owner_whatsapp || '');
+        if (rateInput) rateInput.value = currentExchangeRate > 0 ? String(currentExchangeRate) : '';
+        if (currSelect && currentLocalCurrency) currSelect.value = currentLocalCurrency;
+        if (ownerWaInput) ownerWaInput.value = currentOwnerWhatsapp;
+        updateLiveRatePreview();
         if (message) message.textContent = '';
     } catch (e) {
         if (message) message.textContent = 'No se pudieron cargar las instrucciones: ' + e.message;
@@ -2522,17 +3933,174 @@ async function loadPaymentInstructions() {
 }
 async function savePaymentInstructions() {
     const message = document.getElementById('payment-instructions-message');
-    const payload = {methods:{
-        pago_movil:{enabled:Boolean(document.getElementById('pay-mobile-enabled')?.checked),instructions:document.getElementById('pay-mobile-instructions')?.value || ''},
-        binance:{enabled:Boolean(document.getElementById('pay-binance-enabled')?.checked),instructions:document.getElementById('pay-binance-instructions')?.value || ''}
-    }};
+    const rateVal = Number(document.getElementById('pay-exchange-rate')?.value || 0);
+    const currVal = document.getElementById('pay-local-currency')?.value || 'VES';
+    const ownerWaVal = (document.getElementById('pay-owner-whatsapp')?.value || '').trim();
+    const payload = {
+        methods:{
+            pago_movil:{enabled:Boolean(document.getElementById('pay-mobile-enabled')?.checked),instructions:document.getElementById('pay-mobile-instructions')?.value || ''},
+            transferencia:{enabled:Boolean(document.getElementById('pay-transferencia-enabled')?.checked),instructions:document.getElementById('pay-transferencia-instructions')?.value || ''},
+            zelle:{enabled:Boolean(document.getElementById('pay-zelle-enabled')?.checked),instructions:document.getElementById('pay-zelle-instructions')?.value || ''},
+            binance:{enabled:Boolean(document.getElementById('pay-binance-enabled')?.checked),instructions:document.getElementById('pay-binance-instructions')?.value || ''},
+            paypal:{enabled:Boolean(document.getElementById('pay-paypal-enabled')?.checked),instructions:document.getElementById('pay-paypal-instructions')?.value || ''}
+        },
+        exchange_rate: Number.isNaN(rateVal) || rateVal < 0 ? 0 : rateVal,
+        local_currency_code: currVal,
+        owner_whatsapp: ownerWaVal
+    };
     try {
         const data = await api('/api/v1/dashboard/payment-instructions',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-        if (message) message.textContent = data.message || 'Métodos de cobro guardados.';
-        showToast(data.message || 'Métodos de cobro guardados.');
+        currentExchangeRate = Number(data.exchange_rate ?? payload.exchange_rate ?? 0);
+        currentLocalCurrency = String(data.local_currency_code || payload.local_currency_code || 'VES');
+        currentOwnerWhatsapp = String(data.owner_whatsapp ?? payload.owner_whatsapp ?? '');
+        if (currentBusiness) {
+            currentBusiness.exchange_rate = currentExchangeRate;
+            currentBusiness.local_currency_code = currentLocalCurrency;
+            currentBusiness.owner_whatsapp = currentOwnerWhatsapp;
+        }
+        if (message) message.textContent = data.message || 'Métodos de cobro y tasa del día guardados.';
+        showToast(data.message || 'Métodos de cobro y tasa del día guardados.');
+        await loadPendingWebchatPayments();
     } catch (e) {
         if (message) message.textContent = 'No se pudo guardar: ' + e.message;
         showToast('No se pudieron guardar los métodos de cobro: ' + e.message, true);
+    }
+}
+
+
+let whatsappChannelLoadInFlight = false;
+async function loadWhatsAppChannel() {
+    if (whatsappChannelLoadInFlight) return;
+    whatsappChannelLoadInFlight = true;
+    const badge = document.getElementById('whatsapp-status-badge');
+    const summary = document.getElementById('whatsapp-summary');
+    const qrWrap = document.getElementById('whatsapp-qr-wrap');
+    const qrImg = document.getElementById('whatsapp-qr-image');
+    const pairingBox = document.getElementById('whatsapp-pairing-box');
+    const connectBtn = document.getElementById('whatsapp-connect-btn');
+    const toggleBtn = document.getElementById('whatsapp-toggle-btn');
+    const disconnectBtn = document.getElementById('whatsapp-disconnect-btn');
+    const msgEl = document.getElementById('whatsapp-channel-message');
+    try {
+        const data = await api('/api/v1/dashboard/channels/whatsapp');
+        const st = String(data.status || 'disconnected');
+        const enabled = Boolean(data.enabled);
+        if (badge) {
+            if (st === 'connected') {
+                badge.textContent = enabled ? 'Conectado · IA Activa ✓' : 'Conectado · IA en Pausa';
+                badge.className = 'badge ' + (enabled ? 'success' : 'warning');
+            } else if (st === 'qr_ready') {
+                badge.textContent = 'Esperando escaneo QR…';
+                badge.className = 'badge ai';
+            } else if (st === 'starting') {
+                badge.textContent = 'Generando QR…';
+                badge.className = 'badge warning';
+            } else if (st === 'error') {
+                badge.textContent = 'Error de conexión';
+                badge.className = 'badge danger';
+            } else {
+                badge.textContent = 'Desconectado';
+                badge.className = 'badge';
+            }
+        }
+        if (summary) {
+            if (st === 'connected') {
+                summary.innerHTML = `<strong style="color:#4ade80;">✓ Dispositivo vinculado:</strong> ${escapeHtml(data.display_name || 'WhatsApp Negocio')} (${escapeHtml(data.phone_number || 'Número activo')}). ${enabled ? 'El Cerebro IA está respondiendo automáticamente a tus clientes.' : 'El bot está en pausa; puedes responder manualmente desde tu celular.'}`;
+            } else {
+                summary.textContent = 'Tu sesión queda cifrada y guardada en Supabase para mantenerse activa incluso si el servidor se actualiza. El asistente responde solo a mensajes entrantes con pausa natural humana.';
+            }
+        }
+        if (qrWrap && qrImg) {
+            if (st === 'qr_ready' && data.qr_code_data_url) {
+                qrImg.src = data.qr_code_data_url;
+                qrWrap.classList.remove('hidden');
+            } else {
+                qrWrap.classList.add('hidden');
+            }
+        }
+        if (pairingBox) {
+            if (st === 'qr_ready' && data.pairing_code) {
+                pairingBox.textContent = `CÓDIGO: ${data.pairing_code}`;
+                pairingBox.classList.remove('hidden');
+            } else {
+                pairingBox.classList.add('hidden');
+            }
+        }
+        if (connectBtn) {
+            connectBtn.innerHTML = st === 'connected' ? '<i class="ph ph-arrows-clockwise"></i> Reconectar QR' : '<i class="ph ph-qr-code"></i> Generar Código QR';
+        }
+        if (toggleBtn) {
+            toggleBtn.disabled = st !== 'connected';
+            toggleBtn.innerHTML = enabled ? '<i class="ph ph-pause"></i> Pausar IA' : '<i class="ph ph-play"></i> Reanudar IA';
+        }
+        if (disconnectBtn) {
+            disconnectBtn.style.display = (st === 'connected' || st === 'qr_ready' || st === 'starting') ? 'inline-flex' : 'none';
+        }
+        if (msgEl && data.last_error && st === 'error') {
+            msgEl.textContent = data.last_error;
+            msgEl.style.color = '#fda4af';
+        }
+    } catch (e) {
+        console.warn('Error consultando canal WhatsApp:', e);
+    } finally {
+        whatsappChannelLoadInFlight = false;
+    }
+}
+
+async function connectWhatsAppQr() {
+    const btn = document.getElementById('whatsapp-connect-btn');
+    const msgEl = document.getElementById('whatsapp-channel-message');
+    const phoneInput = document.getElementById('whatsapp-pairing-phone');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Generando QR...'; }
+    if (msgEl) { msgEl.textContent = 'Iniciando sesión segura y generando código QR…'; msgEl.style.color = '#7cecf5'; }
+    try {
+        const data = await api('/api/v1/dashboard/channels/whatsapp/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pairing_phone: (phoneInput?.value || '').trim() })
+        });
+        if (msgEl) { msgEl.textContent = data.message || 'Generando QR…'; msgEl.style.color = '#6ee7b7'; }
+        setTimeout(() => loadWhatsAppChannel(), 1500);
+        setTimeout(() => loadWhatsAppChannel(), 3200);
+        await loadDashboardChannels();
+    } catch (e) {
+        if (msgEl) { msgEl.textContent = e.message; msgEl.style.color = '#fda4af'; }
+        showToast(e.message, true);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-qr-code"></i> Generar Código QR'; }
+    }
+}
+
+async function toggleWhatsAppChannel() {
+    const msgEl = document.getElementById('whatsapp-channel-message');
+    try {
+        const current = await api('/api/v1/dashboard/channels/whatsapp');
+        const data = await api('/api/v1/dashboard/channels/whatsapp/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: !current.enabled })
+        });
+        showToast(data.message || 'Estado de WhatsApp actualizado.');
+        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = '#6ee7b7'; }
+        await loadWhatsAppChannel();
+        await loadDashboardChannels();
+    } catch (e) {
+        if (msgEl) { msgEl.textContent = e.message; msgEl.style.color = '#fda4af'; }
+        showToast(e.message, true);
+    }
+}
+
+async function disconnectWhatsAppChannel() {
+    if (!confirm('¿Desvincular el WhatsApp de este negocio? Tendrás que escanear un nuevo código QR para volver a conectarlo.')) return;
+    const msgEl = document.getElementById('whatsapp-channel-message');
+    try {
+        const data = await api('/api/v1/dashboard/channels/whatsapp/disconnect', { method: 'POST' });
+        showToast(data.message || 'WhatsApp desvinculado.');
+        if (msgEl) { msgEl.textContent = data.message || ''; msgEl.style.color = '#cbd5e1'; }
+        await loadWhatsAppChannel();
+        await loadDashboardChannels();
+    } catch (e) {
+        showToast('No se pudo desvincular: ' + e.message, true);
     }
 }
 
@@ -2544,7 +4112,7 @@ async function loadDashboardChannels() {
         const toggle = document.getElementById('webchat-toggle-btn');
         if (badge) { badge.textContent = data.webchat_enabled ? 'Activo' : 'Desactivado'; badge.className = 'badge ' + (data.webchat_enabled ? 'success' : ''); }
         if (toggle) toggle.innerHTML = `<i class="ph ph-power"></i> ${data.webchat_enabled ? 'Desactivar Webchat' : 'Activar Webchat'}`;
-        if (summary) summary.textContent = `Canales activos: ${data.active_channels}. Telegram: ${data.telegram_enabled ? 'activo' : 'inactivo'}. Webchat: ${data.webchat_enabled ? 'activo' : 'inactivo'}.`;
+        if (summary) summary.textContent = `Canales activos: ${data.active_channels} de ${data.max_channels || 5} disponibles · WhatsApp: ${data.whatsapp_enabled ? 'Activo ✓' : 'Inactivo'} · Instagram: ${data.instagram_enabled ? 'Activo ✓' : 'Inactivo'} · Facebook: ${data.facebook_enabled ? 'Activo ✓' : 'Inactivo'} · Telegram: ${data.telegram_enabled ? 'Activo ✓' : 'Inactivo'} · Webchat: ${data.webchat_enabled ? 'Activo ✓' : 'Inactivo'}.`;
     } catch (e) {
         const summary = document.getElementById('channels-summary'); if (summary) summary.textContent = `No se pudo consultar el estado de los canales: ${e.message}`;
     }
@@ -2708,6 +4276,7 @@ function renderFilteredBookings(type) {
                     ${b.status==='pending'?`<button class="btn-payment-reject" onclick="setBusinessBookingStatus('${b.id}','cancelled','${type}')"><i class="ph ph-x"></i> Rechazar</button>`:''}
                     ${b.status==='confirmed'?`<button class="btn-secondary" onclick="setBusinessBookingStatus('${b.id}','completed','${type}')"><i class="ph ph-check-circle"></i> Atendida</button>`:''}
                     ${b.status==='confirmed'?`<button class="btn-payment-reject" onclick="setBusinessBookingStatus('${b.id}','cancelled','${type}')">Cancelar</button>`:''}
+                    <button type="button" class="btn-secondary" style="padding:7px 11px;font-size:11px;border-color:rgba(52,211,153,.35);color:#6ee7b7;" onclick="sendBookingWhatsAppReminder('${escapeHtml(b.customer_name || 'Cliente')}','${escapeHtml(b.customer_phone || '')}','${escapeHtml(b.service_name || (type==='reservation'?'Reserva de mesa':'Consulta'))}','${escapeHtml(formatBookingDate(b.starts_at))}','${escapeHtml(b.status)}')"><i class="ph ph-whatsapp-logo"></i> Recordar WhatsApp</button>
                 </div>
             </div>`;
         }).join('');
@@ -2756,7 +4325,7 @@ async function loadRetailWorkspace() {
         set('retail-out-stock', out.length);
         set('retail-inventory-val', `$${totalVal.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
 
-        const isBasic = currentPlanCode === 'emprendedor';
+        const isBasic = currentPlanCode === 'free';
         const list = document.getElementById('retail-low-list');
         if (list) {
             if (isBasic) {
@@ -2835,9 +4404,49 @@ async function loadEnterpriseWorkspace() {
 }
 
 
+async function updateCrmLeadStage(leadId, newStage) {
+    try {
+        await api(`/api/v1/dashboard/crm/opportunities/${encodeURIComponent(leadId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stage: newStage })
+        });
+        showToast('Etapa de oportunidad actualizada.');
+        await loadCrmWorkspace();
+    } catch (e) {
+        showToast(e.message, true);
+    }
+}
+
 async function loadCrmWorkspace() {
     const listEl = document.getElementById('crm-customers-list');
+    const oppEl = document.getElementById('crm-opportunities-list');
     if (!listEl) return;
+    try {
+        const oppData = await api('/api/v1/dashboard/crm/opportunities?limit=80').catch(() => ({ leads: [], summary: {} }));
+        const leads = Array.isArray(oppData.leads) ? oppData.leads : [];
+        const activeOpps = document.getElementById('crm-active-opportunities');
+        if (activeOpps) activeOpps.textContent = String(oppData.summary?.active_opportunities ?? leads.filter(l => !['won','lost'].includes(l.stage)).length);
+        if (oppEl) {
+            if (!leads.length) {
+                oppEl.innerHTML = '<div class="upgrade-lock" style="padding:18px;"><h3 style="font-size:14px;">Sin oportunidades activas todavía</h3><p class="muted" style="font-size:12px;">Cuando tus clientes consulten productos, envíen referencias de pago o agenden citas por Webchat, WhatsApp o Telegram, CALYRISIA creará las oportunidades aquí automáticamente sin que tengas que llenar formularios.</p></div>';
+            } else {
+                const stageLabels = { new: 'Nueva oportunidad', contacted: 'Contactado', qualified: 'En seguimiento / Cotizado', won: 'Venta ganada ✓', lost: 'Cerrada / Perdida' };
+                oppEl.innerHTML = leads.slice(0, 35).map(l => `
+                    <div class="booking-row">
+                        <div>
+                            <h4>${escapeHtml(l.customer_name || 'Cliente')} · <span class="badge ${l.stage === 'won' ? 'success' : 'ai'}">${escapeHtml(stageLabels[l.stage] || l.stage)}</span></h4>
+                            <p>${escapeHtml(l.interest || 'Interacción comercial detectada por IA')} · Canal: <strong>${escapeHtml(l.source || 'chat')}</strong>${l.expected_value ? ` · Valor est.: <strong style="color:#34d399;">$${Number(l.expected_value).toFixed(2)}</strong>` : ''}</p>
+                        </div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                            ${l.stage !== 'contacted' && l.stage !== 'won' ? `<button type="button" class="btn-secondary" style="padding:5px 9px;font-size:11px;" onclick="updateCrmLeadStage('${escapeHtml(l.id)}','contacted')">Marcar Contactado</button>` : ''}
+                            ${l.stage !== 'won' ? `<button type="button" class="btn-action" style="padding:5px 9px;font-size:11px;" onclick="updateCrmLeadStage('${escapeHtml(l.id)}','won')">Venta Ganada ✓</button>` : ''}
+                            <button type="button" class="btn-secondary" style="padding:5px 9px;font-size:11px;border-color:rgba(52,211,153,.35);color:#6ee7b7;" onclick="sendCrmFollowUpWhatsApp('${escapeHtml(l.customer_name || 'Cliente')}','${escapeHtml(l.customer_phone || '')}','${escapeHtml(l.interest || '')}',${Number(l.expected_value || 0)})"><i class="ph ph-whatsapp-logo"></i> WhatsApp</button>
+                        </div>
+                    </div>`).join('');
+            }
+        }
+    } catch (_) {}
     const kind = businessKind(currentBusiness || {});
     const isAppt = kind === 'appointments';
     const titleEl = document.getElementById('crm-view-title');
@@ -2893,8 +4502,9 @@ async function loadCrmWorkspace() {
               <h4>${escapeHtml(c.name)}</h4>
               <p>${escapeHtml(c.contact)}${c.lastService ? ` · Último servicio: <strong>${escapeHtml(c.lastService)}</strong>` : ''}${c.totalUsd > 0 ? ` · Compras aprobadas: <strong style="color:#34d399;">$${c.totalUsd.toFixed(2)}</strong>` : ''}</p>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="badge ${c.count >= 2 ? 'success' : 'ai'}">${c.count} interacción(es)</span>
+              <button type="button" class="btn-secondary" style="padding:6px 10px;font-size:11px;border-color:rgba(52,211,153,.35);color:#6ee7b7;" onclick="sendCrmFollowUpWhatsApp('${escapeHtml(c.name || 'Cliente')}','${escapeHtml(c.contact || '')}','${escapeHtml(c.lastService || '')}',${Number(c.totalUsd || 0)})"><i class="ph ph-whatsapp-logo"></i> Seguimiento WhatsApp</button>
             </div>
           </div>`).join('');
     } catch (e) {
@@ -2902,9 +4512,105 @@ async function loadCrmWorkspace() {
     }
 }
 
+
+function sendBookingWhatsAppReminder(customerName, customerPhone, serviceName, dateStr, status) {
+    const bizName = currentBusiness?.name || 'nuestro negocio';
+    const cleanPhone = String(customerPhone || '').replace(/\D/g, '');
+    const msg = status === 'confirmed'
+        ? `¡Hola ${customerName}! Te escribimos de ${bizName} para recordarte y confirmar tu asistencia a "${serviceName}" programada para el ${dateStr}. ¡Te esperamos!`
+        : `¡Hola ${customerName}! Te escribimos de ${bizName}. Recibimos tu solicitud para "${serviceName}" el ${dateStr} y te contactamos para confirmar los detalles.`;
+    const url = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener');
+}
+
+function sendCrmFollowUpWhatsApp(customerName, contactInfo, lastService, totalUsd) {
+    const bizName = currentBusiness?.name || 'nuestro negocio';
+    const cleanPhone = String(contactInfo || '').replace(/\D/g, '');
+    const hasPhone = cleanPhone.length >= 7;
+    const contextPhrase = lastService
+        ? `sobre tu interés en ${lastService}`
+        : (totalUsd > 0 ? `para agradecerte tu preferencia en ${bizName}` : `para saber si pudimos ayudarte con tu consulta en ${bizName}`);
+    const msg = `¡Hola ${customerName}! Te saludamos de ${bizName} ${contextPhrase}. Quedamos a tu entera disposición por si deseas confirmar tu pedido o agendar con nosotros.`;
+    const url = hasPhone
+        ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank', 'noopener');
+}
+
+async function exportExecutiveDailyCloseCsv() {
+    try {
+        showToast('Generando cierre ejecutivo en CSV...');
+        const [catalogRes, paymentsRes, bookingsRes] = await Promise.all([
+            api('/api/v1/dashboard/catalog', { cache: 'no-store' }).catch(() => ({ products: [] })),
+            api('/api/v1/dashboard/webchat-payments?status=all&limit=200').catch(() => ({ payments: [] })),
+            api('/api/v1/dashboard/bookings?booking_type=appointment&limit=200').catch(() => ({ bookings: [] }))
+        ]);
+        const products = catalogRes.products || [];
+        const payments = paymentsRes.payments || [];
+        const bookings = bookingsRes.bookings || [];
+        const bizName = currentBusiness?.name || 'CALYRISIA';
+        const todayIso = new Date().toISOString().slice(0, 10);
+
+        const csvEsc = (val) => `"${String(val ?? '').replaceAll('"', '""')}"`;
+        const lines = [];
+        lines.push(['REPORTE DE CIERRE EJECUTIVO CALYRISIA', bizName, `Fecha: ${todayIso}`, currentExchangeRate > 0 ? `Tasa: ${currentExchangeRate} ${currentLocalCurrency}/USD` : 'Moneda: USD'].map(csvEsc).join(','));
+        lines.push('');
+        lines.push(['--- 1. PAGOS Y VENTAS REGISTRADAS ---'].map(csvEsc).join(','));
+        lines.push(['ID Solicitud', 'Fecha', 'Cliente', 'Telefono', 'Metodo', 'Monto USD', `Equivalente (${currentLocalCurrency})`, 'Estado', 'Referencia / Detalles', 'Alerta Duplicado'].map(csvEsc).join(','));
+        payments.forEach(p => {
+            const usd = Number(p.amount || 0);
+            const loc = currentExchangeRate > 0 ? (usd * currentExchangeRate).toFixed(2) : '';
+            lines.push([
+                p.id, p.created_at || '', p.customer_name || '', p.customer_phone || '',
+                p.payment_method || '', usd.toFixed(2), loc, p.status || '',
+                String(p.customer_payment_details || '').replace(/\s+/g, ' '),
+                p.duplicate_reference_warning ? `ALERTA REPETIDA (${p.duplicate_reference_count}x)` : 'OK'
+            ].map(csvEsc).join(','));
+        });
+        lines.push('');
+        lines.push(['--- 2. ESTADO DE INVENTARIO Y CATALOGO ---'].map(csvEsc).join(','));
+        lines.push(['Producto / Servicio', 'Categoria', 'Precio USD', 'Stock Actual', 'Valor Total USD', 'Estado Stock'].map(csvEsc).join(','));
+        products.forEach(pr => {
+            const price = Number(pr.price || 0);
+            const stock = Number(pr.stock || 0);
+            lines.push([
+                pr.name || '', pr.category || 'General', price.toFixed(2),
+                Math.round(stock), (price * Math.max(0, stock)).toFixed(2),
+                stock <= 0 ? 'AGOTADO' : (stock <= 5 ? 'POR REPONER' : 'OPTIMO')
+            ].map(csvEsc).join(','));
+        });
+        if (bookings.length) {
+            lines.push('');
+            lines.push(['--- 3. AGENDA DE CITAS Y RESERVAS ---'].map(csvEsc).join(','));
+            lines.push(['Fecha / Hora', 'Cliente / Paciente', 'Telefono', 'Servicio / Motivo', 'Personas', 'Estado'].map(csvEsc).join(','));
+            bookings.forEach(b => {
+                lines.push([
+                    b.starts_at || '', b.customer_name || '', b.customer_phone || '',
+                    b.service_name || '', b.party_size || 1, b.status || ''
+                ].map(csvEsc).join(','));
+            });
+        }
+
+        const blob = new Blob(['\ufeff', lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cierre_ejecutivo_${bizName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_${todayIso}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast('✓ Cierre ejecutivo descargado en CSV.');
+    } catch (e) {
+        showToast('No se pudo exportar el cierre: ' + e.message, true);
+    }
+}
+
 function parseCsv(text) {
     const rows=[];let row=[],field='',quoted=false;
-    for(let i=0;i<text.length;i++) { const ch=text[i]; if(ch==='"' && quoted && text[i+1]==='"'){field+='"';i++;} else if(ch==='"'){quoted=!quoted;} else if(ch===','&&!quoted){row.push(field);field='';} else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);row=[];field='';} else field+=ch; }
+    for(let i=0;i<text.length;i++) { const ch=text[i]; if(ch==='"' && quoted && text[i+1]==='"'){field+='"';i++;} else if(ch==='"'){quoted=!quoted;} else if((ch===','||ch===';')&&!quoted){row.push(field);field='';} else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);row=[];field='';} else field+=ch; }
     row.push(field);if(row.some(v=>String(v).trim()))rows.push(row);if(rows.length<2)throw new Error('El CSV debe incluir encabezados y al menos un registro.');
     const headers=rows.shift().map(h=>String(h).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ /g,'_'));
     const idx=(aliases)=>headers.findIndex(h=>aliases.includes(h));
@@ -2936,7 +4642,7 @@ async function importCatalogCsv(event) {
 window.setInterval(() => {
     if (localStorage.getItem(tokenKey) && !document.hidden) {
         loadPendingWebchatPayments();
-        if (document.getElementById('view-settings')?.classList.contains('active')) loadTelegramChannel(false);
+        if (document.getElementById('view-settings')?.classList.contains('active')) { loadTelegramChannel(false); loadWhatsAppChannel(); }
     }
 }, 3500);
 </script>

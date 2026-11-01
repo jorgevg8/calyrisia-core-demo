@@ -6,6 +6,9 @@ const state = {
   businessId: targetBusinessId,
   bizName: "Calyrisia Asesor",
   bizType: "Comercio",
+  exchangeRate: 0,
+  localCurrency: "VES",
+  ownerWhatsapp: "",
   customerId: null,
   conversationId: null,
   ready: false,
@@ -26,6 +29,19 @@ function updateHeaderUI() {
       tenantPill.title = `Tenant activo: ${state.businessId}`;
     } else {
       tenantPill.textContent = "Sin negocio configurado";
+    }
+  }
+  const humanBtn = $("human-handoff-btn");
+  if (humanBtn) {
+    const cleanWa = String(state.ownerWhatsapp || "").replace(/\D/g, "");
+    if (cleanWa.length >= 7) {
+      humanBtn.style.display = "inline-flex";
+      humanBtn.onclick = () => {
+        const msg = `Hola ${state.bizName}, vengo del Asesor IA en la web y necesito atención de una persona.`;
+        window.open(`https://wa.me/${cleanWa}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+      };
+    } else {
+      humanBtn.style.display = "none";
     }
   }
   document.title = `${state.bizName} - Asesor IA`;
@@ -52,7 +68,7 @@ function addMessage(role, text) {
   // 1. Extraer si viene etiqueta de botón de pago con items
   let paymentAmount = null;
   let orderItems = [];
-  const match = (text || "").match(/\[BOTON_PAGO:\s*([\d\.]+)(?:\|ITEMS:\s*(\[.*?\]))?\]/i);
+  const match = (text || "").match(/\[BOTON_PAGO:\s*([\d.,]+)(?:\s*\|\s*ITEMS:\s*(\[[\s\S]*?\]))?\s*\]/i);
   if (match) {
     paymentAmount = parseFloat(match[1]);
     if (match[2]) {
@@ -66,7 +82,7 @@ function addMessage(role, text) {
 
   // 2. Limpiar texto de etiquetas y asteriscos
   let cleanText = (text || "")
-    .replace(/\[BOTON_PAGO:[^\]]+\]/gi, "")
+    .replace(/\[BOTON_PAGO:\s*[\d.,]+(?:\s*\|\s*ITEMS:\s*\[[\s\S]*?\])?\s*\]/gi, "").replace(/\[BOTON_PAGO:[^\]]*\]/gi, "").replace(/(?:^|\n)\s*\]\s*$/g, "")
     .replace(/\*\*/g, "")
     .replace(/\*/g, "")
     .trim();
@@ -115,9 +131,14 @@ async function renderPaymentCard(amount, items = []) {
       info.innerHTML = '<p>El negocio todavía no ha configurado métodos de cobro. Por seguridad, no realices transferencias. Contacta al comercio para recibir instrucciones oficiales.</p>';
       return;
     }
+    const exRate = Number(data.exchange_rate || state.exchangeRate || 0);
+    const locCurr = String(data.local_currency_code || state.localCurrency || 'VES');
+    const rateBanner = exRate > 0
+      ? `<div style="padding:8px 10px;margin-bottom:8px;border-radius:8px;background:#e0f2fe;border:1px solid #bae6fd;color:#0369a1;font-size:.8rem;font-weight:600;">💱 Tasa del día: ${exRate.toFixed(2)} ${escapeHtmlText(locCurr)}/USD<br>Total en moneda local: <strong>${escapeHtmlText(locCurr)} ${(amount * exRate).toLocaleString('es-ES', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong></div>`
+      : '';
     const methodsHtml = methods.map(m => `<div class="pay-info-row" style="display:block;padding:5px 0;"><strong>${escapeHtmlText(m.label)}</strong><p style="white-space:pre-wrap;margin-top:5px;">${escapeHtmlText(m.instructions)}</p></div>`).join('<hr style="border:0;border-top:1px solid #e2e8f0;margin:7px 0;">');
     const methodOptions = methods.map(m => `<option value="${escapeHtmlText(m.code)}">${escapeHtmlText(m.label)}</option>`).join('');
-    info.innerHTML = `${methodsHtml}<label style="display:block;margin-top:10px;font-size:.8rem;">Método utilizado<select id="payment-method-${cardId}" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit;">${methodOptions}</select></label><label style="display:block;margin-top:10px;font-size:.8rem;">Referencia o detalles del pago<textarea id="payment-details-${cardId}" rows="3" maxlength="4000" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit;resize:vertical;" placeholder="Introduce la referencia después de realizar el pago"></textarea></label><button type="button" class="btn-pay-submit" id="btn-pay-${cardId}" style="margin-top:10px;" onclick="submitBusinessPayment(${amount}, '${cardId}')">Enviar referencia para revisión</button><div id="status-box-${cardId}" class="pay-status-box hidden"></div>`;
+    info.innerHTML = `${rateBanner}${methodsHtml}<label style="display:block;margin-top:10px;font-size:.8rem;">Método utilizado<select id="payment-method-${cardId}" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit;">${methodOptions}</select></label><label style="display:block;margin-top:10px;font-size:.8rem;">Referencia o detalles del pago<textarea id="payment-details-${cardId}" rows="3" maxlength="4000" style="display:block;width:100%;margin-top:6px;border:1px solid #cbd5e1;border-radius:9px;padding:9px;font:inherit;resize:vertical;" placeholder="Introduce el número de referencia o datos del titular"></textarea></label><button type="button" class="btn-pay-submit" id="btn-pay-${cardId}" style="margin-top:10px;" onclick="submitBusinessPayment(${amount}, '${cardId}')">Enviar referencia para revisión</button><div id="status-box-${cardId}" class="pay-status-box hidden"></div>`;
     const cardEl = $(`pay-instructions-${cardId}`);
     cardEl.dataset.methods = JSON.stringify(methods.map(m => ({code:m.code,label:m.label})));
   } catch (err) {
@@ -253,6 +274,9 @@ async function initializeWebchat() {
     state.businessId = config.business?.id || state.businessId;
     state.bizName = config.business?.name || "Calyrisia Asesor";
     state.bizType = config.business?.business_type || "Comercio";
+    state.exchangeRate = Number(config.business?.exchange_rate || 0);
+    state.localCurrency = String(config.business?.local_currency_code || "VES");
+    state.ownerWhatsapp = String(config.business?.owner_whatsapp || "");
 
     // Anclar en localStorage y en la URL del navegador
     if (state.businessId) {

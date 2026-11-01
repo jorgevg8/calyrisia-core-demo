@@ -42,9 +42,9 @@ ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS webchat_enabled BOOLEAN N
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
-UPDATE public.businesses
-SET plan_code = 'emprendedor'
-WHERE plan_code IS NULL OR plan_code NOT IN ('emprendedor', 'smart_business', 'enterprise');
+ALTER TABLE public.businesses ALTER COLUMN plan_code SET DEFAULT 'free';
+UPDATE public.businesses SET plan_code = 'pro' WHERE plan_code IN ('smart_business', 'enterprise');
+UPDATE public.businesses SET plan_code = 'free' WHERE plan_code IS NULL OR plan_code NOT IN ('free', 'pro');
 
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -378,8 +378,14 @@ CREATE INDEX IF NOT EXISTS idx_business_bookings_tenant_start ON public.business
 CREATE TABLE IF NOT EXISTS public.business_dashboard_settings (
     business_id UUID PRIMARY KEY REFERENCES public.businesses(id) ON DELETE CASCADE,
     restaurant_table_count INTEGER NOT NULL DEFAULT 12 CHECK (restaurant_table_count BETWEEN 1 AND 100),
+    exchange_rate NUMERIC(14,4) NOT NULL DEFAULT 0,
+    local_currency_code VARCHAR(16) NOT NULL DEFAULT 'VES',
+    owner_whatsapp VARCHAR(80) NOT NULL DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE public.business_dashboard_settings ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(14,4) NOT NULL DEFAULT 0;
+ALTER TABLE public.business_dashboard_settings ADD COLUMN IF NOT EXISTS local_currency_code VARCHAR(16) NOT NULL DEFAULT 'VES';
+ALTER TABLE public.business_dashboard_settings ADD COLUMN IF NOT EXISTS owner_whatsapp VARCHAR(80) NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS public.business_ai_usage_monthly (
     business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
@@ -439,7 +445,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS public.business_payment_instructions (
     business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
-    method_code VARCHAR(30) NOT NULL CHECK (method_code IN ('pago_movil', 'binance')),
+    method_code VARCHAR(30) NOT NULL CHECK (method_code IN ('pago_movil', 'transferencia', 'zelle', 'binance', 'paypal')),
     enabled BOOLEAN NOT NULL DEFAULT false,
     instructions TEXT NOT NULL DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -473,6 +479,27 @@ CREATE TABLE IF NOT EXISTS public.telegram_customer_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (business_id, telegram_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.business_whatsapp_channels (
+    business_id UUID PRIMARY KEY REFERENCES public.businesses(id) ON DELETE CASCADE,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    channel_status VARCHAR(30) NOT NULL DEFAULT 'disconnected',
+    phone_number VARCHAR(80),
+    display_name VARCHAR(160),
+    qr_code_data_url TEXT,
+    pairing_code VARCHAR(32),
+    last_error TEXT,
+    connected_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.business_whatsapp_auth_keys (
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_content TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (business_id, file_name)
 );
 
 CREATE TABLE IF NOT EXISTS public.telegram_update_events (
@@ -1048,6 +1075,251 @@ CREATE TABLE IF NOT EXISTS public.calyrisia_feedback (
     business_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+
+-- =============================================================================
+-- 6B. EVOLUCIÓN SAAS: MODELO FREE/PRO, VARIANTES DE PRODUCTOS, BUSINESS RADAR Y CRM AUTOMÁTICO
+-- =============================================================================
+
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS plan_code VARCHAR(30) NOT NULL DEFAULT 'free';
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS webchat_enabled BOOLEAN NOT NULL DEFAULT true;
+UPDATE public.businesses SET plan_code = 'pro' WHERE plan_code IN ('smart_business', 'enterprise');
+UPDATE public.businesses SET plan_code = 'free' WHERE plan_code IS NULL OR plan_code NOT IN ('free', 'pro', 'emprendedor', 'smart_business', 'enterprise');
+
+ALTER TABLE public.calyrisia_checkout_orders DROP CONSTRAINT IF EXISTS calyrisia_checkout_orders_plan_code_check;
+ALTER TABLE public.calyrisia_checkout_orders ADD CONSTRAINT calyrisia_checkout_orders_plan_code_check
+    CHECK (plan_code IN ('free', 'pro', 'emprendedor', 'smart_business', 'enterprise'));
+
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variants JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS attributes JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS public.calyrisia_sales_leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
+    customer_name VARCHAR(200) NOT NULL,
+    customer_phone VARCHAR(80),
+    customer_email VARCHAR(254),
+    source VARCHAR(40) NOT NULL DEFAULT 'manual',
+    interest TEXT,
+    expected_value NUMERIC(14,2) CHECK (expected_value IS NULL OR expected_value >= 0),
+    currency VARCHAR(8) NOT NULL DEFAULT 'USD',
+    stage VARCHAR(32) NOT NULL DEFAULT 'new'
+        CHECK (stage IN ('new','contacted','qualified','won','lost')),
+    consent_status VARCHAR(32) NOT NULL DEFAULT 'unknown'
+        CHECK (consent_status IN ('unknown','consented','declined')),
+    last_contact_at TIMESTAMPTZ,
+    next_follow_up_at TIMESTAMPTZ,
+    notes TEXT,
+    created_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calyrisia_sales_leads_business_stage_followup
+    ON public.calyrisia_sales_leads (business_id, stage, next_follow_up_at);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_calyrisia_sales_leads_business_customer
+    ON public.calyrisia_sales_leads (business_id, customer_id)
+    WHERE customer_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS public.calyrisia_lead_activities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    lead_id UUID NOT NULL REFERENCES public.calyrisia_sales_leads(id) ON DELETE CASCADE,
+    activity_type VARCHAR(40) NOT NULL
+        CHECK (activity_type IN ('note','contacted','follow_up_scheduled','follow_up_prepared','sale_won','sale_lost','stage_changed','lead_created','auto_opportunity_created')),
+    details TEXT,
+    actor_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calyrisia_lead_activities_business_lead
+    ON public.calyrisia_lead_activities (business_id, lead_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.calyrisia_radar_reviews (
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    signal_key VARCHAR(220) NOT NULL,
+    state VARCHAR(24) NOT NULL DEFAULT 'reviewed'
+        CHECK (state IN ('open','reviewed','snoozed','dismissed')),
+    note TEXT,
+    updated_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    expires_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (business_id, signal_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_calyrisia_radar_reviews_business_state
+    ON public.calyrisia_radar_reviews (business_id, state, expires_at);
+
+
+-- =============================================================================
+-- 6B. CANALES OMNICANAL (INSTAGRAM DM, FACEBOOK MESSENGER, WHATSAPP QR),
+--     VARIANTES DE CATÁLOGO, CHECKOUT PRO Y TELEMETRÍA MULTI-MODELO IA
+-- =============================================================================
+
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS variants JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS attributes JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE public.business_dashboard_settings ADD COLUMN IF NOT EXISTS exchange_rate NUMERIC(14,4) NOT NULL DEFAULT 0;
+ALTER TABLE public.business_dashboard_settings ADD COLUMN IF NOT EXISTS local_currency_code VARCHAR(10) NOT NULL DEFAULT 'VES';
+ALTER TABLE public.business_dashboard_settings ADD COLUMN IF NOT EXISTS owner_whatsapp VARCHAR(80) NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS public.business_meta_channels (
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    platform VARCHAR(20) NOT NULL CHECK (platform IN ('instagram', 'facebook')),
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    channel_status VARCHAR(30) NOT NULL DEFAULT 'disconnected',
+    account_name VARCHAR(160),
+    page_or_ig_id VARCHAR(120),
+    access_token TEXT,
+    verify_token VARCHAR(160),
+    last_error TEXT,
+    last_event_at TIMESTAMPTZ,
+    connected_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (business_id, platform)
+);
+
+CREATE INDEX IF NOT EXISTS idx_business_meta_channels_enabled
+    ON public.business_meta_channels (business_id, platform, enabled);
+
+CREATE TABLE IF NOT EXISTS public.business_whatsapp_channels (
+    business_id UUID PRIMARY KEY REFERENCES public.businesses(id) ON DELETE CASCADE,
+    enabled BOOLEAN NOT NULL DEFAULT false,
+    channel_status VARCHAR(30) NOT NULL DEFAULT 'disconnected',
+    phone_number VARCHAR(80),
+    display_name VARCHAR(160),
+    qr_code_data_url TEXT,
+    pairing_code VARCHAR(32),
+    last_error TEXT,
+    connected_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.business_whatsapp_auth_keys (
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_content TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (business_id, file_name)
+);
+
+CREATE TABLE IF NOT EXISTS public.calyrisia_checkout_orders (
+    checkout_ref VARCHAR(64) PRIMARY KEY,
+    plan_code VARCHAR(30) NOT NULL DEFAULT 'pro',
+    expected_amount_usd NUMERIC(10,2) NOT NULL DEFAULT 39.00,
+    status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    payment_method VARCHAR(40),
+    buyer_full_name VARCHAR(180),
+    buyer_email VARCHAR(254),
+    buyer_phone VARCHAR(80),
+    company_name VARCHAR(180),
+    tax_id VARCHAR(80),
+    country_city VARCHAR(160),
+    billing_notes TEXT,
+    payer_reference VARCHAR(180),
+    payer_full_name VARCHAR(180),
+    paid_amount VARCHAR(80),
+    payer_note TEXT,
+    proof_submitted_at TIMESTAMPTZ,
+    verified_at TIMESTAMPTZ,
+    verified_by VARCHAR(120),
+    verification_note TEXT,
+    external_payment_id VARCHAR(180),
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calyrisia_checkout_orders_status
+    ON public.calyrisia_checkout_orders (status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.llm_usage_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_id UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
+    model_name VARCHAR(100),
+    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens INTEGER NOT NULL DEFAULT 0,
+    estimated_cost_usd NUMERIC(12,6) NOT NULL DEFAULT 0,
+    feature_used VARCHAR(80),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_llm_usage_logs_business_created
+    ON public.llm_usage_logs (business_id, created_at DESC);
+
+
+-- =============================================================================
+-- 6C. LIMPIEZA DE DATOS DE PRUEBA Y AMPLIACIÓN DE MÉTODOS DE PAGO (5 MÉTODOS)
+-- Deja el catálogo, oportunidades, aprobaciones, pagos y clientes en CERO
+-- respecto a cualquier dato de demostración o prueba anterior.
+-- =============================================================================
+
+ALTER TABLE public.business_payment_instructions
+    DROP CONSTRAINT IF EXISTS business_payment_instructions_method_code_check;
+
+ALTER TABLE public.business_payment_instructions
+    ADD CONSTRAINT business_payment_instructions_method_code_check
+    CHECK (method_code IN ('pago_movil', 'transferencia', 'zelle', 'binance', 'paypal'));
+
+-- Eliminar cuenta de demostración antigua si existía
+DELETE FROM public.businesses
+WHERE id IN (SELECT business_id FROM public.users WHERE LOWER(email) = 'demo19@calyrisia.com')
+   OR name IN ('NovaTech Store', 'TechStore Demo Meeting');
+
+-- Eliminar los 8 productos de demostración auto-generados en versiones previas
+DELETE FROM public.inventory
+WHERE product_id IN (
+    SELECT id FROM public.products
+    WHERE name IN (
+        'Auriculares Inalámbricos Bluetooth Pro',
+        'Smartwatch Deportivo Serie 9',
+        'Powerbank Carga Rápida 20.000mAh',
+        'Cargador Rápido USB-C 20W',
+        'Corneta Portátil Impermeable Bluetooth',
+        'Aro de Luz LED Profesional con Trípode',
+        'Teclado Mecánico Inalámbrico RGB',
+        'Mouse Inalámbrico Ergonómico Silencioso'
+    )
+);
+
+DELETE FROM public.products
+WHERE name IN (
+    'Auriculares Inalámbricos Bluetooth Pro',
+    'Smartwatch Deportivo Serie 9',
+    'Powerbank Carga Rápida 20.000mAh',
+    'Cargador Rápido USB-C 20W',
+    'Corneta Portátil Impermeable Bluetooth',
+    'Aro de Luz LED Profesional con Trípode',
+    'Teclado Mecánico Inalámbrico RGB',
+    'Mouse Inalámbrico Ergonómico Silencioso'
+);
+
+-- Eliminar instrucciones de pago de prueba auto-generadas
+DELETE FROM public.business_payment_instructions
+WHERE instructions LIKE '%04128418550%'
+   OR instructions LIKE '%Jorgevg945@gmail.com%';
+
+-- Limpiar registros operativos de prueba (pagos en aprobaciones, oportunidades, citas, clientes de prueba y señales)
+TRUNCATE TABLE
+    public.webchat_payment_requests,
+    public.calyrisia_lead_activities,
+    public.calyrisia_sales_leads,
+    public.calyrisia_radar_reviews,
+    public.business_bookings,
+    public.order_items,
+    public.orders,
+    public.conversation_messages,
+    public.conversations,
+    public.memory,
+    public.customer_360_profiles,
+    public.customers,
+    public.approvals,
+    public.actions,
+    public.audit_logs
+RESTART IDENTITY CASCADE;
 
 -- =============================================================================
 -- 7. SOLUCIÓN DEFINITIVA DE SEGURIDAD SUPABASE: RLS + GRANTS EXPLÍCITOS (OCT 30)

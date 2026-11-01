@@ -12,7 +12,12 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
-from psycopg.types.json import Jsonb
+try:
+    from psycopg.types.json import Jsonb
+except Exception:  # pragma: no cover
+    class Jsonb:  # type: ignore
+        def __init__(self, val):
+            self.val = val
 
 from app.api import auth
 from app.core.config import get_settings
@@ -94,6 +99,11 @@ async def ensure_telegram_schema() -> None:
                         polling_offset bigint NOT NULL DEFAULT 0,
                         last_error text,
                         last_poll_at timestamptz,
+                        auth_mode varchar(20) NOT NULL DEFAULT 'bot',
+                        phone_number varchar(40),
+                        session_string text,
+                        api_id bigint,
+                        api_hash text,
                         created_at timestamptz NOT NULL DEFAULT now(),
                         updated_at timestamptz NOT NULL DEFAULT now()
                     )
@@ -164,7 +174,9 @@ def _looks_like_payment_submission(text: str) -> bool:
 
 def _clean_for_telegram(text: str) -> tuple[str, Decimal | None, list[dict[str, Any]]]:
     amount, items = _parse_payment_marker([text or ""])
-    clean = re.sub(r"\[BOTON_PAGO[^\]]*\]", "", text or "", flags=re.IGNORECASE).strip()
+    clean = re.sub(r"\[BOTON_PAGO:\s*[\d.,]+(?:\s*\|\s*ITEMS:\s*\[[\s\S]*?\])?\s*\]", "", text or "", flags=re.IGNORECASE)
+    clean = re.sub(r"\[BOTON_PAGO[^\]]*\]", "", clean, flags=re.IGNORECASE)
+    clean = re.sub(r"(?:^|\n)\s*\]\s*$", "", clean).strip()
     return clean, amount, items
 
 
@@ -325,7 +337,7 @@ async def _get_business_payment_options(business_id: str) -> list[dict[str, str]
         with conn.cursor() as cur:
             cur.execute("SELECT method_code, instructions FROM public.business_payment_instructions WHERE business_id = %s::uuid AND enabled = true ORDER BY method_code", (business_id,))
             rows = cur.fetchall()
-    labels = {"pago_movil": "Pago Móvil", "binance": "Binance Pay"}
+    labels = {"pago_movil": "Pago Móvil", "transferencia": "Transferencia Bancaria", "zelle": "Zelle", "binance": "Binance Pay", "paypal": "PayPal"}
     return [{"code": str(r[0]), "label": labels.get(str(r[0]), str(r[0])), "instructions": str(r[1] or "")} for r in rows]
 
 
@@ -659,7 +671,8 @@ async def _load_enabled_channels() -> list[dict[str, Any]]:
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT business_id::text, bot_token, COALESCE(polling_offset, 0)
-                   FROM public.business_telegram_channels WHERE enabled = true"""
+                   FROM public.business_telegram_channels
+                   WHERE enabled = true AND COALESCE(auth_mode, 'bot') = 'bot'"""
             )
             return [{"business_id": r[0], "bot_token": r[1], "polling_offset": int(r[2] or 0)} for r in cur.fetchall()]
 
@@ -777,6 +790,8 @@ async def stop_telegram_polling() -> None:
             pass
     _poll_tasks = {}
     _poll_tokens = {}
+    for business_id in list(globals().get("_active_userbot_clients", {}).keys()):
+        await stop_telegram_user_listener(business_id)
 
 
 @router.get("/dashboard/channels/telegram")
@@ -827,7 +842,7 @@ async def save_telegram_channel(payload: TelegramChannelUpdate, current_user: di
                 old_enabled_row = cur.fetchone()
                 telegram_was_enabled = bool(old_enabled_row[0]) if old_enabled_row else False
                 if not telegram_was_enabled and webchat_enabled and limits["channels"] < 2:
-                    raise HTTPException(status_code=409, detail=f"El plan {limits['label']} incluye un solo canal activo. Desactiva Webchat en Dashboard → Canales antes de activar Telegram, o cambia a Smart Business.")
+                    raise HTTPException(status_code=409, detail=f"El plan {limits['label']} incluye un solo canal activo. Desactiva Webchat en Dashboard → Canales antes de activar Telegram, o cambia a Plan PRO.")
                 cur.execute("SELECT bot_token FROM public.business_telegram_channels WHERE business_id = %s::uuid", (business_id,))
                 existing = cur.fetchone()
         submitted_token = (payload.bot_token or "").strip()
@@ -869,6 +884,11 @@ async def save_telegram_channel(payload: TelegramChannelUpdate, current_user: di
                              owner_chat_id = EXCLUDED.owner_chat_id,
                              enabled = true,
                              channel_status = 'starting',
+                             auth_mode = 'bot',
+                             phone_number = NULL,
+                             session_string = NULL,
+                             api_id = NULL,
+                             api_hash = NULL,
                              polling_offset = CASE WHEN business_telegram_channels.bot_token = EXCLUDED.bot_token
                                                    THEN business_telegram_channels.polling_offset ELSE 0 END,
                              last_error = NULL,
@@ -882,6 +902,7 @@ async def save_telegram_channel(payload: TelegramChannelUpdate, current_user: di
             except Exception:
                 conn.rollback()
                 raise
+        await stop_telegram_user_listener(business_id)
         return {"success": True, "message": f"Bot @{bot_username} validado. Telegram está activándose en modo local.", "bot_username": bot_username, "enabled": True}
     except HTTPException:
         raise
@@ -906,7 +927,7 @@ async def toggle_telegram_channel(payload: TelegramChannelToggle, current_user: 
                 existing_row = cur.fetchone()
                 already_enabled = bool(existing_row[0]) if existing_row else False
                 if not already_enabled and webchat_enabled and limits["channels"] < 2:
-                    raise HTTPException(status_code=409, detail=f"El plan {limits['label']} incluye un solo canal activo. Desactiva Webchat primero o cambia a Smart Business.")
+                    raise HTTPException(status_code=409, detail=f"El plan {limits['label']} incluye un solo canal activo. Desactiva Webchat primero o cambia a Plan PRO.")
         with conn.cursor() as cur:
             cur.execute(
                 """UPDATE public.business_telegram_channels
@@ -917,7 +938,29 @@ async def toggle_telegram_channel(payload: TelegramChannelToggle, current_user: 
             row = cur.fetchone()
         conn.commit()
     if not row:
-        raise HTTPException(status_code=404, detail="Primero configura y valida el token del bot.")
+        raise HTTPException(status_code=404, detail="Primero configura y valida la conexión de Telegram.")
+
+    # MTProto user sessions must follow the same enabled/disabled state as the channel.
+    if not payload.enabled:
+        await stop_telegram_user_listener(business_id)
+    else:
+        try:
+            async with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT auth_mode, session_string, api_id, api_hash
+                           FROM public.business_telegram_channels WHERE business_id = %s::uuid""",
+                        (business_id,),
+                    )
+                    auth_row = cur.fetchone()
+            if auth_row and str(auth_row[0] or "bot") == "phone" and auth_row[1]:
+                api_id, api_hash = _get_telegram_api_credentials(
+                    int(auth_row[2]) if auth_row[2] else None,
+                    str(auth_row[3]) if auth_row[3] else None,
+                )
+                await _start_telethon_user_listener(business_id, str(auth_row[1]), api_id, api_hash)
+        except Exception as exc:
+            logger.warning("No se pudo reactivar el listener MTProto (%s): %s", business_id, exc)
     return {"success": True, "enabled": bool(row[0]), "status": "starting" if row[0] else "inactive"}
 
 
@@ -957,3 +1000,301 @@ async def telegram_webhook(
     update = await request.json()
     background_tasks.add_task(process_telegram_update, update, business_id, token, req_id)
     return {"status": "ok", "request_id": req_id}
+
+# ===========================================================================
+# CONEXIÓN DE TELEGRAM POR NÚMERO DE TELÉFONO + CÓDIGO OTP (TELETHON MTPROTO)
+# ===========================================================================
+import os
+
+try:
+    from telethon import TelegramClient, events
+    from telethon.sessions import StringSession
+    from telethon.errors import SessionPasswordNeededError
+    _HAS_TELETHON = True
+except Exception:
+    _HAS_TELETHON = False
+
+_pending_tg_otp: dict[str, dict[str, Any]] = {}
+_active_userbot_clients: dict[str, Any] = {}
+
+
+class TelegramSendCodeRequest(BaseModel):
+    phone_number: str = Field(..., min_length=6, max_length=40)
+    owner_chat_id: str | None = Field(default=None, max_length=80)
+    api_id: int | None = None
+    api_hash: str | None = None
+
+
+class TelegramVerifyCodeRequest(BaseModel):
+    phone_number: str = Field(..., min_length=6, max_length=40)
+    code: str = Field(..., min_length=3, max_length=12)
+    password: str | None = Field(default=None, max_length=200)
+    owner_chat_id: str | None = Field(default=None, max_length=80)
+
+
+async def _ensure_telegram_mtproto_columns() -> None:
+    """Additive migration for persisted Telethon sessions and their API credentials."""
+    await ensure_telegram_schema()
+    async with get_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("ALTER TABLE public.business_telegram_channels ADD COLUMN IF NOT EXISTS auth_mode varchar(20) NOT NULL DEFAULT 'bot'")
+                cur.execute("ALTER TABLE public.business_telegram_channels ADD COLUMN IF NOT EXISTS phone_number varchar(40)")
+                cur.execute("ALTER TABLE public.business_telegram_channels ADD COLUMN IF NOT EXISTS session_string text")
+                cur.execute("ALTER TABLE public.business_telegram_channels ADD COLUMN IF NOT EXISTS api_id bigint")
+                cur.execute("ALTER TABLE public.business_telegram_channels ADD COLUMN IF NOT EXISTS api_hash text")
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+
+def _get_telegram_api_credentials(custom_id: int | None = None, custom_hash: str | None = None) -> tuple[int, str]:
+    raw_id = custom_id or os.getenv("TELEGRAM_API_ID", "").strip()
+    raw_hash = (custom_hash or os.getenv("TELEGRAM_API_HASH", "")).strip()
+    if not raw_id or not raw_hash:
+        raise HTTPException(
+            status_code=422,
+            detail="Configura TELEGRAM_API_ID y TELEGRAM_API_HASH en las variables de entorno de Render (desde my.telegram.org).",
+        )
+    return int(raw_id), raw_hash
+
+
+async def _start_telethon_user_listener(business_id: str, session_str: str, api_id: int, api_hash: str) -> None:
+    if not _HAS_TELETHON or not session_str:
+        return
+    old_client = _active_userbot_clients.pop(business_id, None)
+    if old_client:
+        try:
+            await old_client.disconnect()
+        except Exception:
+            pass
+
+    client = TelegramClient(StringSession(session_str), api_id, api_hash)
+    await client.connect()
+    if not await client.is_user_authorized():
+        await client.disconnect()
+        return
+
+    @client.on(events.NewMessage(incoming=True))
+    async def _on_private_message(event):
+        if not event.is_private or event.out:
+            return
+        sender = await event.get_sender()
+        if getattr(sender, "bot", False):
+            return
+        text = str(event.raw_text or "").strip()
+        if not text:
+            return
+        sender_id = str(event.sender_id)
+        first_name = str(getattr(sender, "first_name", "") or "Cliente Telegram")
+        last_name = str(getattr(sender, "last_name", "") or "")
+        username = str(getattr(sender, "username", "") or "")
+
+        try:
+            chat_dict = {"id": sender_id}
+            sender_dict = {"first_name": first_name, "last_name": last_name, "username": username}
+            customer_id, conversation_id, _ = await _ensure_customer_and_conversation(business_id, chat_dict, sender_dict)
+            payload = IncomingMessage(
+                business_id=uuid.UUID(business_id),
+                customer_id=customer_id,
+                conversation_id=conversation_id,
+                channel="telegram",
+                message=text,
+                metadata={"channel": "telegram", "external_chat_id": sender_id, "telegram_username": username},
+            )
+            async with get_connection() as conn:
+                consume_ai_response(conn, uuid.UUID(business_id))
+                result = GalaxyAutopilotService(conn).respond(payload)
+            raw_reply = str(result.get("response") or "").strip()
+            clean_reply, pay_amount, _ = _clean_for_telegram(raw_reply)
+            if pay_amount is not None and pay_amount > 0:
+                payment_options = await _get_business_payment_options(business_id)
+                if payment_options:
+                    details = "\n\n".join(f"{opt['label']}:\n{opt['instructions']}" for opt in payment_options)
+                    clean_reply = (
+                        f"{clean_reply}\n\n💳 INSTRUCCIONES DE PAGO · USD {pay_amount:.2f}\n{details}\n\n"
+                        "Envíame por este mismo chat el número de referencia cuando completes el pago."
+                    ).strip()
+            if clean_reply:
+                await event.reply(clean_reply)
+        except Exception as exc:
+            logger.warning("Error respondiendo con Telethon en business_id=%s: %s", business_id, exc)
+
+    _active_userbot_clients[business_id] = client
+
+
+async def stop_telegram_user_listener(business_id: str) -> None:
+    client = _active_userbot_clients.pop(str(business_id), None)
+    if client is not None:
+        try:
+            await client.disconnect()
+        except Exception as exc:
+            logger.debug("Could not disconnect Telegram user session for %s: %s", business_id, exc)
+
+
+async def restore_telegram_user_sessions() -> dict[str, int]:
+    """Restore each active tenant's persisted MTProto session after every server restart."""
+    if not _HAS_TELETHON:
+        logger.warning("Telethon is unavailable; MTProto sessions were not restored.")
+        return {"restored": 0, "failed": 0}
+
+    await _ensure_telegram_mtproto_columns()
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT business_id::text, session_string, api_id, api_hash
+                   FROM public.business_telegram_channels
+                   WHERE enabled = true AND auth_mode = 'phone'
+                     AND session_string IS NOT NULL AND btrim(session_string) <> ''"""
+            )
+            sessions = cur.fetchall()
+
+    restored = 0
+    failed = 0
+    for business_id, session_string, stored_api_id, stored_api_hash in sessions:
+        business_id = str(business_id)
+        try:
+            api_id, api_hash = _get_telegram_api_credentials(
+                int(stored_api_id) if stored_api_id else None,
+                str(stored_api_hash) if stored_api_hash else None,
+            )
+            await _start_telethon_user_listener(business_id, str(session_string), api_id, api_hash)
+            if business_id in _active_userbot_clients:
+                restored += 1
+            else:
+                failed += 1
+                logger.warning("Telegram MTProto session for business %s is no longer authorized.", business_id)
+        except Exception as exc:
+            failed += 1
+            logger.exception("Could not restore Telegram MTProto session for business %s: %s", business_id, exc)
+            try:
+                async with get_connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """UPDATE public.business_telegram_channels
+                               SET channel_status = 'error', last_error = %s, updated_at = now()
+                               WHERE business_id = %s::uuid AND auth_mode = 'phone'""",
+                            (str(exc)[:1000], business_id),
+                        )
+                    conn.commit()
+            except Exception:
+                pass
+    logger.info("Telegram MTProto session restore completed: %s restored, %s failed.", restored, failed)
+    return {"restored": restored, "failed": failed}
+
+
+@router.post("/dashboard/channels/telegram/send-code")
+async def send_telegram_login_code(
+    payload: TelegramSendCodeRequest,
+    current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
+) -> dict[str, Any]:
+    if not _HAS_TELETHON:
+        raise HTTPException(status_code=503, detail="La librería Telethon no está instalada en el servidor.")
+    await _ensure_telegram_mtproto_columns()
+    business_id = str(current_user["business_id"])
+    api_id, api_hash = _get_telegram_api_credentials(payload.api_id, payload.api_hash)
+    phone = payload.phone_number.strip()
+    if not phone.startswith("+"):
+        phone = "+" + phone
+
+    client = TelegramClient(StringSession(), api_id, api_hash)
+    await client.connect()
+    try:
+        sent = await client.send_code_request(phone)
+        temp_session = client.session.save()
+        _pending_tg_otp[business_id] = {
+            "phone": phone,
+            "session_str": temp_session,
+            "phone_code_hash": sent.phone_code_hash,
+            "api_id": api_id,
+            "api_hash": api_hash,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"No se pudo enviar el código a {phone}: {exc}") from exc
+    finally:
+        await client.disconnect()
+
+    return {
+        "success": True,
+        "status": "code_sent",
+        "phone_number": phone,
+        "message": f"Código de 5 dígitos enviado a tu Telegram ({phone}). Ingrésalo abajo para conectar.",
+    }
+
+
+@router.post("/dashboard/channels/telegram/verify-code")
+async def verify_telegram_login_code(
+    payload: TelegramVerifyCodeRequest,
+    current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
+) -> dict[str, Any]:
+    if not _HAS_TELETHON:
+        raise HTTPException(status_code=503, detail="La librería Telethon no está instalada.")
+    await _ensure_telegram_mtproto_columns()
+    business_id = str(current_user["business_id"])
+    pending = _pending_tg_otp.get(business_id)
+    if not pending:
+        raise HTTPException(status_code=400, detail="Primero solicita el código con tu número de teléfono.")
+
+    api_id = int(pending["api_id"])
+    api_hash = str(pending["api_hash"])
+    phone = str(pending["phone"])
+    code = payload.code.strip()
+
+    client = TelegramClient(StringSession(pending["session_str"]), api_id, api_hash)
+    await client.connect()
+    try:
+        try:
+            await client.sign_in(phone=phone, code=code, phone_code_hash=pending["phone_code_hash"])
+        except SessionPasswordNeededError:
+            if not payload.password:
+                await client.disconnect()
+                return {
+                    "success": False,
+                    "requires_2fa": True,
+                    "message": "Tu cuenta tiene verificación en dos pasos (2FA). Escribe tu contraseña de Telegram y pulsa Verificar.",
+                }
+            await client.sign_in(password=payload.password.strip())
+
+        me = await client.get_me()
+        username = str(getattr(me, "username", "") or getattr(me, "first_name", "") or phone)
+        final_session = client.session.save()
+    except Exception as exc:
+        await client.disconnect()
+        raise HTTPException(status_code=422, detail=f"Error verificando el código de Telegram: {exc}") from exc
+    await client.disconnect()
+
+    placeholder_token = f"mtproto_{business_id}"
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO public.business_telegram_channels
+                   (business_id, bot_token, bot_username, owner_chat_id, enabled, channel_status, auth_mode, phone_number, session_string, api_id, api_hash, last_error, updated_at)
+                   VALUES (%s::uuid, %s, %s, %s, true, 'active', 'phone', %s, %s, %s, %s, NULL, now())
+                   ON CONFLICT (business_id) DO UPDATE SET
+                     bot_token = EXCLUDED.bot_token,
+                     bot_username = EXCLUDED.bot_username,
+                     owner_chat_id = COALESCE(EXCLUDED.owner_chat_id, business_telegram_channels.owner_chat_id),
+                     enabled = true,
+                     channel_status = 'active',
+                     auth_mode = 'phone',
+                     phone_number = EXCLUDED.phone_number,
+                     session_string = EXCLUDED.session_string,
+                     api_id = EXCLUDED.api_id,
+                     api_hash = EXCLUDED.api_hash,
+                     last_error = NULL,
+                     updated_at = now()""",
+                (business_id, placeholder_token, username, (payload.owner_chat_id or "").strip() or None, phone, final_session, api_id, api_hash),
+            )
+        conn.commit()
+
+    _pending_tg_otp.pop(business_id, None)
+    await _start_telethon_user_listener(business_id, final_session, api_id, api_hash)
+
+    return {
+        "success": True,
+        "status": "connected",
+        "bot_username": username,
+        "phone_number": phone,
+        "message": f"✓ Cuenta de Telegram ({username}) conectada y respondiendo con el Cerebro IA.",
+    }

@@ -1,6 +1,16 @@
+try:
+    from psycopg.types.json import Jsonb
+except Exception:
+    class Jsonb:
+        def __init__(self, val):
+            self.val = val
+
 from uuid import UUID
 
-import psycopg
+try:
+    import psycopg
+except Exception:
+    psycopg = None  # type: ignore
 from fastapi import HTTPException
 
 from app.services.tenant_guard import TenantGuard, TenantIsolationError
@@ -66,7 +76,7 @@ class GalaxyCoreService:
                         payload.business_id,
                         payload.customer_id,
                         payload.channel,
-                        psycopg.types.json.Jsonb(payload.metadata),
+                        Jsonb(payload.metadata),
                     ),
                 )
                 conversation_id = cur.fetchone()[0]
@@ -92,7 +102,7 @@ class GalaxyCoreService:
                     conversation_id,
                     payload.customer_id,
                     payload.message,
-                    psycopg.types.json.Jsonb(payload.metadata),
+                    Jsonb(payload.metadata),
                 ),
             )
             message_id = cur.fetchone()[0]

@@ -1,18 +1,25 @@
+FROM node:20-bookworm-slim AS node_base
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive
 
+# Incorporar Node.js 20 para el puente ligero de WhatsApp QR (Baileys WebSocket)
+COPY --from=node_base /usr/local/ /usr/local/
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev curl build-essential \
+    gcc libpq-dev curl git ca-certificates build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
+
+COPY whatsapp_bridge/package.json whatsapp_bridge/package.json
+RUN cd whatsapp_bridge && npm install --omit=dev --no-audit --no-fund
 
 COPY . .
 
@@ -22,5 +29,5 @@ USER appuser
 
 EXPOSE 8000
 
-# Render asigna PORT (por defecto 10000). Un solo worker evita duplicar el heartbeat.
+# Render asigna PORT (por defecto 10000). Un solo worker mantiene sincronizado Telegram + WhatsApp QR + Heartbeat.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

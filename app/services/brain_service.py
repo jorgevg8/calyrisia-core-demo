@@ -2,18 +2,29 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from google import genai
-from google.genai import types
-from psycopg.types.json import Jsonb
+try:
+    from google import genai
+    from google.genai import types
+except Exception:  # pragma: no cover - optional SDK fallback
+    genai = None  # type: ignore
+    types = None  # type: ignore
+try:
+    from psycopg.types.json import Jsonb
+except Exception:  # pragma: no cover
+    class Jsonb:  # type: ignore
+        def __init__(self, val):
+            self.val = val
 
 from app.core.config import get_settings
 from app.services.context_manager import ContextManager
+from app.services.model_router_service import ModelRouterService
 from app.services.tool_manager import ToolExecutionError, ToolManager
 
 
@@ -51,14 +62,40 @@ class BrainService:
         "get_business_profile",
         "get_customer",
         "get_product",
+        "search_catalog",
         "get_inventory",
         "get_order",
     }
 
     ALL_BRAIN_TOOLS = READ_TOOLS | {
+        "prepare_order",
+        "capture_customer_lead",
+        "request_human_handoff",
         "create_order",
         "update_inventory",
+        "issue_refund",
     }
+
+    PROMPT_INJECTION_PATTERNS = (
+        "ignora tus instrucciones",
+        "ignora las instrucciones",
+        "ignore previous instructions",
+        "ignore all instructions",
+        "system prompt",
+        "prompt del sistema",
+        "revela tus instrucciones",
+        "cambia el precio a 0",
+        "precio a /usr/bin/bash",
+        "regalame",
+        "regálame todo",
+        "descuento del 100%",
+        "datos de otro negocio",
+        "otra empresa",
+        "drop table",
+        "select * from",
+        "aprueba mi pago",
+        "aprobar pago automaticamente",
+    )
 
     MAX_BRAIN_ROUNDS = 3
     MAX_TOOL_CALLS_PER_ROUND = 4
@@ -68,13 +105,13 @@ class BrainService:
         "dirección", "direccion", "política", "politica", "negocio",
     )
 
-    def __init__(self, conn):
+    def __init__(self, conn: Any = None):
         self.conn = conn
         self.settings = get_settings()
         self.client = None
         self.model_candidates: list[str] = []
 
-        if self.settings.gemini_api_key:
+        if self.settings.gemini_api_key and genai is not None and types is not None:
             self.client = genai.Client(
                 api_key=self.settings.gemini_api_key,
                 http_options=types.HttpOptions(
@@ -97,6 +134,7 @@ class BrainService:
 
         self.context_manager = ContextManager(conn)
         self.tool_manager = ToolManager(conn)
+        self.model_router = ModelRouterService(conn)
 
     # ------------------------------------------------------------------
     # Serialization/context helpers
@@ -127,95 +165,28 @@ class BrainService:
 
 
     def _sample_products_by_type(self, business_type: str, currency: str = "USD") -> list[dict]:
-        b = (business_type or "").lower()
-        if any(k in b for k in ["super", "market", "bode", "abasto", "viveres"]):
-            return [
-                {"name": "Harina de Maíz PAN 1kg", "price": 1.30, "category": "Alimentos"},
-                {"name": "Arroz Blanco Premium 1kg", "price": 1.20, "category": "Alimentos"},
-                {"name": "Aceite Vegetal 1 Litro", "price": 2.80, "category": "Alimentos"},
-                {"name": "Queso Blanco Llanero 1kg", "price": 5.50, "category": "Lácteos"},
-                {"name": "Café Molido Gourmet 500g", "price": 4.20, "category": "Alimentos"},
-                {"name": "Pasta Larga Espagueti 1kg", "price": 1.50, "category": "Alimentos"},
-                {"name": "Leche Líquida Completa 1L", "price": 1.80, "category": "Lácteos"},
-                {"name": "Nutella Crema Avellanas 350g", "price": 5.50, "category": "Dulces"},
-                {"name": "Refresco Familiar 2 Litros", "price": 2.50, "category": "Bebidas"},
-                {"name": "Pack 4 Rollos Papel Higiénico", "price": 2.00, "category": "Higiene"},
-            ]
-        elif any(k in b for k in ["restauran", "comida", "hamburgue", "pizza", "caf", "bar"]):
-            return [
-                {"name": "Hamburguesa Especial Calyrisia", "price": 8.50, "category": "Comida"},
-                {"name": "Hamburguesa Doble Queso y Tocineta", "price": 11.00, "category": "Comida"},
-                {"name": "Perro Caliente Gigante con Todo", "price": 4.00, "category": "Comida"},
-                {"name": "Papas Fritas Rústicas con Queso", "price": 3.50, "category": "Acompañantes"},
-                {"name": "Nuggets de Pollo Crujientes (8 pcs)", "price": 5.00, "category": "Acompañantes"},
-                {"name": "Pizza Personal Pepperoni", "price": 7.00, "category": "Comida"},
-                {"name": "Tequeños con Salsa Tártara (6 pcs)", "price": 4.50, "category": "Entradas"},
-                {"name": "Refresco Frío 355ml", "price": 1.50, "category": "Bebidas"},
-                {"name": "Malteada Cremosa de Chocolate", "price": 3.50, "category": "Bebidas"},
-                {"name": "Postre Brownie con Helado", "price": 4.00, "category": "Postres"},
-            ]
-        elif any(k in b for k in ["ropa", "boutique", "moda", "calzado", "textil", "zapater"]):
-            return [
-                {"name": "Camisa de Lino Manga Larga", "price": 25.00, "category": "Ropa"},
-                {"name": "Pantalón Jean Slim Fit Clásico", "price": 32.00, "category": "Ropa"},
-                {"name": "Vestido Casual Elegante", "price": 28.00, "category": "Ropa"},
-                {"name": "Blusa de Seda Estampada", "price": 22.00, "category": "Ropa"},
-                {"name": "Chaqueta Denim Clásica", "price": 45.00, "category": "Ropa"},
-                {"name": "Short Playero Casual", "price": 16.00, "category": "Ropa"},
-                {"name": "Franela Básica 100% Algodón", "price": 12.00, "category": "Ropa"},
-                {"name": "Zapatos Casuales de Cuero", "price": 48.00, "category": "Calzado"},
-                {"name": "Cinturón de Cuero Reversible", "price": 15.00, "category": "Accesorios"},
-                {"name": "Lentes de Sol Polarizados", "price": 18.00, "category": "Accesorios"},
-            ]
-        elif any(k in b for k in ["farma", "salud", "medic"]):
-            return [
-                {"name": "Paracetamol 500mg (10 tabs)", "price": 2.00, "category": "Medicamentos"},
-                {"name": "Ibuprofeno 400mg (10 tabs)", "price": 2.50, "category": "Medicamentos"},
-                {"name": "Protector Solar FPS 50", "price": 14.00, "category": "Cuidado Personal"},
-                {"name": "Champú Reparador 400ml", "price": 5.50, "category": "Cuidado Personal"},
-                {"name": "Crema Dental Blanqueadora", "price": 2.80, "category": "Higiene"},
-                {"name": "Suero Oral Electrolitos", "price": 1.80, "category": "Salud"},
-                {"name": "Vitamina C 1000mg Efervescente", "price": 4.50, "category": "Suplementos"},
-                {"name": "Alcohol Antiséptico 70% 500ml", "price": 2.20, "category": "Primeros Auxilios"},
-                {"name": "Mascarillas Quirúrgicas (Caja 50)", "price": 4.00, "category": "Protección"},
-                {"name": "Termómetro Digital Rápido", "price": 6.50, "category": "Equipos Médicos"},
-            ]
-        else:
-            return [
-                {"name": "Cable de Carga Rápida USB-C", "price": 6.00, "category": "Accesorios"},
-                {"name": "Cargador de Pared 20W", "price": 12.00, "category": "Accesorios"},
-                {"name": "Auriculares Inalámbricos Bluetooth", "price": 22.00, "category": "Audio"},
-                {"name": "Soporte Magnético para Teléfono", "price": 8.50, "category": "Accesorios"},
-                {"name": "Powerbank Portátil 10000mAh", "price": 18.00, "category": "Baterías"},
-                {"name": "Protector de Pantalla Vidrio 9D", "price": 5.00, "category": "Accesorios"},
-                {"name": "Funda Protectora Antigolpes", "price": 7.50, "category": "Fundas"},
-                {"name": "Memoria MicroSD 64GB Clase 10", "price": 9.00, "category": "Memorias"},
-                {"name": "Mouse Inalámbrico Ergonómico", "price": 11.50, "category": "Computación"},
-                {"name": "Teclado Mecánico RGB", "price": 35.00, "category": "Computación"},
-            ]
+        return []
 
-    def _get_product_catalog(self, business_id: UUID, limit: int = 40) -> list[dict[str, Any]]:
+    def _get_product_catalog(self, business_id: UUID, limit: int = 60) -> list[dict[str, Any]]:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT p.id, p.name, p.sku, p.description, p.category, p.brand,
                        p.price, p.status, p.is_service,
-                       COALESCE(SUM(i.quantity), 0) AS stock
+                       COALESCE(SUM(i.quantity), 0) AS stock,
+                       COALESCE(to_jsonb(p)->'variants', '[]'::jsonb) AS variants,
+                       COALESCE(to_jsonb(p)->'attributes', '{}'::jsonb) AS attributes
                 FROM products p
                 LEFT JOIN inventory i ON i.product_id = p.id AND i.business_id = p.business_id
                 WHERE p.business_id = %s
                   AND p.status = 'active'
-                GROUP BY p.id, p.name, p.sku, p.description, p.category, p.brand,
-                         p.price, p.status, p.is_service
+                GROUP BY p.id
                 ORDER BY p.name
                 LIMIT %s
                 """,
                 (str(business_id), limit),
             )
             rows = cur.fetchall()
-
-            # A commercial tenant starts with its own real catalog. Never fabricate products or stock.
-
 
         return [
             {
@@ -228,7 +199,9 @@ class BrainService:
                 "price": float(r[6]) if r[6] is not None else 0.0,
                 "status": r[7],
                 "is_service": r[8],
-                "stock": float(r[9]) if len(r) > 9 and r[9] is not None else 25.0,
+                "stock": float(r[9]) if len(r) > 9 and r[9] is not None else 0.0,
+                "variants": r[10] if len(r) > 10 and isinstance(r[10], list) else [],
+                "attributes": r[11] if len(r) > 11 and isinstance(r[11], dict) else {},
             }
             for r in rows
         ]
@@ -257,6 +230,22 @@ class BrainService:
             return context
         # Para que la IA siempre conozca los productos del negocio y pueda recomendar con calidez humana
         context["product_catalog"] = self._get_product_catalog(business_id, limit=40)
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """SELECT COALESCE(exchange_rate, 0), COALESCE(local_currency_code, 'VES'), COALESCE(owner_whatsapp, '')
+                       FROM public.business_dashboard_settings WHERE business_id = %s""",
+                    (str(business_id),),
+                )
+                s_row = cur.fetchone()
+                if s_row:
+                    context["currency_settings"] = {
+                        "exchange_rate": float(s_row[0] or 0),
+                        "local_currency_code": str(s_row[1] or "VES"),
+                        "owner_whatsapp": str(s_row[2] or ""),
+                    }
+        except Exception:
+            self.conn.rollback()
         return self._safe_json(context)
 
     # ------------------------------------------------------------------
@@ -388,13 +377,39 @@ class BrainService:
         currency = biz.get("currency") or "USD"
         description = biz.get("description") or ""
 
-        # Formatear el catálogo en texto claro y directo
+        curr_cfg = context.get("currency_settings") or {}
+        ex_rate = float(curr_cfg.get("exchange_rate") or 0)
+        local_curr = str(curr_cfg.get("local_currency_code") or "VES")
+        owner_wa = str(curr_cfg.get("owner_whatsapp") or "")
+
+        # Formatear el catálogo en texto claro y directo (con equivalente en moneda local si hay tasa configurada)
         cat_items = context.get("product_catalog") or []
         if cat_items:
-            cat_lines = [f"- {p['name']}: {currency} {p['price']:.2f} ({int(p.get('stock', 25))} unidades disponibles)" for p in cat_items]
+            cat_lines = []
+            for p in cat_items:
+                usd_p = float(p.get("price") or 0)
+                local_str = f" (equiv. {local_curr} {usd_p * ex_rate:,.2f})" if ex_rate > 0 else ""
+                sku_str = f" [SKU: {p['sku']}]" if p.get("sku") else ""
+                brand_str = f" ({p['brand']})" if p.get("brand") else ""
+                var_list = p.get("variants") or []
+                var_str = ""
+                if var_list and isinstance(var_list, list):
+                    v_parts = [str(v.get("label") or v.get("name") or v) if isinstance(v, dict) else str(v) for v in var_list[:6]]
+                    if v_parts:
+                        var_str = f" | Variantes: {', '.join(v_parts)}"
+                cat_lines.append(f"- {p['name']}{brand_str}{sku_str}: {currency} {usd_p:.2f}{local_str} ({int(p.get('stock', 0))} unidades disponibles){var_str}")
             cat_str = "\n".join(cat_lines)
         else:
             cat_str = "No hay productos registrados en el sistema."
+
+        rate_rule = (
+            f"\n- TASA DEL DÍA ACTIVA: 1 {currency} = {ex_rate:.2f} {local_curr}. Si el cliente pregunta precios en bolívares/{local_curr} o va a pagar por Pago Móvil, indícale el monto en {currency} y su equivalente exacto en {local_curr}."
+            if ex_rate > 0 else ""
+        )
+        human_rule = (
+            f"\n- ESCALADO A HUMANO: Si el cliente pide hablar con una persona, asesor humano o dueño, o tiene un reclamo complejo, indícale amablemente que puede escribir directo al WhatsApp de atención del negocio: {owner_wa}."
+            if owner_wa else ""
+        )
 
         bt_lower = str(biz_type or "").lower()
         is_appointment_biz = any(k in bt_lower for k in ("appointment", "cita", "clinic", "clínic", "consult", "salud", "medic", "odont", "service_team", "servici"))
@@ -422,36 +437,42 @@ class BrainService:
         else:
             booking_rules = f"""
 5. FLUJO DE COMPRA Y TARJETA INTERACTIVA DE PAGO EN WEBCHAT:
-- Cuando el cliente salude o pregunte qué vendemos, dale la bienvenida y menciona los productos disponibles en el catálogo con su precio en {currency} y unidades en stock.
-- Cuando el cliente indique que quiere comprar, llevarse o pedir uno o más productos del catálogo (o confirme delivery / retiro en tienda / pagar):
-  1) Confirma las unidades y el nombre exacto de cada producto solicitado con su subtotal, por ejemplo: "- 1x Nombre del Producto: {currency} 25.00".
-  2) Indica el Total a pagar en {currency} y pregúntale si prefiere delivery o retiro en tienda.
-  3) AGREGA OBLIGATORIAMENTE al final de tu respuesta la etiqueta exacta con el monto numérico total (sin símbolo $) y los artículos en JSON para desplegar la tarjeta de pago en el chat:
+- Cuando el cliente pregunte qué vendemos o pida el catálogo, organiza los productos clasificados por su categoría (▸ Categoría:), colocando cada producto en su propia línea con viñeta (•), cerrando cada ítem intermedio con punto y coma (;) y el último ítem con punto final (.).
+- Cuando el cliente indique que quiere comprar, llevarse o pedir uno o más productos del catálogo (o confirme delivery / retiro en tienda / pagar), presenta el pedido estructurado exactamente en estas 3 secciones:
+  1. Detalle del pedido (clasificado por categoría, cerrando cada línea intermedia con ; y la última con .):
+     • 1x Nombre del Producto — Subtotal: {currency} 25.00 ({currency} 25.00 c/u).
+  2. Resumen de cobro:
+     • Cantidad total: X artículo(s);
+     • Total a pagar: {currency} 25.00.
+  3. Modalidad de entrega:
+     ¿Deseas servicio de delivery a domicilio o pasarás a retirar por tienda?
+- AGREGA OBLIGATORIAMENTE en la última línea la etiqueta exacta con el monto numérico total y los artículos en JSON:
 [BOTON_PAGO: 25.00|ITEMS: [{{"name": "Nombre Exacto del Producto", "qty": 1}}]]
 """
 
         return f"""
 Eres el Asistente Inteligente oficial de {biz_name} ({biz_type}).
-Atiendes clientes en tiempo real por chat de manera humana, directa, ágil y simpática.
+Atiendes clientes en tiempo real por chat con excelente redacción, orden visual, puntuación impecable y trato ejecutivo.
 
 CATÁLOGO / SERVICIOS REALES CON PRECIOS OFICIALES EN {currency}:
 {cat_str}
 
-REGLAS ESTRICTAS DE RESPUESTA:
-1. BREVEDAD Y AGILIDAD (NO HABLES DE MÁS):
-- Respuestas cortas, rápidas y al grano (máximo 1 a 3 oraciones claras).
-- Si te preguntan por un precio o servicio, responde DIRECTAMENTE con el precio oficial del catálogo en la primera oración.
-- PROHIBIDO inventar productos, servicios o precios que no estén en el catálogo o en las directrices del dueño.
+REGLAS ESTRICTAS DE RESPUESTA Y FORMATO:
+1. ORDEN, PUNTUACIÓN Y CLASIFICACIÓN IMPECABLE:
+- Organiza siempre tus respuestas con saltos de línea claros, listas con viñetas (•) y clasificación por categorías (▸ Categoría:) cuando muestres varios productos o un pedido.
+- Respeta estrictamente los signos de puntuación: termina cada elemento intermedio de una lista con punto y coma (;) y el último elemento con punto final (.).
+- Si te preguntan por un precio o producto específico, indica en la primera línea el nombre, categoría, precio oficial y stock disponible.
+- PROHIBIDO inventar productos, servicios o precios que no estén en el catálogo oficial.
 
-2. CERO ASTERISCOS (TEXTO LIMPIO DE CHAT):
-- ESTÁ TERMINANTEMENTE PROHIBIDO usar asteriscos (** o *). No uses negritas de markdown. Escribe únicamente texto limpio y natural.
+2. CERO ASTERISCOS (TEXTO LIMPIO Y ESTRUCTURADO):
+- ESTÁ TERMINANTEMENTE PROHIBIDO usar asteriscos (** o *). Usa numeración (1., 2., 3.), encabezados con ▸ y viñetas con •.
 
 3. CONSULTAS DE CATÁLOGO / SERVICIOS:
-- Si el negocio es de productos físicos, menciona el precio y las unidades disponibles.
-- Si el negocio es de citas, consultas o servicios profesionales, menciona el nombre del servicio/consulta y su tarifa sin hablar de "unidades en stock", e invita al cliente a agendar su cita.
+- Si el negocio es de productos físicos, clasifícalos por categoría e indica precio y unidades disponibles separadas con punto y coma (;).
+- Si el negocio es de citas o servicios profesionales, indica el nombre del servicio y su tarifa e invita al cliente a agendar su cita.
 
-4. DIRECTRICES DEL DUEÑO (PRIORIDAD MÁXIMA):
-- Instrucciones configuradas para este negocio: "{description}"
+4. DIRECTRICES DEL DUEÑO Y TASA MULTIMONEDA (PRIORIDAD MÁXIMA):
+- Instrucciones configuradas para este negocio: "{description}"{rate_rule}{human_rule}
 {booking_rules}
 CONTEXTO OPERATIVO:
 {context_json}
@@ -707,20 +728,53 @@ CONTEXTO OPERATIVO:
             found_items.append({"product": prod, "qty": qty, "subtotal": subtotal})
 
         if found_items:
-            lines = []
             total = 0.0
+            total_units = 0
+            grouped: dict[str, list[dict[str, Any]]] = {}
             for fi in found_items:
                 p = fi["product"]
-                q = fi["qty"]
-                st = fi["subtotal"]
+                q = int(fi["qty"])
+                st = float(fi["subtotal"])
                 total += st
-                lines.append(f"- {q}x {p['name']}: {currency} {st:.2f} ({currency} {p['price']:.2f} c/u)")
+                total_units += q
+                cat_name = str(p.get("category") or "Catálogo General").strip() or "Catálogo General"
+                grouped.setdefault(cat_name, []).append(fi)
 
-            items_payload = json.dumps([{"product_id": str(fi["product"].get("id") or ""), "name": fi["product"]["name"], "qty": fi["qty"], "price": float(fi["product"].get("price") or 0)} for fi in found_items], ensure_ascii=False)
+            section_lines: list[str] = []
+            for cat_name, cat_items in grouped.items():
+                section_lines.append(f"▸ {cat_name}:")
+                for idx, fi in enumerate(cat_items):
+                    p = fi["product"]
+                    q = int(fi["qty"])
+                    st = float(fi["subtotal"])
+                    unit_p = float(p.get("price") or 0.0)
+                    punct = "." if idx == len(cat_items) - 1 else ";"
+                    section_lines.append(
+                        f"  • {q}x {p['name']} — Subtotal: {currency} {st:.2f} ({currency} {unit_p:.2f} c/u){punct}"
+                    )
+
+            items_payload = json.dumps(
+                [
+                    {
+                        "product_id": str(fi["product"].get("id") or ""),
+                        "name": fi["product"]["name"],
+                        "qty": fi["qty"],
+                        "price": float(fi["product"].get("price") or 0),
+                    }
+                    for fi in found_items
+                ],
+                ensure_ascii=False,
+            )
             return (
-                "¡Excelente elección! Te anoto el siguiente pedido:\n"
-                + "\n".join(lines)
-                + f"\n\nTotal a pagar: {currency} {total:.2f}. ¿Deseas servicio de delivery o pasarás a retirar por tienda?\n[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
+                "¡Excelente elección! Aquí tienes el resumen organizado de tu pedido:\n\n"
+                "1. Detalle de artículos por categoría:\n"
+                + "\n".join(section_lines)
+                + f"\n\n2. Resumen de cobro:\n"
+                + f"  • Cantidad total: {total_units} unidad(es);\n"
+                + f"  • Total a pagar: {currency} {total:.2f}.\n\n"
+                + "3. Modalidad de entrega:\n"
+                + "¿Deseas servicio de delivery a domicilio o pasarás a retirar por tienda?\n"
+                + f"[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
             )
         return None
 
@@ -786,15 +840,16 @@ CONTEXTO OPERATIVO:
                     for r in rows:
                         txt = str(r[0])
                         import re
-                        m = re.search(r'\[BOTON_PAGO:\s*(\d+(?:\.\d{1,2})?)\]', txt) or re.search(r'Total a pagar:\s*[A-Z$]*\s*(\d+(?:\.\d{1,2})?)', txt, re.IGNORECASE)
+                        m = re.search(r'\[BOTON_PAGO:\s*(\d+(?:\.\d{1,2})?)', txt) or re.search(r'Total a pagar:\s*[A-Z$]*\s*(\d+(?:\.\d{1,2})?)', txt, re.IGNORECASE)
                         if m:
                             total_val = float(m.group(1))
-                            tipo = "delivery" if (is_delivery_word or (not is_retirar_word and not is_payment_query)) else ("retiro en tienda" if is_retirar_word else "tu pedido")
+                            tipo = "delivery a domicilio" if (is_delivery_word or (not is_retirar_word and not is_payment_query)) else ("retiro en tienda" if is_retirar_word else "procesamiento inmediato")
                             return (
-                                f"¡Excelente elección! Hemos registrado tu pedido para {tipo}.\n\n"
-                                f"Total a pagar: {curr} {total_val:.2f}.\n"
-                                f"Puedes continuar con el pago usando uno de los métodos configurados por el negocio.\n\n"
-                                f"La solicitud quedará pendiente de verificación manual por el comercio:\n"
+                                f"¡Perfecto! Hemos actualizado tu solicitud de pedido:\n\n"
+                                f"• Modalidad seleccionada: {tipo.capitalize()};\n"
+                                f"• Total a pagar: {curr} {total_val:.2f};\n"
+                                f"• Estado: Pendiente de reporte de pago.\n\n"
+                                f"A continuación, selecciona el método de pago en la tarjeta inferior y envía tu número de referencia para su verificación:\n"
                                 f"[BOTON_PAGO: {total_val:.2f}]"
                             )
             except Exception as e:
@@ -865,27 +920,60 @@ CONTEXTO OPERATIVO:
 
         biz = context.get("business") or {}
         biz_name = biz.get("name") or "nuestro comercio"
-        curr = biz.get("currency") or "USD"
-        catalog = context.get("product_catalog") or []
+        curr = biz.get("currency") or (context.get("settings") or {}).get("currency") or "USD"
+        catalog = context.get("product_catalog") or context.get("catalog") or []
 
-        # 1. Búsqueda de producto específico en el catálogo
-        words = [w for w in normalized.split() if len(w) > 3]
+        # 1. Búsqueda de producto específico en el catálogo (incluyendo variantes y control de stock agotado)
+        words = [w for w in normalized.split() if len(w) >= 3 and w not in ("hola", "buenas", "cuanto", "cuánto", "tienen", "tienes", "disponible", "salen", "sale", "para", "como")]
         for item in catalog:
-            p_name = item.get("name", "").lower()
+            p_name = self._normalize(str(item.get("name", "")))
             if any(w in p_name for w in words):
                 price = item.get("price")
-                stock_qty = int(item.get("stock", 25))
-                price_str = f"{curr} {price:.2f}" if price is not None else "precio no disponible"
-                return f"La {item['name']} está en {price_str} y nos quedan {stock_qty} unidades disponibles. ¿Cuántas unidades te anoto?"
+                raw_stock = item.get("stock")
+                stock_qty = 25 if raw_stock is None else int(raw_stock)
+                price_str = f"{curr} {float(price):.2f}" if price is not None else "precio por confirmar"
+                variants = item.get("variants") or []
+                var_text = ""
+                if isinstance(variants, list) and variants:
+                    var_parts = []
+                    for v in variants[:4]:
+                        if isinstance(v, dict):
+                            v_label = v.get("color") or v.get("talla") or v.get("pack") or v.get("puerto") or v.get("name") or ""
+                            v_stock = v.get("stock")
+                            if v_label:
+                                var_parts.append(f"{v_label} ({v_stock} disp.)" if v_stock is not None else str(v_label))
+                    if var_parts:
+                        var_text = f" Variantes: {', '.join(var_parts)}."
+                if stock_qty <= 0:
+                    return (
+                        f"El artículo {item['name']} ({price_str}) se encuentra temporalmente agotado (stock: 0). "
+                        f"¿Deseas que registremos tu solicitud para avisarte apenas ingrese inventario o te muestro alternativas disponibles?"
+                    )
+                return f"{item['name']} tiene un precio de {price_str} y contamos con {stock_qty} unidades disponibles.{var_text} ¿Cuántas unidades deseas pedir?"
 
-        # 2. Consulta de catálogo general y stock
+        # 2. Consulta de catálogo general y stock clasificado por categoría con punto y coma (;) y punto final (.)
         if any(term in normalized for term in ("producto", "productos", "disponible", "disponibles", "catalogo", "catálogo", "que venden", "qué venden", "tienen", "unidad", "unidades", "stock", "cuantas", "cuántas", "cantidad")):
             if catalog:
-                top_items = catalog[:5]
-                items_text = ", ".join(f"{it['name']} ({curr} {it['price']:.2f} - {int(it.get('stock', 25))} unid.)" for it in top_items)
-                return f"En {biz_name} tenemos disponible: {items_text}, entre otros artículos. ¿Buscas algún producto en especial?"
+                grouped_cat: dict[str, list[dict[str, Any]]] = {}
+                for it in catalog[:10]:
+                    c_label = str(it.get("category") or "General").strip() or "General"
+                    grouped_cat.setdefault(c_label, []).append(it)
+                cat_blocks: list[str] = []
+                for c_label, c_items in grouped_cat.items():
+                    cat_blocks.append(f"▸ {c_label}:")
+                    for idx, it in enumerate(c_items):
+                        punct = "." if idx == len(c_items) - 1 else ";"
+                        st_qty = 25 if it.get("stock") is None else int(it.get("stock"))
+                        cat_blocks.append(
+                            f"  • {it['name']} — Precio: {curr} {float(it.get('price') or 0):.2f} | Disponible: {st_qty} unid.{punct}"
+                        )
+                return (
+                    f"En {biz_name} contamos con los siguientes artículos disponibles clasificados por categoría:\n\n"
+                    + "\n".join(cat_blocks)
+                    + "\n\n¿Cuál de estos productos te gustaría consultar o agregar a tu pedido?"
+                )
             else:
-                return f"En {biz_name} tenemos víveres, alimentos frescos y abarrotes disponibles. ¿Qué producto estás buscando hoy?"
+                return f"En {biz_name} estamos actualizando nuestro catálogo en este momento. ¿Qué producto estás buscando hoy?"
 
         # 3. Saludos
         if any(term in normalized for term in ("hola", "buenas", "buenos dias", "buenas tardes", "buenas noches", "feliz noche")):
@@ -1250,6 +1338,114 @@ CONTEXTO OPERATIVO:
 
         return clean_response
 
+    def _detect_prompt_injection(self, text: str) -> bool:
+        norm = self._normalize(text)
+        if not norm:
+            return False
+        extra_patterns = (
+            "ignora todas las instrucciones",
+            "ignora las instrucciones",
+            "ignore previous instructions",
+            "ignore all instructions",
+            "forget previous instructions",
+            "olvida las instrucciones",
+            "system prompt",
+            "revela tu prompt",
+            "modo desarrollador",
+            "developer mode",
+            "jailbreak",
+            "cambia el precio a gratis",
+            "cambia el precio a 0",
+            "aprueba mi reembolso",
+            "aprueba mi pago",
+        )
+        if any(pat in norm for pat in self.PROMPT_INJECTION_PATTERNS) or any(p in norm for p in extra_patterns):
+            return True
+        return bool(
+            re.search(r"ignora\s+(?:todas\s+)?(?:las\s+|tus\s+)?(?:instrucciones|reglas)", norm)
+            or re.search(r"forget\s+(?:all\s+)?(?:previous\s+)?instructions", norm)
+            or re.search(r"reveal\s+.*(?:system\s+prompt|api\s+keys?)", norm)
+        )
+
+    def _record_autonomous_operation(
+        self,
+        *,
+        business_id: UUID,
+        tool_name: str,
+        autonomy_level: str,
+        reason: str,
+        input_data: dict[str, Any],
+        output_data: dict[str, Any],
+    ) -> None:
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("SAVEPOINT sp_brain_auto_op")
+                cur.execute(
+                    """
+                    INSERT INTO public.actions (
+                        business_id, action_type, resource_type, tool_name,
+                        autonomy_level, risk_level, status, input_data, output_data,
+                        reason, requested_at, started_at, completed_at
+                    ) VALUES (
+                        %s, 'create', 'order', %s, %s, 'low', 'completed', %s, %s, %s, NOW(), NOW(), NOW()
+                    ) RETURNING id
+                    """,
+                    (
+                        business_id,
+                        tool_name,
+                        autonomy_level if autonomy_level in {"L0", "L1", "L2", "L3", "L4"} else "L2",
+                        Jsonb(self._safe_json(input_data)),
+                        Jsonb(self._safe_json(output_data)),
+                        reason,
+                    ),
+                )
+                act_row = cur.fetchone()
+                act_id = act_row[0] if act_row else None
+                cur.execute(
+                    """
+                    INSERT INTO public.audit_logs (
+                        business_id, action_id, actor_type, action_type, resource_type,
+                        status, tool_name, reason, before_data, after_data, metadata, created_at
+                    ) VALUES (
+                        %s, %s, 'galaxy', 'create', 'order', 'success', %s, %s, '{}'::jsonb, %s, %s, NOW()
+                    )
+                    """,
+                    (
+                        business_id,
+                        act_id,
+                        tool_name,
+                        reason,
+                        Jsonb(self._safe_json(output_data)),
+                        Jsonb({"autonomy_level": autonomy_level, "origin": "business_brain"}),
+                    ),
+                )
+                cur.execute("RELEASE SAVEPOINT sp_brain_auto_op")
+            self.conn.commit()
+        except Exception:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("ROLLBACK TO SAVEPOINT sp_brain_auto_op")
+            except Exception:
+                pass
+
+
+    def _build_catalog_grounded_fallback(self, user_message: str, context: dict[str, Any]) -> str:
+        return self._emergency_response(
+            user_message=user_message,
+            context=context,
+            tool_results=[],
+            conversation_id=None,
+        )
+
+    def _build_injection_safe_response(self, context: dict[str, Any]) -> str:
+        biz = context.get("business") or {}
+        biz_name = biz.get("name") or "nuestro negocio"
+        return (
+            f"Por seguridad operativa de {biz_name}, no puedo modificar precios oficiales, "
+            f"aprobar pagos sin verificación del propietario ni revelar configuraciones internas. "
+            f"Con gusto puedo ayudarte a consultar nuestro catálogo oficial, precios y existencias reales."
+        )
+
     def respond(
         self,
         *,
@@ -1266,6 +1462,8 @@ CONTEXTO OPERATIVO:
         )
         if fast_path:
             final_text, route = fast_path
+            if final_text:
+                final_text = re.sub(r"(?:^|\n)\s*\]\s*$", "", final_text).strip()
             message_id = self._save_galaxy_message(
                 business_id=business_id,
                 customer_id=customer_id,
@@ -1297,6 +1495,51 @@ CONTEXTO OPERATIVO:
         )
         if not context.get("found"):
             raise ValueError(context.get("reason", "Context not found"))
+
+        if self._detect_prompt_injection(user_message):
+            biz = context.get("business") or {}
+            biz_name = biz.get("name") or "nuestro negocio"
+            safe_refusal = (
+                f"Por seguridad operativa de {biz_name}, no puedo modificar precios oficiales, "
+                f"aprobar pagos sin verificación del propietario ni revelar configuraciones internas. "
+                f"Con gusto puedo ayudarte a consultar nuestro catálogo oficial, precios y existencias reales."
+            )
+            self._record_autonomous_operation(
+                business_id=business_id,
+                tool_name="security_prompt_guard",
+                autonomy_level="L1",
+                reason="Intento de manipulación de instrucciones o precios bloqueado por Business Brain.",
+                input_data={"user_message": user_message[:300]},
+                output_data={"blocked": True},
+            )
+            message_id = self._save_galaxy_message(
+                business_id=business_id,
+                customer_id=customer_id,
+                conversation_id=conversation_id,
+                content=safe_refusal,
+                tool_results=[],
+            )
+            return {
+                "success": True,
+                "stage": "completed",
+                "intent": "seguridad_bloqueada",
+                "confidence": 100.0,
+                "response": safe_refusal,
+                "tool_results": [],
+                "message_id": message_id,
+                "next_component": "business_brain",
+                "brain_route": "security_prompt_guard",
+                "brain_rounds": 0,
+                "brain_tools": ["security_prompt_guard"],
+                "brain_error": None,
+                "brain_models_tried": [],
+            }
+
+        route_decision = self.model_router.select_route(
+            business_id=business_id,
+            message=user_message,
+            feature="customer_chat",
+        )
 
         # Brain-first rule: every request enters the reasoning layer.
         if not self.client or not self.model_candidates:
@@ -1354,8 +1597,8 @@ CONTEXTO OPERATIVO:
                 if recent_turns_text else user_message
             )
 
-            # MOTOR PRINCIPAL DE ALTA VELOCIDAD GEMINI FLASH
-            fast_models = ["gemini-2.5-flash", "gemini-2.0-flash"]
+            # MOTOR MULTI-MODELO ENRUTADO POR COMPLEJIDAD Y PLAN
+            fast_models = route_decision.candidate_models or ["gemini-2.5-flash", "gemini-2.0-flash"]
             for model in fast_models:
                 metadata["models_tried"].append(model)
                 try:
@@ -1435,11 +1678,30 @@ CONTEXTO OPERATIVO:
                 catalog_list = context.get("product_catalog") or []
                 parsed_quote = self._parse_multi_item_order(user_message, catalog_list, biz_info.get("currency") or "USD")
                 if parsed_quote:
-                    tag_m = re.search(r"(\[BOTON_PAGO:[^\]]+\])", parsed_quote)
+                    tag_m = re.search(r"(\[BOTON_PAGO:\s*[\d.,]+(?:\s*\|\s*ITEMS:\s*\[[\s\S]*?\])?\s*\])", parsed_quote)
                     if tag_m:
                         final_text = f"{final_text.strip()}\n{tag_m.group(1)}"
         except Exception:
             pass
+
+        if final_text and "[BOTON_PAGO:" in final_text:
+            self._record_autonomous_operation(
+                business_id=business_id,
+                tool_name="prepare_order",
+                autonomy_level="L2",
+                reason="Cotización y pre-orden preparada automáticamente por Business Brain con precios de catálogo verificados.",
+                input_data={"customer_id": str(customer_id) if customer_id else None, "message": user_message[:300]},
+                output_data={"quote_prepared": True},
+            )
+
+        used_model = (metadata.get("models_tried") or ["deterministic-engine"])[-1] if metadata.get("route") != "brain_emergency_fallback" else "deterministic-engine"
+        self.model_router.log_usage(
+            business_id=business_id,
+            model_name=used_model,
+            prompt_text=user_message,
+            completion_text=final_text or "",
+            feature_used="customer_chat",
+        )
 
         message_id = self._save_galaxy_message(
             business_id=business_id,

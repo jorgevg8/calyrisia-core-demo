@@ -1,0 +1,11 @@
+CALYRISIA UI LIMPIA V4
+
+Para aplicar en tu proyecto local existente:
+1) Detén Uvicorn con Ctrl+C.
+2) Extrae CALYRISIA_UI_LIMPIA_V4_APLICAR_EN_PROYECTO.zip directamente en la raíz del proyecto (la carpeta donde existe app\static\dashboard\index.html).
+3) Ejecuta APLICAR_UI_LIMPIA_V4.bat.
+4) Reinicia CALYRISIA con tu BAT habitual.
+5) Abre http://127.0.0.1:8000/dashboard/ y pulsa Ctrl+F5.
+
+El instalador respalda el HTML actual antes de reemplazarlo. No modifica .env ni Supabase.
+Si estás preparando una nueva carpeta de pruebas, usa CALYRISIA_UI_LIMPIA_V4_PROYECTO.zip.
