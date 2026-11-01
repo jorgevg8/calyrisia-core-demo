@@ -832,9 +832,9 @@ CONTEXTO OPERATIVO:
                 with self.conn.cursor() as cur:
                     cur.execute(
                         """SELECT content FROM conversation_messages
-                           WHERE conversation_id = %s AND direction = 'outbound'
+                           WHERE conversation_id = %s AND business_id = %s AND direction = 'outbound'
                            ORDER BY created_at DESC LIMIT 4""",
-                        (conversation_id,)
+                        (conversation_id, business_id)
                     )
                     rows = cur.fetchall()
                     for r in rows:

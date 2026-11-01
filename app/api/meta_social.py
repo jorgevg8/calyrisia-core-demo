@@ -4,13 +4,13 @@ import asyncio
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
-import urllib.error
+import unicodedata
 import urllib.parse
-import urllib.request
 import uuid
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import httpx
@@ -26,41 +26,57 @@ except Exception:  # pragma: no cover
             self.val = val
 
 from app.api import auth
-from app.api.telegram import (
-    _clean_for_telegram,
-    _looks_like_payment_submission,
-    _parse_payment_marker,
-    notify_owner_payment_pending,
-)
-from app.core.logger import get_logger
 from app.db import get_connection
 from app.schemas import IncomingMessage
 from app.services.autopilot_service import GalaxyAutopilotService
-from app.services.commercial_limits import (
-    AIQuotaExceeded,
-    consume_ai_response,
-)
+from app.services.commercial_limits import AIQuotaExceeded, consume_ai_response
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-_meta_schema_initialized = False
-VALID_META_PLATFORMS = {"instagram", "facebook", "whatsapp"}
+VALID_META_PLATFORMS = ("instagram", "facebook", "whatsapp")
+META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v21.0").strip() or "v21.0"
 
-META_APP_ID = os.getenv("META_APP_ID", "2456430845105397").strip()
-META_CONFIG_ID = os.getenv("META_CONFIG_ID", "1831235794732615").strip()
+# Credenciales de la App de Meta (configurables por entorno en Render)
+META_APP_ID = os.getenv("META_APP_ID", "1485549296488369").strip()
 META_APP_SECRET = os.getenv("META_APP_SECRET", "").strip()
-META_REDIRECT_URI = os.getenv("META_REDIRECT_URI", "https://calyrisia.com/api/auth/meta/callback").strip()
-META_WEBHOOK_VERIFY_TOKEN = os.getenv("META_WEBHOOK_VERIFY_TOKEN", "").strip()
-META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v26.0").strip() or "v26.0"
+META_CONFIG_ID = os.getenv("META_CONFIG_ID", "").strip()
+META_REDIRECT_URI = os.getenv(
+    "META_REDIRECT_URI",
+    "https://calyrisia.com/api/auth/meta/callback",
+).strip()
+META_WEBHOOK_VERIFY_TOKEN = os.getenv(
+    "META_WEBHOOK_VERIFY_TOKEN",
+    "calyrisia_meta_2026_secret",
+).strip()
+
+PAYMENT_METHOD_LABELS = {
+    "pago_movil": "Pago Móvil",
+    "transferencia": "Transferencia Bancaria",
+    "zelle": "Zelle",
+    "binance": "Binance Pay",
+    "paypal": "PayPal",
+}
+
+_PAYMENT_BUTTON_RE = re.compile(
+    r"\[BOTON_PAGO:\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:\|\s*ITEMS:\s*(\[[^\]]*\]))?\s*\]",
+    re.IGNORECASE | re.DOTALL,
+)
+_TOTAL_AMOUNT_RE = re.compile(
+    r"total(?:\s+a\s+pagar|\s+estimado|\s+del\s+pedido)?[^\d$]{0,20}(?:usd|\$)?\s*([0-9]+(?:\.[0-9]{1,2})?)",
+    re.IGNORECASE,
+)
+
+# Temporary in-memory cache of OAuth sessions so the user can pick the exact Page or Instagram account in the popup
+_pending_meta_oauth_sessions: dict[str, dict[str, Any]] = {}
 
 
 class MetaChannelConfigUpdate(BaseModel):
-    account_name: str | None = Field(default=None, max_length=160)
+    account_name: str = Field(default="", max_length=160)
     page_or_ig_id: str | None = Field(default=None, max_length=120)
     access_token: str | None = Field(default=None, max_length=600)
     verify_token: str | None = Field(default=None, max_length=160)
-    enabled: bool = Field(default=True)
+    enabled: bool = True
 
 
 class MetaChannelToggleRequest(BaseModel):
@@ -68,25 +84,21 @@ class MetaChannelToggleRequest(BaseModel):
 
 
 class MetaChannelTestRequest(BaseModel):
-    message: str = Field(
-        default="Hola, vi su perfil y quiero saber qué productos tienen disponibles y precios",
-        min_length=1,
-        max_length=1500,
-    )
-    sender_name: str = Field(default="Cliente Demo Social", max_length=120)
-    sender_handle: str = Field(default="@cliente_demo", max_length=100)
+    message: str = Field(..., min_length=1, max_length=1500)
+    sender_name: str = Field(default="Cliente Social", max_length=120)
+    sender_handle: str = Field(default="@cliente_demo", max_length=120)
 
 
-def _default_verify_token(business_id: str) -> str:
-    digest = hashlib.sha256(f"calyrisia-meta-{business_id}".encode("utf-8")).hexdigest()[:12]
-    return f"calyrisia_meta_{digest}"
+class MetaOAuthSelectAccountRequest(BaseModel):
+    session_key: str = Field(..., min_length=8, max_length=120)
+    platform: str = Field(..., min_length=3, max_length=30)
+    page_or_ig_id: str = Field(..., min_length=1, max_length=160)
+    account_name: str = Field(..., min_length=1, max_length=160)
+    access_token: str = Field(default="", max_length=800)
 
 
 async def ensure_meta_social_schema() -> None:
-    """Idempotent schema for Instagram DM and Facebook Messenger business channels."""
-    global _meta_schema_initialized
-    if _meta_schema_initialized:
-        return
+    """Create the multi-tenant table for Instagram Direct, Facebook Messenger and WhatsApp Cloud channels."""
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
@@ -94,152 +106,372 @@ async def ensure_meta_social_schema() -> None:
                     """
                     CREATE TABLE IF NOT EXISTS public.business_meta_channels (
                         business_id uuid NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
-                        platform varchar(20) NOT NULL CHECK (platform IN ('instagram', 'facebook', 'whatsapp')),
+                        platform varchar(30) NOT NULL CHECK (platform IN ('instagram', 'facebook', 'whatsapp')),
                         enabled boolean NOT NULL DEFAULT false,
                         channel_status varchar(30) NOT NULL DEFAULT 'disconnected',
-                        account_name varchar(160),
-                        page_or_ig_id varchar(120),
-                        access_token text,
-                        verify_token varchar(160),
+                        account_name varchar(160) NOT NULL DEFAULT '',
+                        page_or_ig_id varchar(120) NOT NULL DEFAULT '',
+                        access_token text NOT NULL DEFAULT '',
+                        verify_token varchar(160) NOT NULL DEFAULT '',
                         last_error text,
                         last_event_at timestamptz,
                         connected_at timestamptz,
-                        updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at timestamptz NOT NULL DEFAULT now(),
                         PRIMARY KEY (business_id, platform)
                     )
                     """
                 )
-                cur.execute("ALTER TABLE public.business_meta_channels DROP CONSTRAINT IF EXISTS business_meta_channels_platform_check")
-                cur.execute(
-                    """ALTER TABLE public.business_meta_channels
-                       ADD CONSTRAINT business_meta_channels_platform_check
-                       CHECK (platform IN ('instagram', 'facebook', 'whatsapp'))"""
-                )
                 try:
-                    cur.execute("SAVEPOINT sp_meta_rls")
-                    cur.execute("ALTER TABLE public.business_meta_channels ENABLE ROW LEVEL SECURITY")
+                    cur.execute("SAVEPOINT sp_meta_platform_chk")
                     cur.execute(
-                        "GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.business_meta_channels TO postgres, service_role"
+                        "ALTER TABLE public.business_meta_channels "
+                        "DROP CONSTRAINT IF EXISTS business_meta_channels_platform_check"
                     )
-                    cur.execute("RELEASE SAVEPOINT sp_meta_rls")
+                    cur.execute(
+                        "ALTER TABLE public.business_meta_channels "
+                        "ADD CONSTRAINT business_meta_channels_platform_check "
+                        "CHECK (platform IN ('instagram', 'facebook', 'whatsapp'))"
+                    )
+                    cur.execute("RELEASE SAVEPOINT sp_meta_platform_chk")
                 except Exception:
                     try:
-                        cur.execute("ROLLBACK TO SAVEPOINT sp_meta_rls")
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_meta_platform_chk")
                     except Exception:
                         pass
-            conn.commit()
-            _meta_schema_initialized = True
-        except Exception:
-            conn.rollback()
-            _meta_schema_initialized = True
-
-
-def _graph_api_call_sync(
-    path: str,
-    access_token: str,
-    method: str = "GET",
-    payload: dict[str, Any] | None = None,
-    timeout: int = 10,
-) -> dict[str, Any]:
-    sep = "&" if "?" in path else "?"
-    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{path.lstrip('/')}{sep}access_token={urllib.parse.quote(access_token)}"
-    data = json.dumps(payload).encode("utf-8") if payload is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
-async def _send_meta_graph_message(
-    *,
-    page_or_ig_id: str | None,
-    access_token: str | None,
-    recipient_id: str,
-    text: str,
-    platform: str = "facebook",
-) -> bool:
-    if not access_token or not recipient_id or not text:
-        return False
-    if access_token.startswith("demo_") or access_token.startswith("test_") or len(access_token.strip()) < 20:
-        return True
-    target = (page_or_ig_id or "me").strip() or "me"
-    try:
-        if platform == "whatsapp":
-            payload = {
-                "messaging_product": "whatsapp",
-                "recipient_type": "individual",
-                "to": recipient_id,
-                "type": "text",
-                "text": {"preview_url": False, "body": text[:4096]},
-            }
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.post(
-                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target}/messages",
-                    headers={"Authorization": f"Bearer {access_token.strip()}"},
-                    json=payload,
+                cur.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_business_meta_channels_page_id
+                    ON public.business_meta_channels (platform, page_or_ig_id)
+                    """
                 )
-                response.raise_for_status()
-        else:
-            payload = {
-                "recipient": {"id": recipient_id},
-                "messaging_type": "RESPONSE",
-                "message": {"text": text[:2000]},
-            }
-            await asyncio.to_thread(
-                _graph_api_call_sync, f"{target}/messages", access_token.strip(), "POST", payload, 10
-            )
-        return True
-    except Exception as exc:
-        logger.warning("Error enviando respuesta por Meta Graph API (%s, %s): %s", platform, target, exc)
-        return False
+            conn.commit()
+        except Exception as exc:
+            conn.rollback()
+            logger.warning("Could not initialize business_meta_channels schema: %s", exc)
+
+
+def _default_verify_token(business_id: str) -> str:
+    clean = str(business_id or "").replace("-", "")[:12]
+    return f"calyrisia_meta_{clean}"
 
 
 def _platform_label(platform: str) -> str:
     if platform == "instagram":
         return "Instagram Direct"
     if platform == "whatsapp":
-        return "WhatsApp Business (Cloud API)"
+        return "WhatsApp Cloud"
     return "Facebook Messenger"
 
 
-def _channel_row_to_dict(business_id: str, platform: str, row: tuple | None, base_url: str = "") -> dict[str, Any]:
-    default_vtoken = META_WEBHOOK_VERIFY_TOKEN or _default_verify_token(business_id)
-    webhook_path = "/api/webhooks/meta"
-    webhook_url = f"{base_url.rstrip('/')}{webhook_path}" if base_url else f"https://calyrisia.com{webhook_path}"
-    if not row:
-        return {
-            "platform": platform,
-            "label": _platform_label(platform),
-            "configured": False,
-            "enabled": False,
-            "status": "disconnected",
-            "account_name": "",
-            "page_or_ig_id": "",
-            "token_hint": "",
-            "verify_token": default_vtoken,
-            "webhook_url": webhook_url,
-            "last_error": None,
-            "last_event_at": None,
-            "connected_at": None,
+def _normalise(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text or "")
+    stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return re.sub(r"\s+", " ", stripped).strip().lower()
+
+
+def _clean_for_meta(text: str) -> tuple[str, Decimal | None, list[dict[str, Any]]]:
+    amount: Decimal | None = None
+    items: list[dict[str, Any]] = []
+    match = _PAYMENT_BUTTON_RE.search(text or "")
+    if match:
+        try:
+            amount = Decimal(match.group(1)).quantize(Decimal("0.01"))
+        except (InvalidOperation, ValueError):
+            amount = None
+        if match.group(2):
+            try:
+                parsed = json.loads(match.group(2))
+                if isinstance(parsed, list):
+                    items = [row for row in parsed if isinstance(row, dict)]
+            except Exception:
+                items = []
+    cleaned = _PAYMENT_BUTTON_RE.sub("", text or "")
+    cleaned = re.sub(r"\*\*(.+?)\*\*", r"\1", cleaned)
+    cleaned = re.sub(r"`([^`]+)`", r"\1", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    if len(cleaned) > 1900:
+        cleaned = cleaned[:1897].rstrip() + "..."
+    return cleaned, amount, items
+
+
+def _parse_payment_marker(messages: list[str]) -> tuple[Decimal | None, list[dict[str, Any]]]:
+    for content in messages:
+        match = _PAYMENT_BUTTON_RE.search(content or "")
+        if match:
+            amount: Decimal | None = None
+            items: list[dict[str, Any]] = []
+            try:
+                amount = Decimal(match.group(1)).quantize(Decimal("0.01"))
+            except (InvalidOperation, ValueError):
+                amount = None
+            if match.group(2):
+                try:
+                    parsed = json.loads(match.group(2))
+                    if isinstance(parsed, list):
+                        items = [row for row in parsed if isinstance(row, dict)]
+                except Exception:
+                    items = []
+            if amount is not None and amount > 0:
+                return amount, items
+        fallback = _TOTAL_AMOUNT_RE.search(content or "")
+        if fallback:
+            try:
+                amount = Decimal(fallback.group(1)).quantize(Decimal("0.01"))
+                if amount > 0:
+                    return amount, []
+            except (InvalidOperation, ValueError):
+                continue
+    return None, []
+
+
+def _looks_like_payment_submission(text: str) -> bool:
+    normalized = _normalise(text)
+    digits = re.findall(r"\d{4,}", normalized)
+    keywords = (
+        "referencia",
+        "ref",
+        "comprobante",
+        "pago movil",
+        "transferencia",
+        "zelle",
+        "binance",
+        "paypal",
+        "operacion",
+        "capture",
+        "pague",
+        "ya pague",
+        "listo el pago",
+    )
+    return bool(digits and any(k in normalized for k in keywords)) or len(digits) >= 2
+
+
+def _get_business_payment_options_sync(conn, business_id: str) -> list[dict[str, str]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT method_code, instructions
+            FROM public.business_payment_instructions
+            WHERE business_id = %s::uuid
+              AND enabled = true
+              AND btrim(instructions) <> ''
+            ORDER BY CASE method_code
+                WHEN 'pago_movil' THEN 1
+                WHEN 'transferencia' THEN 2
+                WHEN 'zelle' THEN 3
+                WHEN 'binance' THEN 4
+                WHEN 'paypal' THEN 5
+                ELSE 9
+            END
+            """,
+            (business_id,),
+        )
+        rows = cur.fetchall()
+    options: list[dict[str, str]] = []
+    for code, instructions in rows:
+        code_str = str(code or "")
+        clean_instructions = str(instructions or "").strip()
+        if code_str in PAYMENT_METHOD_LABELS and clean_instructions:
+            options.append(
+                {
+                    "code": code_str,
+                    "label": PAYMENT_METHOD_LABELS[code_str],
+                    "instructions": clean_instructions,
+                }
+            )
+    return options
+
+
+def _get_recent_outbound_sync(
+    conn, business_id: str, customer_id: uuid.UUID, conversation_id: uuid.UUID
+) -> list[str]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT content FROM public.conversation_messages
+            WHERE business_id = %s::uuid AND customer_id = %s AND conversation_id = %s
+              AND direction = 'outbound'
+            ORDER BY created_at DESC LIMIT 12
+            """,
+            (business_id, customer_id, conversation_id),
+        )
+        return [str(r[0] or "") for r in cur.fetchall()]
+
+
+def _ensure_social_customer_and_conversation(
+    conn,
+    *,
+    business_id: str,
+    platform: str,
+    sender_id: str,
+    sender_name: str,
+) -> tuple[uuid.UUID, uuid.UUID, str]:
+    clean_sender = str(sender_id or "").strip()[:80] or f"{platform}_user"
+    display_name = (
+        str(sender_name or "").strip()[:150]
+        or f"Cliente {_platform_label(platform)} ({clean_sender[-6:]})"
+    )
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, full_name FROM public.customers
+            WHERE business_id = %s::uuid AND source = %s AND phone = %s
+            LIMIT 1
+            """,
+            (business_id, platform, clean_sender),
+        )
+        row = cur.fetchone()
+        if row:
+            customer_id = row[0]
+            if sender_name and str(row[1] or "").startswith("Cliente "):
+                cur.execute(
+                    "UPDATE public.customers SET full_name = %s, last_interaction_at = now() WHERE id = %s AND business_id = %s::uuid",
+                    (display_name, customer_id, business_id),
+                )
+            else:
+                display_name = str(row[1] or display_name)
+        else:
+            customer_id = uuid.uuid4()
+            cur.execute(
+                """
+                INSERT INTO public.customers (id, business_id, full_name, source, channel, phone, status)
+                VALUES (%s, %s::uuid, %s, %s, %s, %s, 'active')
+                """,
+                (customer_id, business_id, display_name, platform, platform, clean_sender),
+            )
+
+        cur.execute(
+            """
+            SELECT id FROM public.conversations
+            WHERE business_id = %s::uuid AND customer_id = %s AND channel = %s AND status = 'active'
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (business_id, customer_id, platform),
+        )
+        conv_row = cur.fetchone()
+        if conv_row:
+            conversation_id = conv_row[0]
+        else:
+            conversation_id = uuid.uuid4()
+            cur.execute(
+                """
+                INSERT INTO public.conversations (id, business_id, customer_id, channel, status, metadata)
+                VALUES (%s, %s::uuid, %s, %s, 'active', %s::jsonb)
+                """,
+                (
+                    conversation_id,
+                    business_id,
+                    customer_id,
+                    platform,
+                    Jsonb({"channel": platform, "sender_id": clean_sender}),
+                ),
+            )
+    conn.commit()
+    return customer_id, conversation_id, display_name
+
+
+def _create_social_payment_sync(
+    conn,
+    *,
+    business_id: str,
+    platform: str,
+    customer_id: uuid.UUID,
+    amount: Decimal,
+    items: list[dict[str, Any]],
+    payment_details: str,
+    payment_method: str,
+) -> tuple[str, bool]:
+    payment_id = uuid.uuid4()
+    created = True
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id FROM public.webchat_payment_requests
+            WHERE business_id = %s::uuid AND customer_id = %s AND source = %s
+              AND status = 'pending' AND created_at >= now() - interval '30 minutes'
+            ORDER BY created_at DESC LIMIT 1 FOR UPDATE
+            """,
+            (business_id, customer_id, platform),
+        )
+        prior = cur.fetchone()
+        if prior:
+            payment_id = prior[0]
+            created = False
+            cur.execute(
+                """
+                UPDATE public.webchat_payment_requests
+                SET customer_payment_details = %s, payment_method = %s
+                WHERE id = %s AND business_id = %s::uuid
+                """,
+                (payment_details[:4000], payment_method, payment_id, business_id),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO public.webchat_payment_requests
+                (id, business_id, customer_id, amount, currency, payment_method, status, source,
+                 approval_note, items, customer_payment_details)
+                VALUES (%s, %s::uuid, %s, %s, 'USD', %s, 'pending', %s,
+                        %s, %s, %s)
+                """,
+                (
+                    payment_id,
+                    business_id,
+                    customer_id,
+                    amount,
+                    payment_method,
+                    platform,
+                    f"Solicitud recibida por {_platform_label(platform)}; pendiente de aprobación del dueño.",
+                    Jsonb(items) if items else None,
+                    payment_details[:4000],
+                ),
+            )
+    conn.commit()
+    return str(payment_id), created
+
+
+async def _send_meta_graph_reply(
+    *,
+    platform: str,
+    page_or_ig_id: str,
+    access_token: str,
+    recipient_id: str,
+    message_text: str,
+) -> tuple[bool, str | None]:
+    """Send an outbound reply via Meta Graph API when an official Page/Instagram/WhatsApp token is present."""
+    token = (access_token or "").strip()
+    if not token or not recipient_id or not message_text:
+        return False, None
+    target_node = (page_or_ig_id or "me").strip() or "me"
+    url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_node}/messages"
+    if platform == "whatsapp":
+        payload: dict[str, Any] = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": recipient_id,
+            "type": "text",
+            "text": {"preview_url": False, "body": message_text[:4000]},
         }
-    enabled, status, acc_name, page_id, acc_token, ver_token, last_err, last_evt, conn_at = row
-    tok_str = str(acc_token or "").strip()
-    token_hint = f"...{tok_str[-6:]}" if len(tok_str) > 6 else ("Configurado" if tok_str else "")
-    return {
-        "platform": platform,
-        "label": _platform_label(platform),
-        "configured": bool(acc_name or page_id or tok_str),
-        "enabled": bool(enabled),
-        "status": str(status or "disconnected"),
-        "account_name": str(acc_name or ""),
-        "page_or_ig_id": str(page_id or ""),
-        "token_hint": token_hint,
-        "verify_token": str(ver_token or default_vtoken),
-        "webhook_url": webhook_url,
-        "last_error": last_err,
-        "last_event_at": str(last_evt) if last_evt else None,
-        "connected_at": str(conn_at) if conn_at else None,
-    }
+    else:
+        payload = {
+            "recipient": {"id": recipient_id},
+            "messaging_type": "RESPONSE",
+            "message": {"text": message_text[:1950]},
+        }
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            resp = await client.post(
+                url,
+                params={"access_token": token},
+                json=payload,
+            )
+        if resp.status_code >= 400:
+            err = resp.text[:400]
+            logger.warning("Meta Graph send error (%s): %s", platform, err)
+            return False, err
+        return True, None
+    except Exception as exc:
+        logger.warning("Meta Graph HTTP exception (%s): %s", platform, exc)
+        return False, str(exc)
 
 
 async def process_meta_incoming_message(
@@ -252,284 +484,326 @@ async def process_meta_incoming_message(
     message_text: str,
     is_simulation: bool = False,
 ) -> dict[str, Any]:
-    """Process an incoming Instagram DM or Facebook Messenger message through CALYRISIA's Brain, CRM & Payments."""
-    platform = platform.lower().strip()
-    if platform not in VALID_META_PLATFORMS:
-        platform = "instagram"
+    """Unified handler for Instagram Direct, Facebook Messenger and WhatsApp Cloud messages."""
+    text = str(message_text or "").strip()
+    if not text:
+        return {"replied": False, "reply_text": ""}
 
-    with conn.cursor() as cur:
-        cur.execute(
-            """SELECT b.status, b.name, COALESCE(d.exchange_rate, 0), COALESCE(d.local_currency_code, 'VES')
-               FROM public.businesses b
-               LEFT JOIN public.business_dashboard_settings d ON d.business_id = b.id
-               WHERE b.id = %s::uuid""",
-            (business_id,),
-        )
-        biz_row = cur.fetchone()
-        if not biz_row or str(biz_row[0]) != "active":
-            return {"ok": False, "reply_text": "El negocio no está activo."}
-        biz_name = str(biz_row[1] or "nuestro negocio")
-        ex_rate = float(biz_row[2] or 0)
-        loc_curr = str(biz_row[3] or "VES")
+    customer_id, conversation_id, display_name = _ensure_social_customer_and_conversation(
+        conn,
+        business_id=business_id,
+        platform=platform,
+        sender_id=sender_id,
+        sender_name=sender_name,
+    )
 
-        cur.execute(
-            """SELECT enabled, page_or_ig_id, access_token, account_name
-               FROM public.business_meta_channels
-               WHERE business_id = %s::uuid AND platform = %s""",
-            (business_id, platform),
-        )
-        ch_row = cur.fetchone()
-        if not is_simulation and (not ch_row or not bool(ch_row[0])):
-            return {"ok": True, "reply_text": ""}
+    outbound = _get_recent_outbound_sync(conn, business_id, customer_id, conversation_id)
+    prior_amount, prior_items = _parse_payment_marker(outbound)
 
-        page_or_ig_id = str(ch_row[1] or "") if ch_row else ""
-        access_token = str(ch_row[2] or "") if ch_row else ""
-
-        handle_key = f"{platform}:{sender_id}"
-        clean_sender_name = (sender_name or f"Cliente {_platform_label(platform)}").strip()[:180]
-        cur.execute(
-            """SELECT id, full_name FROM public.customers
-               WHERE business_id = %s::uuid AND (phone = %s OR full_name = %s)
-               ORDER BY created_at DESC LIMIT 1""",
-            (business_id, handle_key, clean_sender_name),
-        )
-        cust_row = cur.fetchone()
-        if cust_row:
-            customer_id = uuid.UUID(str(cust_row[0]))
-            try:
-                cur.execute(
-                    "UPDATE public.customers SET last_interaction_at = now() WHERE id = %s",
-                    (str(customer_id),),
-                )
-            except Exception:
-                pass
+    reply_text = ""
+    if prior_amount is not None and prior_amount > 0 and _looks_like_payment_submission(text):
+        payment_options = _get_business_payment_options_sync(conn, business_id)
+        normalized_proof = _normalise(text)
+        selected_option = None
+        if len(payment_options) == 1:
+            selected_option = payment_options[0]
         else:
-            customer_id = uuid.uuid4()
-            try:
-                cur.execute("SAVEPOINT sp_meta_cust")
-                cur.execute(
-                    """INSERT INTO public.customers
-                       (id, business_id, full_name, phone, status, source, channel, first_contact_at, last_interaction_at, notes)
-                       VALUES (%s, %s::uuid, %s, %s, 'active', %s, %s, now(), now(), %s)""",
-                    (
-                        str(customer_id),
-                        business_id,
-                        clean_sender_name,
-                        handle_key,
-                        platform,
-                        platform,
-                        f"Cliente capturado automáticamente desde {_platform_label(platform)}.",
-                    ),
-                )
-                cur.execute("RELEASE SAVEPOINT sp_meta_cust")
-            except Exception:
-                cur.execute("ROLLBACK TO SAVEPOINT sp_meta_cust")
-                cur.execute(
-                    """INSERT INTO public.customers (id, business_id, full_name, phone, status, source, notes)
-                       VALUES (%s, %s, %s, %s, 'active', %s, %s)""",
-                    (
-                        str(customer_id),
-                        business_id,
-                        clean_sender_name,
-                        handle_key,
-                        platform,
-                        f"Cliente capturado automáticamente desde {_platform_label(platform)}.",
-                    ),
-                )
+            for opt in payment_options:
+                if opt["code"].replace("_", " ") in normalized_proof or opt["label"].lower() in normalized_proof:
+                    selected_option = opt
+                    break
+            if selected_option is None and payment_options:
+                selected_option = payment_options[0]
 
-        cur.execute(
-            """SELECT id FROM public.conversations
-               WHERE business_id = %s::uuid AND customer_id = %s AND channel = %s AND status = 'active'
-               ORDER BY updated_at DESC NULLS LAST LIMIT 1""",
-            (business_id, str(customer_id), platform),
+        method_label = (
+            f"{selected_option['label']} ({_platform_label(platform)})"
+            if selected_option
+            else f"Pago ({_platform_label(platform)})"
         )
-        conv_row = cur.fetchone()
-        if conv_row:
-            conversation_id = uuid.UUID(str(conv_row[0]))
+        payment_id, newly_created = _create_social_payment_sync(
+            conn,
+            business_id=business_id,
+            platform=platform,
+            customer_id=customer_id,
+            amount=prior_amount,
+            items=prior_items,
+            payment_details=text,
+            payment_method=method_label,
+        )
+        if newly_created:
+            reply_text = (
+                f"✅ Recibimos tus datos de pago por USD {prior_amount:.2f};\n"
+                f"• Estado: PENDIENTE de verificación en el panel del negocio;\n"
+                f"• Solicitud: #{payment_id[:8].upper()}.\n\n"
+                "Apenas el propietario valide la operación en su cuenta, te confirmaremos por esta misma vía."
+            )
         else:
-            conversation_id = uuid.uuid4()
-            try:
-                cur.execute("SAVEPOINT sp_meta_conv")
-                cur.execute(
-                    """INSERT INTO public.conversations (id, business_id, customer_id, channel, status, started_at, last_message_at)
-                       VALUES (%s, %s::uuid, %s, %s, 'active', now(), now())""",
-                    (str(conversation_id), business_id, str(customer_id), platform),
-                )
-                cur.execute("RELEASE SAVEPOINT sp_meta_conv")
-            except Exception:
-                cur.execute("ROLLBACK TO SAVEPOINT sp_meta_conv")
-                cur.execute(
-                    """INSERT INTO public.conversations (id, business_id, customer_id, channel, status)
-                       VALUES (%s, %s, %s, %s, 'active')""",
-                    (str(conversation_id), business_id, str(customer_id), platform),
-                )
+            reply_text = (
+                f"📌 Tu reporte de pago #{payment_id[:8].upper()} ha sido actualizado y está pendiente de aprobación por el comercio."
+            )
+    else:
+        try:
+            consume_ai_response(conn, business_id)
+            payload = IncomingMessage(
+                business_id=uuid.UUID(str(business_id)),
+                customer_id=customer_id,
+                conversation_id=conversation_id,
+                channel=platform,
+                message=text,
+                metadata={
+                    "channel": platform,
+                    "external_sender_id": sender_id,
+                    "sender_name": display_name,
+                    "simulation": is_simulation,
+                },
+            )
+            result = GalaxyAutopilotService(conn).respond(payload)
+            raw_reply = str(result.get("response") or "¿En qué puedo ayudarte hoy?")
+            clean_reply, pay_amount, _pay_items = _clean_for_meta(raw_reply)
+            if pay_amount is not None and pay_amount > 0:
+                payment_options = _get_business_payment_options_sync(conn, business_id)
+                if payment_options:
+                    details = "\n\n".join(
+                        f"▸ {opt['label']}:\n{opt['instructions']}" for opt in payment_options
+                    )
+                    clean_reply = (
+                        f"{clean_reply}\n\n"
+                        f"💳 MÉTODOS DE PAGO DISPONIBLES (USD {pay_amount:.2f}):\n"
+                        f"{details}\n\n"
+                        "Cuando realices el pago, envíame por este mismo chat el método utilizado y el número de referencia para registrarlo en el sistema."
+                    ).strip()
+            reply_text = clean_reply
+        except AIQuotaExceeded as exc:
+            reply_text = (
+                f"Hemos alcanzado el límite mensual de {exc.limit} respuestas automáticas del plan actual. "
+                "Un asesor te atenderá en breve."
+            )
+        except Exception as exc:
+            logger.exception("Error processing %s message for business %s: %s", platform, business_id, exc)
+            reply_text = "Gracias por escribirnos. En este momento estamos procesando tu consulta; en breve te respondemos."
 
-        if ch_row:
+    sent_live = False
+    if not is_simulation:
+        with conn.cursor() as cur:
             cur.execute(
-                """UPDATE public.business_meta_channels
-                   SET last_event_at = now(), updated_at = now()
-                   WHERE business_id = %s::uuid AND platform = %s""",
+                """
+                SELECT page_or_ig_id, access_token, enabled
+                FROM public.business_meta_channels
+                WHERE business_id = %s::uuid AND platform = %s
+                """,
                 (business_id, platform),
             )
-    conn.commit()
-
-    if _looks_like_payment_submission(message_text):
-        with conn.cursor() as cur:
-            cur.execute(
-                """SELECT content FROM public.conversation_messages
-                   WHERE business_id = %s::uuid AND customer_id = %s AND conversation_id = %s AND direction = 'outbound'
-                   ORDER BY created_at DESC LIMIT 10""",
-                (business_id, str(customer_id), str(conversation_id)),
-            )
-            outbound_msgs = [str(r[0] or "") for r in cur.fetchall()]
-        amount, items = _parse_payment_marker(outbound_msgs)
-        if amount is None:
-            m_amt = re.search(r"(\d+(?:[.,]\d{1,2})?)", message_text)
-            amount = Decimal(m_amt.group(1).replace(",", ".")).quantize(Decimal("0.01")) if m_amt else Decimal("1.00")
-        raw_norm = message_text.lower()
-        pay_method = "binance" if "binance" in raw_norm else "pago_movil"
-        pay_id = uuid.uuid4()
-        with conn.cursor() as cur:
-            cur.execute(
-                """INSERT INTO public.webchat_payment_requests
-                   (id, business_id, customer_id, amount, currency, payment_method, status, source, approval_note, items, customer_payment_details)
-                   VALUES (%s, %s::uuid, %s, %s, 'USD', %s, 'pending', %s,
-                           %s, %s, %s)""",
-                (
-                    str(pay_id),
-                    business_id,
-                    str(customer_id),
-                    amount,
-                    pay_method,
-                    platform,
-                    f"Solicitud de pago recibida por {_platform_label(platform)}; pendiente de aprobación.",
-                    Jsonb(items) if items else None,
-                    message_text[:4000],
-                ),
-            )
-        conn.commit()
-        try:
-            await notify_owner_payment_pending(
-                business_id=business_id,
-                payment_id=str(pay_id),
-                amount=amount,
-                customer_name=f"{clean_sender_name} ({_platform_label(platform)})",
-                customer_chat_id=handle_key,
-                payment_details=message_text,
-                payment_method=f"{'Binance Pay' if pay_method == 'binance' else 'Pago Móvil'} · {_platform_label(platform)}",
-                items=items,
-            )
-        except Exception:
-            pass
-        reply_text = (
-            f"✅ Recibimos los datos de tu pago en {biz_name} por USD {amount:.2f}. "
-            f"Tu referencia quedó registrada en nuestro panel para verificación y te confirmaremos por {_platform_label(platform)} apenas sea aprobada."
-        )
-        if not is_simulation:
-            await _send_meta_graph_message(
-                page_or_ig_id=page_or_ig_id,
-                access_token=access_token,
-                recipient_id=sender_id,
-                text=reply_text,
+            ch_row = cur.fetchone()
+        if ch_row and bool(ch_row[2]) and str(ch_row[1] or "").strip():
+            sent_live, err = await _send_meta_graph_reply(
                 platform=platform,
+                page_or_ig_id=str(ch_row[0] or ""),
+                access_token=str(ch_row[1] or ""),
+                recipient_id=sender_id,
+                message_text=reply_text,
             )
-        return {"ok": True, "reply_text": reply_text, "customer_id": str(customer_id), "conversation_id": str(conversation_id)}
-
-    try:
-        consume_ai_response(conn, uuid.UUID(business_id))
-        conn.commit()
-    except AIQuotaExceeded as exc:
-        return {"ok": False, "reply_text": str(exc)}
-
-    incoming = IncomingMessage(
-        business_id=uuid.UUID(business_id),
-        customer_id=customer_id,
-        conversation_id=conversation_id,
-        channel=("messenger" if platform == "facebook" else ("whatsapp" if platform == "whatsapp" else "instagram")),
-        message=message_text,
-        metadata={"source": f"calyrisia_{platform}", "sender_id": sender_id, "sender_name": clean_sender_name},
-    )
-    result = GalaxyAutopilotService(conn).respond(incoming)
-    raw_reply = str(result.get("response") or "").strip()
-    clean_reply, pay_amount, _ = _clean_for_telegram(raw_reply)
-
-    if pay_amount is not None and pay_amount > 0:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT method_code, instructions FROM public.business_payment_instructions WHERE business_id = %s::uuid AND enabled = true ORDER BY method_code",
-                (business_id,),
-            )
-            methods = cur.fetchall()
-        if methods:
-            loc_line = (
-                f"\n💱 Equivalente a tasa del día ({ex_rate:.2f} {loc_curr}/USD): {loc_curr} {(float(pay_amount) * ex_rate):,.2f}"
-                if ex_rate > 0
-                else ""
-            )
-            inst_lines = [f"\n\n💳 DATOS DE PAGO ({biz_name}):\nTotal: USD {float(pay_amount):.2f}{loc_line}"]
-            for m_code, m_inst in methods:
-                label = {"pago_movil": "Pago Móvil", "transferencia": "Transferencia Bancaria", "zelle": "Zelle", "binance": "Binance Pay", "paypal": "PayPal"}.get(str(m_code), str(m_code).title())
-                inst_lines.append(f"\n• {label}:\n{str(m_inst).strip()}")
-            inst_lines.append(
-                "\nCuando realices el pago, envíame por este mismo chat el número de referencia (ej. 'Referencia 123456') para registrarlo al instante."
-            )
-            clean_reply = (clean_reply + "\n" + "\n".join(inst_lines)).strip()
-
-    if not is_simulation:
-        await _send_meta_graph_message(
-            page_or_ig_id=page_or_ig_id,
-            access_token=access_token,
-            recipient_id=sender_id,
-            text=clean_reply,
-            platform=platform,
-        )
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE public.business_meta_channels
+                    SET last_event_at = now(),
+                        last_error = %s,
+                        updated_at = now()
+                    WHERE business_id = %s::uuid AND platform = %s
+                    """,
+                    (err[:500] if err else None, business_id, platform),
+                )
+            conn.commit()
 
     return {
-        "ok": True,
-        "platform": platform,
-        "platform_label": _platform_label(platform),
-        "reply_text": clean_reply,
+        "replied": True,
+        "sent_live": sent_live,
+        "reply_text": reply_text,
         "customer_id": str(customer_id),
         "conversation_id": str(conversation_id),
     }
 
 
+def _channel_row_to_dict(business_id: str, platform: str, row: tuple | None, base_url: str = "") -> dict[str, Any]:
+    default_vtoken = META_WEBHOOK_VERIFY_TOKEN or _default_verify_token(business_id)
+    webhook_path = "/api/webhooks/meta"
+    webhook_url = f"{base_url.rstrip('/')}{webhook_path}" if base_url else webhook_path
+    if not row:
+        return {
+            "platform": platform,
+            "label": _platform_label(platform),
+            "enabled": False,
+            "status": "disconnected",
+            "configured": False,
+            "account_name": "",
+            "page_or_ig_id": "",
+            "has_access_token": False,
+            "token_hint": "",
+            "verify_token": default_vtoken,
+            "webhook_url": webhook_url,
+            "last_error": None,
+            "last_event_at": None,
+            "connected_at": None,
+        }
+    enabled, status, account_name, page_or_ig_id, access_token, verify_token, last_error, last_event_at, connected_at = row
+    token_str = str(access_token or "").strip()
+    acc_str = str(account_name or "").strip()
+    pid_str = str(page_or_ig_id or "").strip()
+    vtok_str = str(verify_token or "").strip() or default_vtoken
+    configured = bool(acc_str or pid_str or token_str)
+    return {
+        "platform": platform,
+        "label": _platform_label(platform),
+        "enabled": bool(enabled),
+        "status": str(status or ("connected" if enabled else "disconnected")),
+        "configured": configured,
+        "account_name": acc_str,
+        "page_or_ig_id": pid_str,
+        "has_access_token": bool(token_str),
+        "token_hint": f"••••{token_str[-4:]}" if len(token_str) >= 4 else "",
+        "verify_token": vtok_str,
+        "webhook_url": webhook_url,
+        "last_error": str(last_error) if last_error else None,
+        "last_event_at": last_event_at.isoformat() if last_event_at else None,
+        "connected_at": connected_at.isoformat() if connected_at else None,
+    }
+
+
 # ---------------------------------------------------------------------------
-# OAUTH 2.0 UNIFIED LOGIN POPUP & AUTOMATIC WEBHOOK SUBSCRIPTION
+# META OAUTH POPUP FLOW (INSTAGRAM DIRECT & FACEBOOK MESSENGER)
+# Sin config_id de Portfolio Comercial/Cuenta Publicitaria para permitir
+# iniciar sesión con la cuenta y elegir directamente la Página o el Instagram
 # ---------------------------------------------------------------------------
+
+def _build_facebook_dialog_oauth_url(
+    *,
+    business_id: str,
+    platform: str,
+    force_login: bool = False,
+) -> str:
+    app_id = os.getenv("META_APP_ID", META_APP_ID).strip()
+    redirect_uri = os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()
+    state = f"{business_id}:{platform}"
+
+    # No enviamos config_id de Business Portfolio/Cuenta Publicitaria porque bloquea cuentas
+    # que no tienen cuenta publicitaria. Usamos los permisos directos de Páginas e Instagram
+    # con auth_type=rerequest (o reauthenticate al cambiar de cuenta).
+    scopes = [
+        "public_profile",
+        "pages_show_list",
+        "pages_messaging",
+        "pages_manage_metadata",
+        "pages_read_engagement",
+        "instagram_basic",
+        "instagram_manage_messages",
+    ]
+    params: dict[str, str] = {
+        "client_id": app_id,
+        "display": "popup",
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "auth_type": "reauthenticate" if force_login else "rerequest",
+        "scope": ",".join(scopes),
+        "state": state,
+    }
+    return f"https://www.facebook.com/{META_GRAPH_API_VERSION}/dialog/oauth?{urllib.parse.urlencode(params)}"
+
 
 @router.get("/dashboard/channels/meta/oauth-url")
 async def get_meta_oauth_url(
     platform: str = Query(default="instagram"),
+    force_login: bool = Query(default=False),
     current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN")),
 ) -> dict[str, Any]:
     platform = platform.lower().strip()
     if platform not in VALID_META_PLATFORMS:
         platform = "instagram"
     business_id = str(current_user["business_id"])
-    app_id = os.getenv("META_APP_ID", META_APP_ID).strip()
-    config_id = os.getenv("META_CONFIG_ID", META_CONFIG_ID).strip()
-    redirect_uri = os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()
-    state = f"{business_id}:{platform}"
-
-    params = {
-        "client_id": app_id,
-        "display": "popup",
-        "override_default_response_type": "true",
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "state": state,
-    }
-    if config_id:
-        params["config_id"] = config_id
-    else:
-        params["scope"] = (
-            "pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,"
-            "instagram_manage_messages,business_management,whatsapp_business_management,whatsapp_business_messaging"
-        )
-
-    auth_url = f"https://www.facebook.com/dialog/oauth?{urllib.parse.urlencode(params)}"
+    auth_url = _build_facebook_dialog_oauth_url(
+        business_id=business_id,
+        platform=platform,
+        force_login=force_login,
+    )
     return {"success": True, "auth_url": auth_url, "platform": platform}
+
+
+async def _activate_meta_account_in_db(
+    *,
+    business_id: str,
+    platform: str,
+    account_name: str,
+    page_or_ig_id: str,
+    access_token: str,
+    subscribe_page_id: str | None = None,
+) -> None:
+    vtoken = os.getenv("META_WEBHOOK_VERIFY_TOKEN", META_WEBHOOK_VERIFY_TOKEN).strip() or _default_verify_token(business_id)
+    if subscribe_page_id and access_token:
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.post(
+                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{subscribe_page_id}/subscribed_apps",
+                    params={
+                        "subscribed_fields": "messages,messaging_postbacks",
+                        "access_token": access_token,
+                    },
+                )
+        except Exception as sub_exc:
+            logger.warning("No se pudo suscribir automáticamente la página %s: %s", subscribe_page_id, sub_exc)
+
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO public.business_meta_channels
+                   (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, access_token, verify_token, last_error, connected_at, updated_at)
+                   VALUES (%s::uuid, %s, true, 'connected', %s, %s, %s, %s, NULL, now(), now())
+                   ON CONFLICT (business_id, platform) DO UPDATE SET
+                     enabled = true,
+                     channel_status = 'connected',
+                     account_name = EXCLUDED.account_name,
+                     page_or_ig_id = EXCLUDED.page_or_ig_id,
+                     access_token = EXCLUDED.access_token,
+                     verify_token = EXCLUDED.verify_token,
+                     last_error = NULL,
+                     connected_at = COALESCE(business_meta_channels.connected_at, now()),
+                     updated_at = now()""",
+                (business_id, platform, account_name[:160], page_or_ig_id[:120], access_token, vtoken),
+            )
+        conn.commit()
+
+
+@router.post("/auth/meta/select-account")
+async def select_meta_oauth_account(payload: MetaOAuthSelectAccountRequest) -> dict[str, Any]:
+    """Activate the specific Page or Instagram account chosen by the user inside the Meta OAuth popup."""
+    await ensure_meta_social_schema()
+    session_info = _pending_meta_oauth_sessions.get(payload.session_key)
+    if not session_info:
+        raise HTTPException(status_code=400, detail="La sesión de vinculación expiró. Cierra esta ventana y vuelve a pulsar Conectar.")
+
+    business_id = str(session_info["business_id"])
+    platform = payload.platform.lower().strip()
+    if platform not in VALID_META_PLATFORMS:
+        platform = str(session_info.get("requested_platform") or "instagram")
+
+    account_name = payload.account_name.strip()[:160]
+    if platform == "instagram" and account_name and not account_name.startswith("@"):
+        account_name = "@" + account_name
+    page_or_ig_id = payload.page_or_ig_id.strip()[:120] or f"meta_{platform}_{business_id[:8]}"
+    access_token = (payload.access_token or session_info.get("user_access_token") or "").strip()
+
+    await _activate_meta_account_in_db(
+        business_id=business_id,
+        platform=platform,
+        account_name=account_name,
+        page_or_ig_id=page_or_ig_id,
+        access_token=access_token,
+        subscribe_page_id=page_or_ig_id if platform == "facebook" else None,
+    )
+    return {
+        "success": True,
+        "platform": platform,
+        "account_name": account_name,
+        "message": f"✓ {_platform_label(platform)} ({account_name}) vinculado y activo con IA.",
+    }
 
 
 async def handle_meta_oauth_callback(
@@ -538,28 +812,51 @@ async def handle_meta_oauth_callback(
     error: str | None = None,
 ) -> HTMLResponse:
     await ensure_meta_social_schema()
-    if error or not code or not state:
+    parts = (state or "").split(":", 1)
+    business_id = parts[0].strip() if parts and parts[0] else ""
+    requested_platform = parts[1].strip().lower() if len(parts) > 1 else "instagram"
+    if requested_platform not in VALID_META_PLATFORMS:
+        requested_platform = "instagram"
+
+    switch_account_url = (
+        _build_facebook_dialog_oauth_url(business_id=business_id, platform=requested_platform, force_login=True)
+        if business_id
+        else "#"
+    )
+    rerequest_url = (
+        _build_facebook_dialog_oauth_url(business_id=business_id, platform=requested_platform, force_login=False)
+        if business_id
+        else "#"
+    )
+
+    if error or not code or not business_id:
         return HTMLResponse(
-            """<html><body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;text-align:center;padding-top:60px;">
-            <h3>Conexión cancelada o incompleta</h3>
+            f"""<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Vincular {_platform_label(requested_platform)}</title></head>
+            <body style="background:#090d16;color:#f8fafc;font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-align:center;padding:48px 24px;">
+            <div style="max-width:440px;margin:0 auto;padding:28px;border-radius:18px;background:#111827;border:1px solid rgba(255,255,255,0.1);">
+                <h3 style="margin:0 0 10px;font-size:18px;">Conexión cancelada o incompleta</h3>
+                <p style="color:#94a3b8;font-size:13.5px;line-height:1.5;margin-bottom:20px;">No se completó el inicio de sesión en Meta. Puedes intentar de nuevo o iniciar sesión con otra cuenta.</p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <a href="{rerequest_url}" style="padding:10px 16px;border-radius:10px;background:#3b82f6;color:#fff;text-decoration:none;font-weight:700;font-size:13px;">Intentar de nuevo</a>
+                    <button onclick="window.close()" style="padding:10px 16px;border-radius:10px;background:rgba(255,255,255,0.08);color:#cbd5e1;border:1px solid rgba(255,255,255,0.12);cursor:pointer;font-size:13px;">Cerrar ventana</button>
+                </div>
+            </div>
             <script>
-                if (window.opener) {
-                    window.opener.postMessage({ type: 'META_CONNECTED', status: 'error', message: 'Inicio de sesión cancelado' }, '*');
-                }
-                setTimeout(() => window.close(), 1200);
+                if (window.opener) {{
+                    window.opener.postMessage({{ type: 'META_CONNECTED', status: 'error', message: 'Inicio de sesión cancelado' }}, '*');
+                }}
             </script></body></html>"""
         )
-
-    parts = state.split(":", 1)
-    business_id = parts[0].strip()
-    requested_platform = parts[1].strip() if len(parts) > 1 else "instagram"
 
     app_id = os.getenv("META_APP_ID", META_APP_ID).strip()
     app_secret = os.getenv("META_APP_SECRET", META_APP_SECRET).strip()
     redirect_uri = os.getenv("META_REDIRECT_URI", META_REDIRECT_URI).strip()
-    vtoken = os.getenv("META_WEBHOOK_VERIFY_TOKEN", META_WEBHOOK_VERIFY_TOKEN).strip() or _default_verify_token(business_id)
 
-    connected_platforms: list[str] = []
+    user_access_token = ""
+    me_name = "Usuario de Meta"
+    me_id = ""
+    discovered_pages: list[dict[str, str]] = []
+    discovered_ig_accounts: list[dict[str, str]] = []
     error_detail = ""
 
     try:
@@ -574,191 +871,311 @@ async def handle_meta_oauth_callback(
                 },
             )
             token_data = token_res.json()
-            user_access_token = token_data.get("access_token")
+            user_access_token = str(token_data.get("access_token") or "").strip()
             if not user_access_token:
-                error_detail = str(token_data.get("error", {}).get("message") or "Falta META_APP_SECRET en Render o el código expiró.")
+                error_detail = str(
+                    token_data.get("error", {}).get("message")
+                    or "Falta META_APP_SECRET en Render o el código de autorización expiró."
+                )
             else:
+                me_res = await client.get(
+                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me",
+                    params={"fields": "id,name", "access_token": user_access_token},
+                )
+                me_json = me_res.json() if me_res.status_code < 400 else {}
+                me_id = str(me_json.get("id") or "").strip()
+                me_name = str(me_json.get("name") or "Cuenta Meta").strip()
+
+                # 1. Consultar páginas directas de la cuenta (/me/accounts)
                 pages_res = await client.get(
                     f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/accounts",
                     params={
-                        "fields": "id,name,access_token,instagram_business_account{id,username,name}",
+                        "fields": "id,name,access_token,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}",
+                        "limit": "100",
                         "access_token": user_access_token,
                     },
                 )
-                pages_data = pages_res.json().get("data") or []
+                raw_pages = list(pages_res.json().get("data") or []) if pages_res.status_code < 400 else []
 
-                async with get_connection() as conn:
-                    with conn.cursor() as cur:
-                        for page in pages_data:
-                            page_id = str(page.get("id") or "").strip()
-                            page_name = str(page.get("name") or "Página de Facebook").strip()[:160]
-                            page_token = str(page.get("access_token") or user_access_token).strip()
-                            if page_id and page_token:
-                                try:
-                                    await client.post(
-                                        f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{page_id}/subscribed_apps",
-                                        params={
-                                            "subscribed_fields": "messages,messaging_postbacks",
-                                            "access_token": page_token,
-                                        },
-                                    )
-                                except Exception as sub_exc:
-                                    logger.warning("No se pudo suscribir automáticamente la página %s: %s", page_id, sub_exc)
+                # 2. Consultar páginas dentro de Business Manager (/me/businesses -> owned_pages / client_pages)
+                try:
+                    biz_res = await client.get(
+                        f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/businesses",
+                        params={
+                            "fields": "id,name,owned_pages{id,name,access_token,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}}",
+                            "access_token": user_access_token,
+                        },
+                    )
+                    if biz_res.status_code < 400:
+                        for b_item in (biz_res.json().get("data") or []):
+                            for p_item in ((b_item.get("owned_pages") or {}).get("data") or []):
+                                raw_pages.append(p_item)
+                except Exception:
+                    pass
 
-                                cur.execute(
-                                    """INSERT INTO public.business_meta_channels
-                                       (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, access_token, verify_token, last_error, connected_at, updated_at)
-                                       VALUES (%s::uuid, 'facebook', true, 'connected', %s, %s, %s, %s, NULL, now(), now())
-                                       ON CONFLICT (business_id, platform) DO UPDATE SET
-                                         enabled = true,
-                                         channel_status = 'connected',
-                                         account_name = EXCLUDED.account_name,
-                                         page_or_ig_id = EXCLUDED.page_or_ig_id,
-                                         access_token = EXCLUDED.access_token,
-                                         verify_token = EXCLUDED.verify_token,
-                                         last_error = NULL,
-                                         connected_at = COALESCE(business_meta_channels.connected_at, now()),
-                                         updated_at = now()""",
-                                    (business_id, page_name, page_id, page_token, vtoken),
-                                )
-                                connected_platforms.append("facebook")
-
-                            ig_obj = page.get("instagram_business_account") or {}
-                            ig_id = str(ig_obj.get("id") or "").strip()
-                            ig_user = str(ig_obj.get("username") or ig_obj.get("name") or "").strip()
-                            if ig_id:
-                                ig_handle = f"@{ig_user.lstrip('@')}" if ig_user else f"IG #{ig_id[-6:]}"
-                                cur.execute(
-                                    """INSERT INTO public.business_meta_channels
-                                       (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, access_token, verify_token, last_error, connected_at, updated_at)
-                                       VALUES (%s::uuid, 'instagram', true, 'connected', %s, %s, %s, %s, NULL, now(), now())
-                                       ON CONFLICT (business_id, platform) DO UPDATE SET
-                                         enabled = true,
-                                         channel_status = 'connected',
-                                         account_name = EXCLUDED.account_name,
-                                         page_or_ig_id = EXCLUDED.page_or_ig_id,
-                                         access_token = EXCLUDED.access_token,
-                                         verify_token = EXCLUDED.verify_token,
-                                         last_error = NULL,
-                                         connected_at = COALESCE(business_meta_channels.connected_at, now()),
-                                         updated_at = now()""",
-                                    (business_id, ig_handle[:160], ig_id, page_token, vtoken),
-                                )
-                                connected_platforms.append("instagram")
-
-                        # WhatsApp Cloud API: discover the connected WABA and its phone-number ID.
-                        # Some login configurations do not grant these scopes; that should not block IG/FB.
-                        try:
-                            businesses_res = await client.get(
-                                f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/businesses",
-                                params={"fields": "id,name", "access_token": user_access_token},
+                seen_page_ids: set[str] = set()
+                seen_ig_ids: set[str] = set()
+                for page in raw_pages:
+                    if not isinstance(page, dict):
+                        continue
+                    page_id = str(page.get("id") or "").strip()
+                    page_name = str(page.get("name") or "Página de Facebook").strip()[:160]
+                    page_token = str(page.get("access_token") or user_access_token).strip()
+                    if page_id and page_id not in seen_page_ids:
+                        seen_page_ids.add(page_id)
+                        discovered_pages.append(
+                            {
+                                "id": page_id,
+                                "name": page_name,
+                                "access_token": page_token,
+                            }
+                        )
+                    ig_obj = page.get("instagram_business_account") or page.get("connected_instagram_account") or {}
+                    if isinstance(ig_obj, dict):
+                        ig_id = str(ig_obj.get("id") or "").strip()
+                        ig_user = str(ig_obj.get("username") or ig_obj.get("name") or "").strip()
+                        if ig_id and ig_id not in seen_ig_ids:
+                            seen_ig_ids.add(ig_id)
+                            ig_handle = f"@{ig_user.lstrip('@')}" if ig_user else f"@{page_name.replace(' ', '_').lower()}"
+                            discovered_ig_accounts.append(
+                                {
+                                    "id": ig_id,
+                                    "name": ig_handle[:160],
+                                    "page_name": page_name,
+                                    "page_id": page_id,
+                                    "access_token": page_token,
+                                }
                             )
-                            business_items = businesses_res.json().get("data") or []
-                            seen_wabas: set[str] = set()
-                            for meta_business in business_items:
-                                meta_business_id = str(meta_business.get("id") or "").strip()
-                                if not meta_business_id:
-                                    continue
-                                waba_res = await client.get(
-                                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{meta_business_id}/owned_whatsapp_business_accounts",
-                                    params={
-                                        "fields": "id,name,phone_numbers{id,display_phone_number,verified_name}",
-                                        "access_token": user_access_token,
-                                    },
-                                )
-                                for waba in (waba_res.json().get("data") or []):
-                                    waba_id = str(waba.get("id") or "").strip()
-                                    if not waba_id or waba_id in seen_wabas:
-                                        continue
-                                    seen_wabas.add(waba_id)
-                                    try:
-                                        await client.post(
-                                            f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{waba_id}/subscribed_apps",
-                                            params={"access_token": user_access_token},
-                                        )
-                                    except Exception as sub_exc:
-                                        logger.warning("No se pudo suscribir WABA %s al webhook: %s", waba_id, sub_exc)
-                                    phones = (waba.get("phone_numbers") or {}).get("data") or []
-                                    for phone_item in phones:
-                                        phone_id = str(phone_item.get("id") or "").strip()
-                                        if not phone_id:
-                                            continue
-                                        phone_label = str(
-                                            phone_item.get("verified_name")
-                                            or phone_item.get("display_phone_number")
-                                            or waba.get("name")
-                                            or "WhatsApp Business"
-                                        ).strip()[:160]
-                                        cur.execute(
-                                            """INSERT INTO public.business_meta_channels
-                                               (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, access_token, verify_token, last_error, connected_at, updated_at)
-                                               VALUES (%s::uuid, 'whatsapp', true, 'connected', %s, %s, %s, %s, NULL, now(), now())
-                                               ON CONFLICT (business_id, platform) DO UPDATE SET
-                                                 enabled = true, channel_status = 'connected',
-                                                 account_name = EXCLUDED.account_name,
-                                                 page_or_ig_id = EXCLUDED.page_or_ig_id,
-                                                 access_token = EXCLUDED.access_token,
-                                                 verify_token = EXCLUDED.verify_token,
-                                                 last_error = NULL, updated_at = now()""",
-                                            (business_id, phone_label, phone_id, user_access_token, vtoken),
-                                        )
-                                        connected_platforms.append("whatsapp")
-                                        break
-                                    if "whatsapp" in connected_platforms:
-                                        break
-                                if "whatsapp" in connected_platforms:
-                                    break
-                        except Exception as wa_exc:
-                            logger.info("WhatsApp Cloud API no se habilitó en este login Meta (opcional): %s", wa_exc)
-
-                        # Fallback if user logged in with Unified Instagram Login without a linked FB Page list
-                        if not connected_platforms:
-                            me_res = await client.get(
-                                f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me",
-                                params={"fields": "id,name", "access_token": user_access_token},
-                            )
-                            me_data = me_res.json()
-                            me_id = str(me_data.get("id") or f"meta_{requested_platform}_{business_id[:8]}").strip()
-                            me_name = str(me_data.get("name") or f"Cuenta {requested_platform.title()}").strip()[:160]
-                            cur.execute(
-                                """INSERT INTO public.business_meta_channels
-                                   (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, access_token, verify_token, last_error, connected_at, updated_at)
-                                   VALUES (%s::uuid, %s, true, 'connected', %s, %s, %s, %s, NULL, now(), now())
-                                   ON CONFLICT (business_id, platform) DO UPDATE SET
-                                     enabled = true,
-                                     channel_status = 'connected',
-                                     account_name = EXCLUDED.account_name,
-                                     page_or_ig_id = EXCLUDED.page_or_ig_id,
-                                     access_token = EXCLUDED.access_token,
-                                     verify_token = EXCLUDED.verify_token,
-                                     last_error = NULL,
-                                     connected_at = COALESCE(business_meta_channels.connected_at, now()),
-                                     updated_at = now()""",
-                                (business_id, requested_platform, me_name, me_id, user_access_token, vtoken),
-                            )
-                            connected_platforms.append(requested_platform)
-                    conn.commit()
     except Exception as exc:
         logger.exception("Error procesando OAuth callback de Meta: %s", exc)
         error_detail = str(exc)
 
-    status_js = "ok" if connected_platforms else "error"
-    msg_js = "Cuenta conectada y lista para responder con IA." if connected_platforms else (error_detail or "No se pudo completar la vinculación.")
+    session_key = uuid.uuid4().hex
+    _pending_meta_oauth_sessions[session_key] = {
+        "business_id": business_id,
+        "requested_platform": requested_platform,
+        "user_access_token": user_access_token,
+        "me_id": me_id,
+        "me_name": me_name,
+    }
+
+    # Determinar candidatos según el botón que pulsó el usuario (Instagram o Facebook)
+    candidates = discovered_ig_accounts if requested_platform == "instagram" else discovered_pages
+    platform_title = "Instagram Direct" if requested_platform == "instagram" else "Facebook Messenger"
+    accent_gradient = (
+        "linear-gradient(135deg,#f43f5e,#a855f7)"
+        if requested_platform == "instagram"
+        else "linear-gradient(135deg,#3b82f6,#1d4ed8)"
+    )
+
+    # Si hay exactamente 1 cuenta/página descubierta para ese canal, la dejamos conectada de una vez
+    # pero le mostramos la pantalla de confirmación para que vea qué cuenta quedó activa o pueda cambiarla.
+    auto_connected_item: dict[str, str] | None = None
+    if len(candidates) == 1 and not error_detail:
+        auto_connected_item = candidates[0]
+        try:
+            await _activate_meta_account_in_db(
+                business_id=business_id,
+                platform=requested_platform,
+                account_name=auto_connected_item["name"],
+                page_or_ig_id=auto_connected_item["id"],
+                access_token=auto_connected_item["access_token"],
+                subscribe_page_id=auto_connected_item.get("page_id") or auto_connected_item["id"],
+            )
+        except Exception as act_exc:
+            logger.warning("Auto-connect warning: %s", act_exc)
+
+    candidates_json = json.dumps(candidates)
+    auto_connected_json = json.dumps(auto_connected_item)
+
     return HTMLResponse(
-        f"""<html><body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;text-align:center;padding-top:60px;">
-        <h3>{"✓ ¡Cuenta conectada con éxito!" if connected_platforms else "Aviso de conexión Meta"}</h3>
-        <p style="color:#94a3b8;font-size:14px;">{msg_js}</p>
-        <script>
-            if (window.opener) {{
-                window.opener.postMessage({{
-                    type: 'META_CONNECTED',
-                    status: {json.dumps(status_js)},
-                    platform: {json.dumps(requested_platform)},
-                    message: {json.dumps(msg_js)}
-                }}, '*');
-            }}
-            setTimeout(() => window.close(), 900);
-        </script></body></html>"""
+        f"""<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conectar {platform_title} · CALYRISIA</title>
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0; padding: 28px 18px;
+    background: radial-gradient(circle at 50% 0%, rgba(56,189,248,0.14), transparent 55%), #090d16;
+    color: #f8fafc;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }}
+  .card {{
+    max-width: 500px; margin: 0 auto;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 20px; padding: 24px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }}
+  .pill {{
+    display: inline-block; padding: 4px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(56, 189, 248, 0.12); color: #7cecf5; border: 1px solid rgba(56, 189, 248, 0.3);
+    margin-bottom: 10px;
+  }}
+  h2 {{ margin: 0 0 6px; font-size: 1.25rem; }}
+  p.sub {{ margin: 0 0 18px; color: #94a3b8; font-size: 13px; line-height: 1.55; }}
+  .account-option {{
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 13px 15px; border-radius: 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.18);
+    margin-bottom: 10px;
+  }}
+  .account-option strong {{ display: block; font-size: 14px; color: #fff; }}
+  .account-option small {{ color: #94a3b8; font-size: 12px; }}
+  .btn-primary {{
+    border: 0; border-radius: 11px; padding: 10px 16px;
+    background: {accent_gradient}; color: #fff;
+    font-weight: 700; font-size: 12.5px; cursor: pointer; white-space: nowrap;
+  }}
+  .btn-secondary {{
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid rgba(148,163,184,0.25); border-radius: 11px; padding: 9px 14px;
+    background: rgba(255,255,255,0.04); color: #cbd5e1;
+    font-weight: 600; font-size: 12px; text-decoration: none; cursor: pointer;
+  }}
+  .input-box {{
+    width: 100%; padding: 11px 13px; border-radius: 11px;
+    background: #060a12; border: 1px solid rgba(148,163,184,0.28);
+    color: #fff; font-size: 13px; margin-bottom: 10px;
+  }}
+  .status-msg {{ margin-top: 12px; font-size: 12.5px; min-height: 18px; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="pill">{platform_title}</span>
+  <h2>Selecciona la cuenta que quedará activa</h2>
+  <p class="sub">
+    Sesión de Meta: <strong style="color:#e2e8f0;">{me_name}</strong>.
+    Elige la cuenta o página donde responderá el Cerebro IA de tu negocio:
+  </p>
+
+  <div id="accounts-list"></div>
+
+  <div id="direct-box" style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(148,163,184,0.14);">
+    <label style="display:block;font-size:12px;color:#cbd5e1;font-weight:600;margin-bottom:6px;">
+      {"¿Tu cuenta de Instagram no aparece en la lista? Escribe el @usuario que quedará activo:" if requested_platform == "instagram" else "¿Tu Página de Facebook no aparece arriba? Escribe el nombre de tu Página para dejarla activa:"}
+    </label>
+    <div style="display:flex;gap:8px;">
+      <input id="manual-account-input" class="input-box" style="margin-bottom:0;" placeholder="{"@tu_cuenta_instagram" if requested_platform == "instagram" else "Nombre de tu Página de Facebook"}" value="{(auto_connected_item['name'] if auto_connected_item else '')}">
+      <button type="button" class="btn-primary" onclick="activateCustomAccount()">Activar cuenta</button>
+    </div>
+  </div>
+
+  <div id="status-msg" class="status-msg"></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid rgba(148,163,184,0.14);">
+    <a href="{switch_account_url}" class="btn-secondary">Cambiar de cuenta de Meta</a>
+    <a href="{rerequest_url}" class="btn-secondary">Elegir otras páginas en Meta</a>
+  </div>
+</div>
+
+<script>
+const SESSION_KEY = {json.dumps(session_key)};
+const PLATFORM = {json.dumps(requested_platform)};
+const CANDIDATES = {candidates_json};
+const AUTO_CONNECTED = {auto_connected_json};
+const ERROR_DETAIL = {json.dumps(error_detail)};
+
+const listEl = document.getElementById('accounts-list');
+const statusEl = document.getElementById('status-msg');
+
+function notifyParentAndClose(accountName, message) {{
+  if (window.opener) {{
+    window.opener.postMessage({{
+      type: 'META_CONNECTED',
+      status: 'ok',
+      platform: PLATFORM,
+      account_name: accountName,
+      message: message || 'Cuenta conectada y lista para responder con IA.'
+    }}, '*');
+  }}
+  setTimeout(() => window.close(), 700);
+}}
+
+async function selectAccount(id, name, token) {{
+  statusEl.style.color = '#38bdf8';
+  statusEl.textContent = 'Activando ' + name + ' en CALYRISIA...';
+  try {{
+    const res = await fetch('/api/v1/auth/meta/select-account', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        session_key: SESSION_KEY,
+        platform: PLATFORM,
+        page_or_ig_id: id,
+        account_name: name,
+        access_token: token || ''
+      }})
+    }});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'No se pudo activar la cuenta.');
+    statusEl.style.color = '#34d399';
+    statusEl.textContent = data.message || '¡Cuenta activada con éxito!';
+    notifyParentAndClose(data.account_name || name, data.message);
+  }} catch (err) {{
+    statusEl.style.color = '#fda4af';
+    statusEl.textContent = err.message;
+  }}
+}}
+
+function activateCustomAccount() {{
+  const val = (document.getElementById('manual-account-input')?.value || '').trim();
+  if (!val) {{
+    statusEl.style.color = '#fda4af';
+    statusEl.textContent = 'Escribe el usuario o nombre de la cuenta que deseas dejar activa.';
+    return;
+  }}
+  selectAccount('meta_' + PLATFORM + '_' + Date.now(), val, '');
+}}
+
+if (ERROR_DETAIL) {{
+  statusEl.style.color = '#fda4af';
+  statusEl.textContent = ERROR_DETAIL;
+}}
+
+if (CANDIDATES.length > 0) {{
+  listEl.innerHTML = CANDIDATES.map((item, idx) => {{
+    const sub = item.page_name ? ('Página vinculada: ' + item.page_name) : ('ID: ' + item.id);
+    return `<div class="account-option">
+      <div>
+        <strong>${{item.name}}</strong>
+        <small>${{sub}}</small>
+      </div>
+      <button type="button" class="btn-primary" id="cand-btn-${{idx}}">Conectar y activar</button>
+    </div>`;
+  }}).join('');
+  CANDIDATES.forEach((item, idx) => {{
+    document.getElementById('cand-btn-' + idx)?.addEventListener('click', () => {{
+      selectAccount(item.id, item.name, item.access_token || '');
+    }});
+  }});
+}} else {{
+  listEl.innerHTML = `<div style="padding:12px 14px;border-radius:12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.28);color:#fde68a;font-size:12.5px;margin-bottom:10px;">
+    Meta inició sesión correctamente, pero no devolvió páginas comerciales asociadas en este perfil. Puedes elegir otra cuenta con el botón inferior o activar tu cuenta directamente abajo.
+  </div>`;
+}}
+
+if (AUTO_CONNECTED) {{
+  statusEl.style.color = '#34d399';
+  statusEl.textContent = '✓ Cuenta ' + AUTO_CONNECTED.name + ' detectada y lista. Pulsa "Conectar y activar" para confirmar.';
+  if (window.opener) {{
+    window.opener.postMessage({{
+      type: 'META_CONNECTED',
+      status: 'ok',
+      platform: PLATFORM,
+      account_name: AUTO_CONNECTED.name,
+      message: '✓ ' + AUTO_CONNECTED.name + ' conectada y activa con IA.'
+    }}, '*');
+  }}
+}}
+</script>
+</body>
+</html>"""
     )
 
 
@@ -844,7 +1261,7 @@ async def save_meta_channel(
             if not account_name:
                 account_name = (
                     "WhatsApp Business" if platform == "whatsapp"
-                    else ("@mi_negocio_ig" if platform == "instagram" else "MiPagina Oficial")
+                    else ("@cuenta_instagram" if platform == "instagram" else "Página de Facebook")
                 )
             if not page_or_ig_id:
                 page_or_ig_id = f"meta_{platform}_{business_id[:8]}"
@@ -900,22 +1317,10 @@ async def toggle_meta_channel(
     async with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO public.business_meta_channels
-                   (business_id, platform, enabled, channel_status, account_name, page_or_ig_id, verify_token, connected_at, updated_at)
-                   VALUES (%s::uuid, %s, %s, %s, %s, %s, %s, now(), now())
-                   ON CONFLICT (business_id, platform) DO UPDATE SET
-                     enabled = EXCLUDED.enabled,
-                     channel_status = EXCLUDED.channel_status,
-                     updated_at = now()""",
-                (
-                    business_id,
-                    platform,
-                    payload.enabled,
-                    status,
-                    f"@{'cuenta_ig' if platform == 'instagram' else 'PaginaFB'}",
-                    f"meta_{platform}_{business_id[:8]}",
-                    META_WEBHOOK_VERIFY_TOKEN or _default_verify_token(business_id),
-                ),
+                """UPDATE public.business_meta_channels
+                   SET enabled = %s, channel_status = %s, updated_at = now()
+                   WHERE business_id = %s::uuid AND platform = %s""",
+                (payload.enabled, status, business_id, platform),
             )
             cur.execute(
                 """SELECT enabled, channel_status, account_name, page_or_ig_id,
@@ -926,6 +1331,8 @@ async def toggle_meta_channel(
             )
             row = cur.fetchone()
         conn.commit()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Primero vincula tu cuenta de {_platform_label(platform)}.")
     return {
         "success": True,
         "enabled": payload.enabled,

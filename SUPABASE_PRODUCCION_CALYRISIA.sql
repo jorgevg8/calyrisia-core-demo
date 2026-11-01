@@ -1304,6 +1304,7 @@ WHERE instructions LIKE '%04128418550%'
 
 -- Limpiar registros operativos de prueba (pagos en aprobaciones, oportunidades, citas, clientes de prueba y señales)
 TRUNCATE TABLE
+    public.calyrisia_checkout_orders,
     public.webchat_payment_requests,
     public.calyrisia_lead_activities,
     public.calyrisia_sales_leads,
@@ -1316,9 +1317,15 @@ TRUNCATE TABLE
     public.memory,
     public.customer_360_profiles,
     public.customers,
+    public.product_images,
+    public.inventory,
+    public.products,
     public.approvals,
     public.actions,
-    public.audit_logs
+    public.audit_logs,
+    public.llm_usage_logs,
+    public.business_ai_usage_monthly,
+    public.business_payment_instructions
 RESTART IDENTITY CASCADE;
 
 -- =============================================================================

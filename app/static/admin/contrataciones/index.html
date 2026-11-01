@@ -31,7 +31,7 @@
     <div id="saasMetricsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;"></div>
   </section>
   <section class="panel">
-    <div class="toolbar"><div><h2>Solicitudes de pago</h2><p>Los pagos con tarjeta no se pueden aprobar manualmente; requieren confirmación verificada de la pasarela.</p></div><div class="filters"><select id="statusFilter" aria-label="Filtrar por estado"><option value="awaiting_payment">Pendientes de revisión</option><option value="paid">Pagadas</option><option value="failed">Rechazadas / no verificadas</option><option value="all">Todas</option></select><button class="btn" id="refreshBtn" type="button">Actualizar ↻</button></div></div>
+    <div class="toolbar"><div><h2>Solicitudes de pago</h2><p>Los pagos con tarjeta no se pueden aprobar manualmente; requieren confirmación verificada de la pasarela.</p></div><div class="filters"><select id="statusFilter" aria-label="Filtrar por estado"><option value="awaiting_payment">Pendientes de revisión</option><option value="paid">Pagadas</option><option value="failed">Rechazadas / no verificadas</option><option value="all">Todas</option></select><button class="btn" id="refreshBtn" type="button">Actualizar ↻</button><button class="btn reject" id="resetZeroBtn" type="button">Limpiar todo a 0</button></div></div>
     <div class="notice" id="mainNotice" role="status"></div>
     <div class="table-wrap"><table><thead><tr><th>Referencia</th><th>Plan / importe</th><th>Método</th><th>Fecha</th><th>Estado</th><th>Acción / enlace</th></tr></thead><tbody id="ordersBody"><tr><td colspan="6" class="empty">Accede con la clave privada para consultar las contrataciones.</td></tr></tbody></table></div>
     <div class="empty" id="emptyOrders" hidden>No hay contrataciones para este filtro.</div>
@@ -76,6 +76,7 @@
   $('adminKey').addEventListener('keydown',e=>{if(e.key==='Enter')$('connectBtn').click();});
   $('logoutBtn').addEventListener('click',()=>{apiKey='';sessionStorage.removeItem(KEY);$('adminKey').value='';renderOrders([]);notice('authNotice','Sesión cerrada.');notice('mainNotice','');});
   $('refreshBtn').addEventListener('click',loadOrders);$('statusFilter').addEventListener('change',loadOrders);
+  $('resetZeroBtn')?.addEventListener('click',async()=>{if(!apiKey){notice('authNotice','Introduce primero la clave privada.',true);return;}if(!confirm('¿Dejar en 0 todas las contrataciones y contadores del panel administrativo?'))return;try{const d=await api('/api/v1/admin/checkout/reset-zero',{method:'POST'});await loadOrders();notice('mainNotice',d.message||'Historial reiniciado a 0.');}catch(e){notice('mainNotice',e.message,true);}});
   $('ordersBody').addEventListener('click',e=>{const btn=e.target.closest('button[data-action]');if(btn)decide(btn.dataset.ref,btn.dataset.action);const copy=e.target.closest('button[data-copy]');if(copy){navigator.clipboard.writeText(copy.dataset.copy).then(()=>notice('mainNotice','Enlace de onboarding copiado.')).catch(()=>{notice('mainNotice','Copia manualmente el enlace que aparece en la fila.');});}});
   if(apiKey){$('adminKey').value=apiKey;loadOrders();}
 })();

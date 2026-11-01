@@ -318,13 +318,16 @@
         }
 
         .channels-modern-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px; width: 100%; max-width: 100%; margin-bottom: 22px;
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px; width: 100%; max-width: 100%; margin-bottom: 22px;
+            align-items: stretch;
         }
         .channel-card {
             position: relative; overflow: hidden; border-radius: 20px; padding: 22px;
-            background: linear-gradient(160deg, rgba(15, 23, 42, 0.78) 0%, rgba(7, 11, 22, 0.88) 100%);
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.82) 0%, rgba(7, 11, 22, 0.92) 100%);
             border: 1px solid rgba(255, 255, 255, 0.09);
+            display: flex; flex-direction: column; justify-content: space-between;
+            min-height: 215px;
             transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s ease, box-shadow 0.35s ease;
         }
         .channel-card:hover {
@@ -830,105 +833,115 @@
                         <div id="whatsapp-channel-message" role="status" style="margin-top:8px;font-size:12px;"></div>
                     </div>
 
-                    <!-- CANAL 2: INSTAGRAM DIRECT (VINCULACIÓN EN 1 CLIC SIN TOKENS) -->
+                    <!-- CANAL 2: INSTAGRAM DIRECT (VINCULACIÓN DIRECTA CON BOTÓN SIN CAMPOS DE TEXTO) -->
                     <div class="channel-card ch-instagram glass-panel">
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
-                            <div style="display:flex;gap:13px;align-items:center;">
-                                <div class="channel-icon-box" style="background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);">
-                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                        <div>
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                                <div style="display:flex;gap:13px;align-items:center;">
+                                    <div class="channel-icon-box" style="background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);">
+                                        <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                                    </div>
+                                    <div>
+                                        <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#f472b6;font-weight:700;">VINCULACIÓN OFICIAL EN 1 CLIC</span>
+                                        <h3 style="margin:2px 0;font-size:1.1rem;">Instagram Direct</h3>
+                                        <p class="muted" style="font-size:12px;margin:0;">Atiende DMs, cotiza catálogo y recibe pedidos automáticamente.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#f472b6;font-weight:700;">VINCULACIÓN RÁPIDA EN 1 CLIC</span>
-                                    <h3 style="margin:2px 0;font-size:1.1rem;">Instagram Direct</h3>
-                                    <p class="muted" style="font-size:12px;margin:0;">Atiende mensajes directos, cotiza catálogo y toma pedidos en Instagram.</p>
-                                </div>
+                                <div id="instagram-status-badge" class="badge">Desconectado</div>
                             </div>
-                            <div id="instagram-status-badge" class="badge">Desconectado</div>
+                            <p id="instagram-summary" class="muted" style="font-size:12.5px;line-height:1.55;margin:0 0 16px;">
+                                Pulsa <strong>Vincular Instagram</strong> para iniciar sesión con tu cuenta comercial y dejar activo el Cerebro IA.
+                            </p>
                         </div>
-                        <p id="instagram-summary" class="muted" style="font-size:12px;line-height:1.55;margin-bottom:14px;">
-                            Ingresa el usuario de tu cuenta comercial de Instagram para activar la atención automática del asistente.
-                        </p>
-                        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
-                            <input id="ig-account-name" type="text" placeholder="Usuario de Instagram (ej. @tu_negocio)" style="padding:11px 14px;font-size:12.5px;">
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="button" class="btn-action" id="ig-connect-btn" onclick="openMetaOAuthPopup('instagram')" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff;"><i class="ph ph-sign-in"></i> Conectar con Instagram</button>
-                                <button type="button" class="btn-secondary" id="ig-toggle-btn" onclick="toggleMetaChannelState('instagram')" disabled style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-pause"></i> Pausar IA</button>
-                                <button type="button" class="btn-payment-reject" id="ig-disconnect-btn" onclick="disconnectMetaChannel('instagram')" style="display:none;padding:10px 14px;font-size:11.5px;"><i class="ph ph-plugs"></i> Desvincular</button>
+                        <div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <button type="button" class="btn-action" id="ig-connect-btn" onclick="openMetaOAuthPopup('instagram')" style="padding:10px 18px;font-size:12px;background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff;"><i class="ph ph-sign-in"></i> Vincular Instagram</button>
+                                <button type="button" class="btn-secondary" id="ig-toggle-btn" onclick="toggleMetaChannelState('instagram')" disabled style="padding:10px 14px;font-size:12px;"><i class="ph ph-pause"></i> Pausar IA</button>
+                                <button type="button" class="btn-payment-reject" id="ig-disconnect-btn" onclick="disconnectMetaChannel('instagram')" style="display:none;padding:10px 14px;font-size:12px;"><i class="ph ph-plugs"></i> Desvincular</button>
                             </div>
+                            <div id="instagram-channel-message" style="margin-top:8px;font-size:12px;min-height:16px;"></div>
                         </div>
-                        <div id="instagram-channel-message" style="margin-top:8px;font-size:12px;"></div>
                     </div>
 
-                    <!-- CANAL 3: FACEBOOK MESSENGER (VINCULACIÓN EN 1 CLIC SIN TOKENS) -->
+                    <!-- CANAL 3: FACEBOOK MESSENGER (VINCULACIÓN DIRECTA CON BOTÓN SIN CAMPOS DE TEXTO) -->
                     <div class="channel-card ch-facebook glass-panel">
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
-                            <div style="display:flex;gap:13px;align-items:center;">
-                                <div class="channel-icon-box" style="background:linear-gradient(135deg,#00B2FF,#006AFF);">
-                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.44 3.14 7.17.16.13.26.35.27.57l.05 1.78c.02.57.61.94 1.13.71l1.98-.87c.17-.08.36-.1.55-.06.88.24 1.86.37 2.88.37 5.64 0 10-4.13 10-9.7C22 6.13 17.64 2 12 2zm5.89 7.64l-2.9 4.61c-.46.73-1.45.91-2.13.4l-2.31-1.73a.6.6 0 0 0-.72 0l-3.12 2.37c-.41.31-.95-.18-.68-.61l2.9-4.61c.46-.73 1.45-.91 2.13-.4l2.31 1.73a.6.6 0 0 0 .72 0l3.12-2.37c.41-.31.95.18.68.61z"/></svg>
+                        <div>
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
+                                <div style="display:flex;gap:13px;align-items:center;">
+                                    <div class="channel-icon-box" style="background:linear-gradient(135deg,#00B2FF,#006AFF);">
+                                        <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2C6.36 2 2 6.13 2 11.7c0 2.91 1.19 5.44 3.14 7.17.16.13.26.35.27.57l.05 1.78c.02.57.61.94 1.13.71l1.98-.87c.17-.08.36-.1.55-.06.88.24 1.86.37 2.88.37 5.64 0 10-4.13 10-9.7C22 6.13 17.64 2 12 2zm5.89 7.64l-2.9 4.61c-.46.73-1.45.91-2.13.4l-2.31-1.73a.6.6 0 0 0-.72 0l-3.12 2.37c-.41.31-.95-.18-.68-.61l2.9-4.61c.46-.73 1.45-.91 2.13-.4l2.31 1.73a.6.6 0 0 0 .72 0l3.12-2.37c.41-.31.95.18.68.61z"/></svg>
+                                    </div>
+                                    <div>
+                                        <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#60a5fa;font-weight:700;">VINCULACIÓN OFICIAL EN 1 CLIC</span>
+                                        <h3 style="margin:2px 0;font-size:1.1rem;">Facebook Messenger</h3>
+                                        <p class="muted" style="font-size:12px;margin:0;">Atiende el inbox de tu Página de Facebook 24/7 con tu catálogo en vivo.</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#60a5fa;font-weight:700;">VINCULACIÓN RÁPIDA EN 1 CLIC</span>
-                                    <h3 style="margin:2px 0;font-size:1.1rem;">Facebook Messenger</h3>
-                                    <p class="muted" style="font-size:12px;margin:0;">Atiende el inbox de tu Página de Facebook 24/7 con tu catálogo en vivo.</p>
-                                </div>
+                                <div id="facebook-status-badge" class="badge">Desconectado</div>
                             </div>
-                            <div id="facebook-status-badge" class="badge">Desconectado</div>
+                            <p id="facebook-summary" class="muted" style="font-size:12.5px;line-height:1.55;margin:0 0 16px;">
+                                Pulsa <strong>Vincular Facebook</strong> para iniciar sesión, seleccionar tu Página comercial y activar Messenger.
+                            </p>
                         </div>
-                        <p id="facebook-summary" class="muted" style="font-size:12px;line-height:1.55;margin-bottom:14px;">
-                            Escribe el nombre o usuario de tu Página comercial de Facebook para activar la respuesta automática en Messenger.
-                        </p>
-                        <div style="display:grid;grid-template-columns:1fr;gap:10px;">
-                            <input id="fb-account-name" type="text" placeholder="Nombre o usuario de tu Página de Facebook" style="padding:11px 14px;font-size:12.5px;">
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                <button type="button" class="btn-action" id="fb-connect-btn" onclick="openMetaOAuthPopup('facebook')" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;"><i class="ph ph-sign-in"></i> Conectar con Facebook</button>
-                                <button type="button" class="btn-secondary" id="fb-toggle-btn" onclick="toggleMetaChannelState('facebook')" disabled style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-pause"></i> Pausar IA</button>
-                                <button type="button" class="btn-payment-reject" id="fb-disconnect-btn" onclick="disconnectMetaChannel('facebook')" style="display:none;padding:10px 14px;font-size:11.5px;"><i class="ph ph-plugs"></i> Desvincular</button>
+                        <div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <button type="button" class="btn-action" id="fb-connect-btn" onclick="openMetaOAuthPopup('facebook')" style="padding:10px 18px;font-size:12px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#fff;"><i class="ph ph-sign-in"></i> Vincular Facebook</button>
+                                <button type="button" class="btn-secondary" id="fb-toggle-btn" onclick="toggleMetaChannelState('facebook')" disabled style="padding:10px 14px;font-size:12px;"><i class="ph ph-pause"></i> Pausar IA</button>
+                                <button type="button" class="btn-payment-reject" id="fb-disconnect-btn" onclick="disconnectMetaChannel('facebook')" style="display:none;padding:10px 14px;font-size:12px;"><i class="ph ph-plugs"></i> Desvincular</button>
                             </div>
+                            <div id="facebook-channel-message" style="margin-top:8px;font-size:12px;min-height:16px;"></div>
                         </div>
-                        <div id="facebook-channel-message" style="margin-top:8px;font-size:12px;"></div>
                     </div>
 
-                    <!-- CANAL 4: TELEGRAM BOT -->
+                    <!-- CANAL 4: TELEGRAM BUSINESS -->
                     <div class="channel-card ch-telegram glass-panel">
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;">
-                            <div style="display:flex;gap:13px;align-items:center;">
-                                <div class="channel-icon-box" style="background:linear-gradient(135deg,#2AABEE,#229ED9);">
-                                    <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                        <div>
+                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
+                                <div style="display:flex;gap:13px;align-items:center;">
+                                    <div class="channel-icon-box" style="background:linear-gradient(135deg,#2AABEE,#229ED9);">
+                                        <svg viewBox="0 0 24 24" fill="#ffffff"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                                    </div>
+                                    <div>
+                                        <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#38bdf8;font-weight:700;">VINCULACIÓN POR TELÉFONO O BOT</span>
+                                        <h3 style="margin:2px 0;font-size:1.1rem;">Telegram Business</h3>
+                                        <p id="telegram-bot-summary" class="muted" style="font-size:12px;margin:0;">Conecta tu cuenta con número y código de 5 dígitos (llega al chat oficial 'Telegram' en tu app).</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#38bdf8;font-weight:700;">BOT OFICIAL & ALERTAS AL DUEÑO</span>
-                                    <h3 style="margin:2px 0;font-size:1.1rem;">Telegram Business</h3>
-                                    <p id="telegram-bot-summary" class="muted" style="font-size:12px;margin:0;">Atiende clientes y recibe notificaciones de pagos en tu celular.</p>
+                                <div id="telegram-status-badge" class="badge">Desconectado</div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px;">
+                                <div style="display:flex;gap:8px;">
+                                    <input id="telegram-phone-number" type="text" placeholder="Número de teléfono (ej. +584121234567 o 0412...)" style="flex:1;padding:10px 13px;font-size:12.5px;">
+                                    <button type="button" class="btn-action" id="telegram-send-code-btn" onclick="sendTelegramOtpCode(false)" style="padding:10px 15px;font-size:11.5px;white-space:nowrap;"><i class="ph ph-paper-plane-right"></i> Enviar código</button>
+                                </div>
+                                <div id="telegram-otp-box" class="hidden" style="display:none;gap:8px;flex-wrap:wrap;padding:10px;border-radius:12px;background:rgba(15,23,42,0.75);border:1px solid rgba(56,189,248,0.35);">
+                                    <input id="telegram-otp-code" type="text" inputmode="numeric" placeholder="Código de 5 dígitos recibido en Telegram" style="flex:1;min-width:150px;padding:10px 12px;font-size:12.5px;">
+                                    <input id="telegram-2fa-password" type="password" placeholder="Clave 2FA (solo si tienes verificación en 2 pasos)" style="flex:1;min-width:160px;padding:10px 12px;font-size:12.5px;display:none;">
+                                    <button type="button" class="btn-action" id="telegram-verify-code-btn" onclick="verifyTelegramOtpCode()" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;">Verificar y conectar</button>
+                                    <button type="button" class="btn-secondary" onclick="sendTelegramOtpCode(true)" style="padding:9px 12px;font-size:11px;">Reenviar por SMS</button>
                                 </div>
                             </div>
-                            <div id="telegram-status-badge" class="badge">Desconectado</div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:10px;">
-                            <div style="display:flex;gap:8px;">
-                                <input id="telegram-phone-number" type="text" placeholder="Número de teléfono con país (ej. +584121234567)" style="flex:1;padding:11px 14px;font-size:12.5px;">
-                                <button type="button" class="btn-action" id="telegram-send-code-btn" onclick="sendTelegramOtpCode()" style="padding:10px 14px;font-size:11.5px;white-space:nowrap;"><i class="ph ph-paper-plane-Right"></i> Enviar código</button>
+                        <div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <button class="btn-secondary" id="telegram-toggle-btn" onclick="toggleTelegramChannel()" style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-power"></i> Pausar IA</button>
+                                    <button type="button" class="btn-payment-reject" id="telegram-disconnect-btn" onclick="disconnectTelegramChannel()" style="display:none;padding:10px 14px;font-size:11.5px;"><i class="ph ph-plugs"></i> Desvincular</button>
+                                </div>
+                                <details style="font-size:11px;color:#94a3b8;">
+                                    <summary style="cursor:pointer;">Modo @BotFather (opcional)</summary>
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                                        <input id="telegram-bot-token" type="password" autocomplete="off" placeholder="Token @BotFather" style="padding:8px 10px;font-size:11.5px;">
+                                        <input id="telegram-owner-chat-id" inputmode="numeric" placeholder="Chat ID Dueño" style="padding:8px 10px;font-size:11.5px;">
+                                    </div>
+                                    <div style="display:flex;gap:6px;margin-top:6px;">
+                                        <button class="btn-secondary" id="telegram-save-btn" onclick="saveTelegramChannel()" style="padding:7px 11px;font-size:11px;">Guardar Bot</button>
+                                        <button class="btn-secondary" id="telegram-test-btn" onclick="testTelegramChannel()" style="padding:7px 11px;font-size:11px;">Probar alerta</button>
+                                    </div>
+                                </details>
                             </div>
-                            <div id="telegram-otp-box" class="hidden" style="display:none;gap:8px;flex-wrap:wrap;padding:10px;border-radius:10px;background:rgba(15,23,42,0.6);border:1px solid rgba(56,189,248,0.3);">
-                                <input id="telegram-otp-code" type="text" inputmode="numeric" placeholder="Código de 5 dígitos" style="flex:1;min-width:140px;padding:10px 12px;font-size:12.5px;">
-                                <input id="telegram-2fa-password" type="password" placeholder="Clave 2FA (solo si tienes verificación en 2 pasos)" style="flex:1;min-width:160px;padding:10px 12px;font-size:12.5px;display:none;">
-                                <button type="button" class="btn-action" id="telegram-verify-code-btn" onclick="verifyTelegramOtpCode()" style="padding:10px 16px;font-size:11.5px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;">Verificar y conectar</button>
-                            </div>
+                            <div id="telegram-channel-message" role="status" style="margin-top:8px;font-size:12px;min-height:16px;"></div>
                         </div>
-                        <details style="margin-bottom:10px;font-size:11.5px;color:#94a3b8;">
-                            <summary style="cursor:pointer;margin-bottom:6px;">Opcional: Conectar mediante Token de @BotFather y Chat ID</summary>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
-                                <input id="telegram-bot-token" type="password" autocomplete="off" placeholder="Token de @BotFather" style="padding:10px 12px;font-size:12px;">
-                                <input id="telegram-owner-chat-id" inputmode="numeric" placeholder="Chat ID del Dueño" style="padding:10px 12px;font-size:12px;">
-                            </div>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-                                <button class="btn-secondary" id="telegram-save-btn" onclick="saveTelegramChannel()" style="padding:8px 12px;font-size:11px;">Guardar BotToken</button>
-                                <button class="btn-secondary" id="telegram-test-btn" onclick="testTelegramChannel()" style="padding:8px 12px;font-size:11px;">Verificar alerta</button>
-                            </div>
-                        </details>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button class="btn-secondary" id="telegram-toggle-btn" onclick="toggleTelegramChannel()" style="padding:10px 14px;font-size:11.5px;"><i class="ph ph-power"></i> Desactivar</button>
-                        </div>
-                        <div id="telegram-channel-message" role="status" style="margin-top:8px;font-size:12px;"></div>
                     </div>
 
                     <!-- CANAL 5: WEBCHAT OFICIAL IA -->
@@ -1388,8 +1401,11 @@ function switchView(viewId) {
 
 function logout(silent = false) {
     currentBusinessId = null;
+    currentBusiness = null;
+    cachedWorkspaceProducts = [];
     localStorage.removeItem(tokenKey);
     localStorage.removeItem(roleKey);
+    localStorage.removeItem('calyrisia_current_business_id');
     if(!silent) showLogin('Sesión cerrada de forma segura.');
 }
 
@@ -1764,36 +1780,56 @@ async function loadTelegramChannel(fillForm = false) {
     const badge = document.getElementById('telegram-status-badge');
     const summary = document.getElementById('telegram-bot-summary');
     const message = document.getElementById('telegram-channel-message');
+    const disconnectBtn = document.getElementById('telegram-disconnect-btn');
     try {
         const data = await api('/api/v1/dashboard/channels/telegram');
         if (fillForm) {
             const ownerInput = document.getElementById('telegram-owner-chat-id');
             const tokenInput = document.getElementById('telegram-bot-token');
+            const phoneInput = document.getElementById('telegram-phone-number');
             if (ownerInput) ownerInput.value = data.owner_chat_id || '';
+            if (phoneInput && data.phone_number) phoneInput.value = data.phone_number;
             if (tokenInput) {
                 tokenInput.value = '';
-                tokenInput.placeholder = data.configured
-                    ? `Token guardado ${data.token_hint || ''}; deja vacío para conservarlo`
-                    : 'Pega aquí el token de Telegram obtenido desde @BotFather';
+                tokenInput.placeholder = data.configured && data.token_hint
+                    ? `Token guardado ${data.token_hint}`
+                    : 'Token de @BotFather';
             }
         }
         const enabled = Boolean(data.enabled);
         if (badge) {
-            badge.textContent = !data.configured ? 'No configurado' : (!enabled ? 'Desactivado' : (data.status === 'error' ? 'Error de conexión' : (data.status === 'active' ? 'Activado' : 'Activando…')));
-            badge.style.background = !data.configured || !enabled ? 'rgba(148,163,184,.12)' : (data.status === 'error' ? 'rgba(244,63,94,.14)' : 'rgba(16,185,129,.14)');
-            badge.style.color = !data.configured || !enabled ? '#cbd5e1' : (data.status === 'error' ? '#fda4af' : '#34d399');
+            if (!data.configured) {
+                badge.textContent = 'Desconectado';
+                badge.className = 'badge';
+            } else if (!enabled) {
+                badge.textContent = 'Conectado · IA en Pausa';
+                badge.className = 'badge warning';
+            } else if (data.status === 'error') {
+                badge.textContent = 'Error de conexión';
+                badge.className = 'badge danger';
+            } else {
+                badge.innerHTML = '<span class="status-dot-live"></span> Conectado · IA Activa';
+                badge.className = 'badge success';
+            }
         }
         if (summary) {
-            const bot = data.bot_username ? `Bot: @${escapeHtml(data.bot_username)}.` : 'Cada bot queda vinculado al negocio autenticado.';
-            const polling = data.last_poll_at ? `Última conexión local: ${escapeHtml(paymentDate(data.last_poll_at))}.` : 'Esperando la primera conexión local.';
-            const ownerWarning = enabled && !data.owner_chat_id ? ' <span style="color:#fbbf24;">Falta el Chat ID del dueño: no llegarán alertas personales hasta configurarlo.</span>' : '';
-            summary.innerHTML = `${bot} ${polling}${ownerWarning}`;
+            if (data.configured) {
+                const label = data.auth_mode === 'phone'
+                    ? `${escapeHtml(data.bot_username ? '@' + data.bot_username.replace(/^@/, '') : 'Cuenta personal')} (${escapeHtml(data.phone_number || 'Teléfono activo')})`
+                    : `Bot @${escapeHtml(data.bot_username || 'telegram')}`;
+                summary.innerHTML = `<strong style="color:#38bdf8;">✓ Telegram vinculado:</strong> ${label} · ${enabled ? 'El Cerebro IA responde automáticamente.' : 'Respuestas automáticas en pausa.'}`;
+            } else {
+                summary.textContent = "Conecta tu cuenta con número y código de 5 dígitos (llega al chat oficial 'Telegram' en tu app).";
+            }
         }
         const toggleButton = document.getElementById('telegram-toggle-btn');
         const testButton = document.getElementById('telegram-test-btn');
         if (toggleButton) {
             toggleButton.disabled = !data.configured;
-            toggleButton.innerHTML = enabled ? '<i class="ph ph-power"></i> Desactivar canal' : '<i class="ph ph-power"></i> Activar canal';
+            toggleButton.innerHTML = enabled ? '<i class="ph ph-pause"></i> Pausar IA' : '<i class="ph ph-play"></i> Reanudar IA';
+        }
+        if (disconnectBtn) {
+            disconnectBtn.style.display = data.configured ? 'inline-flex' : 'none';
         }
         if (testButton) testButton.disabled = !enabled || !data.owner_chat_id;
         if (data.status === 'error' && message && data.last_error) {
@@ -1806,6 +1842,22 @@ async function loadTelegramChannel(fillForm = false) {
         if (message) { message.textContent = `No se pudo leer Telegram: ${error.message}`; message.style.color = '#fda4af'; }
     } finally {
         telegramChannelLoadInFlight = false;
+    }
+}
+
+async function disconnectTelegramChannel() {
+    if (!confirm('¿Desvincular la cuenta o bot de Telegram de este negocio?')) return;
+    const msgEl = document.getElementById('telegram-channel-message');
+    try {
+        const data = await api('/api/v1/dashboard/channels/telegram/disconnect', { method: 'POST' });
+        const phoneInput = document.getElementById('telegram-phone-number');
+        if (phoneInput) phoneInput.value = '';
+        if (msgEl) { msgEl.textContent = data.message || 'Telegram desvinculado.'; msgEl.style.color = '#cbd5e1'; }
+        showToast(data.message || 'Telegram desvinculado.');
+        await loadTelegramChannel(true);
+        await loadDashboardChannels();
+    } catch (e) {
+        showToast(e.message, true);
     }
 }
 
@@ -3476,9 +3528,9 @@ async function loadMetaSocialChannels(fillInputs = false) {
                 if (info.configured) {
                     summary.innerHTML = `<strong style="color:#34d399;">✓ Cuenta vinculada:</strong> ${escapeHtml(info.account_name)} · ${info.enabled ? 'El Cerebro IA responde automáticamente los mensajes entrantes.' : 'Respuestas automáticas en pausa.'}`;
                 } else {
-                    summary.textContent = platform === 'instagram'
-                        ? 'Ingresa el usuario de tu cuenta comercial de Instagram para activar la atención automática del asistente.'
-                        : 'Escribe el nombre o usuario de tu Página comercial de Facebook para activar la respuesta automática en Messenger.';
+                    summary.innerHTML = platform === 'instagram'
+                        ? 'Pulsa <strong>Vincular Instagram</strong> para iniciar sesión con tu cuenta comercial y dejar activo el Cerebro IA.'
+                        : 'Pulsa <strong>Vincular Facebook</strong> para iniciar sesión, seleccionar tu Página comercial y activar Messenger.';
                 }
             }
             if (connectBtn) {
@@ -3611,32 +3663,37 @@ window.addEventListener('message', async (event) => {
 
 // La autenticación de Telegram también se expone globalmente para los botones
 // inline del dashboard.
-async function sendTelegramOtpCode() {
+async function sendTelegramOtpCode(forceSms = false) {
     const phoneInput = document.getElementById('telegram-phone-number');
     const otpBox = document.getElementById('telegram-otp-box');
     const msgEl = document.getElementById('telegram-channel-message');
     const btn = document.getElementById('telegram-send-code-btn');
     const phone = (phoneInput?.value || '').trim();
     if (!phone) {
-        showToast('Ingresa tu número de teléfono con código de país (ej. +58412...).', true);
+        showToast('Ingresa tu número de teléfono (ej. +58412... o 0412...).', true);
         if (phoneInput) phoneInput.focus();
         return;
     }
-    if (btn) { btn.disabled = true; btn.textContent = 'Enviando código...'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Enviando...'; }
     if (msgEl) {
-        msgEl.textContent = 'Solicitando código de acceso a Telegram...';
+        msgEl.textContent = forceSms ? 'Solicitando reenvío de código por SMS...' : 'Solicitando código de 5 dígitos a Telegram...';
         msgEl.style.color = '#38bdf8';
     }
     try {
         const data = await api('/api/v1/dashboard/channels/telegram/send-code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone_number: phone })
+            body: JSON.stringify({ phone_number: phone, force_sms: Boolean(forceSms) })
         });
+        if (phoneInput && data.phone_number) {
+            phoneInput.value = data.phone_number;
+        }
         if (otpBox) {
             otpBox.classList.remove('hidden');
             otpBox.style.display = 'flex';
         }
+        const codeInput = document.getElementById('telegram-otp-code');
+        if (codeInput) codeInput.focus();
         if (msgEl) {
             msgEl.textContent = data.message || 'Código enviado a tu Telegram.';
             msgEl.style.color = '#38bdf8';
@@ -3646,7 +3703,7 @@ async function sendTelegramOtpCode() {
         if (msgEl) { msgEl.textContent = e.message; msgEl.style.color = '#fda4af'; }
         showToast(e.message, true);
     } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Enviar código'; }
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="ph ph-paper-plane-right"></i> Enviar código'; }
     }
 }
 

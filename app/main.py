@@ -741,6 +741,64 @@ async def _ensure_public_checkout_schema() -> None:
                         PRIMARY KEY (subscription_id, transaction_id)
                     )
                 """)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS public.calyrisia_system_migrations (
+                        migration_key varchar(120) PRIMARY KEY,
+                        applied_at timestamptz NOT NULL DEFAULT now()
+                    )
+                """)
+                cur.execute(
+                    "SELECT 1 FROM public.calyrisia_system_migrations WHERE migration_key = 'clean_production_zero_v3'"
+                )
+                if cur.fetchone() is None:
+                    zero_tables = [
+                        "calyrisia_checkout_orders",
+                        "calyrisia_paypal_pending_sales",
+                        "webchat_payment_requests",
+                        "calyrisia_lead_activities",
+                        "calyrisia_sales_leads",
+                        "calyrisia_radar_reviews",
+                        "business_bookings",
+                        "order_items",
+                        "orders",
+                        "conversation_messages",
+                        "conversations",
+                        "memory",
+                        "customer_360_profiles",
+                        "customers",
+                        "product_images",
+                        "inventory",
+                        "products",
+                        "approvals",
+                        "actions",
+                        "audit_logs",
+                        "llm_usage_logs",
+                        "business_ai_usage_monthly",
+                    ]
+                    for tbl in zero_tables:
+                        try:
+                            cur.execute(f"SAVEPOINT sp_zero_{tbl}")
+                            cur.execute(f"DELETE FROM public.{tbl}")
+                            cur.execute(f"RELEASE SAVEPOINT sp_zero_{tbl}")
+                        except Exception:
+                            try:
+                                cur.execute(f"ROLLBACK TO SAVEPOINT sp_zero_{tbl}")
+                            except Exception:
+                                pass
+                    try:
+                        cur.execute("SAVEPOINT sp_zero_demo_biz")
+                        cur.execute(
+                            "DELETE FROM public.businesses WHERE id IN (SELECT business_id FROM public.users WHERE LOWER(email) = 'demo19@calyrisia.com') OR name IN ('NovaTech Store', 'TechStore Demo Meeting')"
+                        )
+                        cur.execute("RELEASE SAVEPOINT sp_zero_demo_biz")
+                    except Exception:
+                        try:
+                            cur.execute("ROLLBACK TO SAVEPOINT sp_zero_demo_biz")
+                        except Exception:
+                            pass
+                    cur.execute(
+                        "INSERT INTO public.calyrisia_system_migrations (migration_key) VALUES ('clean_production_zero_v3') ON CONFLICT DO NOTHING"
+                    )
             conn.commit()
         except Exception as exc:
             conn.rollback()
@@ -3995,6 +4053,36 @@ async def admin_checkout_orders(request: Request, status: str = Query(default="a
             item["onboarding_url"] = _checkout_onboarding_url(str(ref), str(plan_code), str(method))
         orders.append(item)
     return {"success": True, "orders": orders}
+
+
+@app.post("/api/v1/admin/checkout/reset-zero")
+async def admin_checkout_reset_zero(request: Request) -> dict:
+    """Reset all checkout orders and platform usage counters to 0 from the admin contrataciones panel."""
+    _require_checkout_admin(request)
+    tables = [
+        "calyrisia_checkout_orders",
+        "calyrisia_paypal_pending_sales",
+        "llm_usage_logs",
+        "business_ai_usage_monthly",
+        "actions",
+    ]
+    async with get_connection() as conn:
+        with conn.cursor() as cur:
+            for tbl in tables:
+                try:
+                    cur.execute(f"SAVEPOINT sp_adm_rst_{tbl}")
+                    cur.execute(f"DELETE FROM public.{tbl}")
+                    cur.execute(f"RELEASE SAVEPOINT sp_adm_rst_{tbl}")
+                except Exception:
+                    try:
+                        cur.execute(f"ROLLBACK TO SAVEPOINT sp_adm_rst_{tbl}")
+                    except Exception:
+                        pass
+        conn.commit()
+    return {
+        "success": True,
+        "message": "Historial de contrataciones y contadores administrativos reiniciados a 0.",
+    }
 
 
 @app.post("/api/v1/admin/checkout/orders/{checkout_ref}/decision")

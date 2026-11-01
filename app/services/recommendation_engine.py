@@ -63,11 +63,12 @@ class RecommendationEngine:
                        requires_approval, status, payload, created_at,
                        updated_at, expires_at, acted_at
                 FROM recommendations
-                WHERE insight_id = %s
+                WHERE business_id = %s
+                  AND insight_id = %s
                   AND recommendation_type = %s
                 LIMIT 1
                 """,
-                (insight_id, config["recommendation_type"]),
+                (business_id, insight_id, config["recommendation_type"]),
             )
             row = cur.fetchone()
 
