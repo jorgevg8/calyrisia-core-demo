@@ -304,6 +304,10 @@ from app.api.meta_social import (
     router as meta_social_router,
     verify_global_meta_webhook_handler,
 )
+from app.api.easy_catalog import (
+    router as easy_catalog_router,
+    smart_extract_products_from_text,
+)
 
 settings = get_settings()
 
@@ -894,8 +898,13 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
-app.include_router(whatsapp_router, prefix="/api/v1", tags=["WhatsApp QR"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(whatsapp_router, prefix="/api/v1", tags=["WhatsApp Evolution API & QR"])
+app.include_router(whatsapp_router, prefix="/api", tags=["WhatsApp Evolution API & QR"])
 app.include_router(meta_social_router, prefix="/api/v1", tags=["Meta Social (Instagram & Facebook)"])
+app.include_router(meta_social_router, prefix="/api", tags=["Meta Social (Instagram & Facebook)"])
+app.include_router(easy_catalog_router, prefix="/api/v1", tags=["Easy Catalog & AI Product Upload"])
+app.include_router(easy_catalog_router, prefix="/api", tags=["Easy Catalog & AI Product Upload"])
 
 
 # Public aliases used by Meta Developer Console. Existing authenticated dashboard routes
@@ -1675,7 +1684,10 @@ async def save_dashboard_ai_instructions(payload: dict, current_user: dict = Dep
 
 
 def _parse_smart_catalog_lines(raw_text: str, default_category: str = "General") -> list[dict[str, Any]]:
-    """Parse free-form product lines from WhatsApp, Excel, or text notes into structured catalog items."""
+    """Parse free-form product lines from WhatsApp, Excel, voice dictation, or text notes into structured catalog items."""
+    smart_items = smart_extract_products_from_text(raw_text, default_category=default_category, default_stock=15.0)
+    if smart_items:
+        return smart_items
     items: list[dict[str, Any]] = []
     for raw_line in (raw_text or "").splitlines():
         line = raw_line.strip()

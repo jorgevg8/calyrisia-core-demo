@@ -2377,7 +2377,7 @@ function getBusinessProfileMeta(business) {
     };
     if (profiles[bType]) {
         const meta = { ...profiles[bType] };
-        if (isBasic) meta.allowCsv = false;
+        meta.allowCsv = true;
         return meta;
     }
     const kind = businessKind(business);
@@ -3156,44 +3156,62 @@ async function renderCatalogWorkspace(business) {
             <h3 style="margin:0 0 4px;font-size:1.08rem;color:#fff;"><i class="ph ph-lightning" style="color:#00f2fe;"></i> Subida Rápida de Artículos (Ahorra Tiempo)</h3>
             <p class="muted" style="font-size:12px;margin:0;">Sube decenas de ${escapeHtml(meta.itemNounPlural)} de una sola vez pegando tu lista de precios, usando la tabla rápida o subiendo un archivo Excel/CSV.</p>
           </div>
-          <div class="bulk-tab-bar" style="margin:0;border:none;padding:0;">
-            <button type="button" class="bulk-tab-btn active" onclick="switchBulkUploadTab('paste', this)"><i class="ph ph-clipboard-text"></i> 1. Pegado Inteligente</button>
-            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('grid', this)"><i class="ph ph-table"></i> 2. Tabla Multi-Fila</button>
-            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('csv', this)"><i class="ph ph-file-csv"></i> 3. Archivo CSV / Excel</button>
+          <div class="bulk-tab-bar" style="margin:0;border:none;padding:0;display:flex;gap:6px;flex-wrap:wrap;">
+            <button type="button" class="bulk-tab-btn active" onclick="switchBulkUploadTab('paste', this)"><i class="ph ph-sparkle"></i> 1. Carga Mágica IA / Voz</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('photo', this)"><i class="ph ph-camera"></i> 2. Foto de Menú / Lista</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('csv', this)"><i class="ph ph-file-xls"></i> 3. Archivo Excel (.xlsx) / CSV</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('grid', this)"><i class="ph ph-table"></i> 4. Tabla Rápida</button>
           </div>
         </div>
 
-        <!-- MODO 1: PEGADO INTELIGENTE -->
+        <!-- MODO 1: CARGA MÁGICA IA / VOZ / PLANTILLA EN 1 CLIC -->
         <div id="bulk-tab-paste">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-            <span class="muted" style="font-size:11.5px;">Escribe o pega un artículo por línea desde Excel, WhatsApp o Notas (formato: <code>Nombre | Precio | Stock | Categoría</code>):</span>
+            <span class="muted" style="font-size:11.5px;">Pega tu lista de precios de WhatsApp, notas o escribe como hablas (ej. <code>20 franelas negras a $12, 15 pantalones jean en $28</code>):</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button type="button" class="btn-secondary" id="voice-dictation-btn" onclick="toggleCatalogVoiceDictation()" style="padding:6px 12px;font-size:11px;border-color:rgba(192,132,252,.4);color:#e9d5ff;"><i class="ph ph-microphone"></i> Dictar por Voz</button>
+              <button type="button" class="btn-secondary" onclick="seedCatalogTemplateOneClick()" style="padding:6px 12px;font-size:11px;border-color:rgba(52,211,153,.4);color:#6ee7b7;"><i class="ph ph-magic-wand"></i> Pre-cargar Plantilla de mi Rubro (1 Clic)</button>
+            </div>
           </div>
-          <textarea id="quick-bulk-textarea" rows="4" oninput="previewQuickBulkPaste()" placeholder="Nombre del Artículo | Precio USD | Stock | Categoría" style="width:100%;border-radius:12px;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,242,254,0.25);color:#f8fafc;font-size:12.5px;line-height:1.55;resize:vertical;font-family:monospace;"></textarea>
+          <textarea id="quick-bulk-textarea" rows="4" oninput="previewQuickBulkPaste()" placeholder="Ejemplo 1: Cargador 20W $12 stock 30&#10;Ejemplo 2: Tengo 25 camisas de lino en 22 dolares y 15 pantalones en 28$&#10;Ejemplo 3: Nombre | Precio USD | Stock | Categoría" style="width:100%;border-radius:12px;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,242,254,0.25);color:#f8fafc;font-size:12.5px;line-height:1.55;resize:vertical;font-family:monospace;"></textarea>
           <div id="quick-bulk-preview-box" class="hidden" style="margin-top:10px;padding:10px 14px;border-radius:11px;background:rgba(0,242,254,.06);border:1px solid rgba(0,242,254,.2);font-size:12px;color:#cbd5e1;"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px;">
-            <span class="muted" style="font-size:11px;">Si un producto ya existe con el mismo nombre, se actualizará su precio y stock automáticamente.</span>
-            <button type="button" class="btn-action" id="quick-bulk-submit-btn" onclick="submitQuickBulkPaste()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-rocket-launch"></i> Subir todos los artículos ahora</button>
+            <span class="muted" style="font-size:11px;">✨ La IA detecta nombres, precios, stock, SKU y tallas automáticamente. Si ya existe, actualiza su precio y stock.</span>
+            <button type="button" class="btn-action" id="quick-bulk-submit-btn" onclick="submitQuickBulkPaste()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-rocket-launch"></i> Extraer con IA y Subir Ahora</button>
           </div>
         </div>
 
-        <!-- MODO 2: TABLA MULTI-FILA TIPO EXCEL -->
+        <!-- MODO 2: FOTO DE LISTA DE PRECIOS / MENÚ CON IA VISION -->
+        <div id="bulk-tab-photo" class="hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:16px;border-radius:12px;background:rgba(192,132,252,.06);border:1px dashed rgba(192,132,252,.4);">
+            <div>
+              <strong style="color:#e9d5ff;font-size:13px;display:block;margin-bottom:4px;"><i class="ph ph-camera"></i> Escáner IA de Menús, Catálogos y Facturas</strong>
+              <span class="muted" style="font-size:11.5px;">Sube una foto o captura de pantalla de tu lista de precios en papel, menú o factura y la IA extraerá todos los productos por ti.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <input type="file" id="catalog-vision-file" accept="image/*" onchange="uploadCatalogPhotoVision(event)" style="max-width:300px;padding:8px;font-size:12px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- MODO 3: ARCHIVO EXCEL (.XLSX) O CSV -->
+        <div id="bulk-tab-csv" class="hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;border-radius:12px;background:rgba(0,242,254,.05);border:1px dashed rgba(0,242,254,.35);">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <input type="file" accept=".xlsx,.xls,.csv,.tsv,.txt,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="importCatalogExcelOrCsvFile(event)" style="max-width:340px;padding:8px;font-size:12px;">
+              <span class="muted" style="font-size:11.5px;">Acepta archivos nativos de <strong>Excel (<code>.xlsx</code>)</strong> y <strong>CSV (<code>.csv</code>)</strong> con detección automática de columnas.</span>
+            </div>
+            <button type="button" class="btn-secondary" onclick="downloadCatalogCsvTemplate()" style="padding:8px 14px;font-size:11.5px;"><i class="ph ph-download-simple"></i> Descargar plantilla CSV</button>
+          </div>
+        </div>
+
+        <!-- MODO 4: TABLA MULTI-FILA TIPO EXCEL -->
         <div id="bulk-tab-grid" class="hidden">
           <p class="muted" style="font-size:11.5px;margin-bottom:10px;">Llena varios artículos a la vez como en una hoja de cálculo y guárdalos todos en un solo clic:</p>
           <div id="quick-grid-rows" style="display:grid;gap:8px;margin-bottom:12px;"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
             <button type="button" class="btn-secondary" onclick="addQuickGridRow()" style="padding:8px 14px;font-size:11.5px;"><i class="ph ph-plus"></i> Agregar otra fila</button>
             <button type="button" class="btn-action" onclick="submitQuickGridRows()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-floppy-disk"></i> Guardar todas las filas</button>
-          </div>
-        </div>
-
-        <!-- MODO 3: ARCHIVO CSV / EXCEL -->
-        <div id="bulk-tab-csv" class="hidden">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:14px 16px;border-radius:12px;background:rgba(0,242,254,.05);border:1px dashed rgba(0,242,254,.35);">
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-              <input type="file" accept=".csv,text/csv" onchange="importCatalogCsv(event)" style="max-width:340px;padding:8px;font-size:12px;">
-              <span class="muted" style="font-size:11.5px;">Acepta CSV separado por comas (<code>,</code>) o punto y coma (<code>;</code>) de Excel.</span>
-            </div>
-            <button type="button" class="btn-secondary" onclick="downloadCatalogCsvTemplate()" style="padding:8px 14px;font-size:11.5px;"><i class="ph ph-download-simple"></i> Descargar plantilla CSV</button>
           </div>
         </div>
       </div>
@@ -3884,10 +3902,126 @@ function updatePromptCharCount() {
 function switchBulkUploadTab(tabId, btnEl) {
     document.querySelectorAll('.bulk-tab-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
-    ['paste', 'grid', 'csv'].forEach(k => {
+    ['paste', 'photo', 'grid', 'csv'].forEach(k => {
         const el = document.getElementById(`bulk-tab-${k}`);
         if (el) el.classList.toggle('hidden', k !== tabId);
     });
+}
+
+let _catalogSpeechRec = null;
+function toggleCatalogVoiceDictation() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const btn = document.getElementById('voice-dictation-btn');
+    const ta = document.getElementById('quick-bulk-textarea');
+    if (!SpeechRecognition) {
+        showToast('Tu navegador no soporta dictado directo; puedes pegar texto o usar el micrófono de tu teclado.', true);
+        return;
+    }
+    if (_catalogSpeechRec) {
+        _catalogSpeechRec.stop();
+        _catalogSpeechRec = null;
+        if (btn) btn.innerHTML = '<i class="ph ph-microphone"></i> Dictar por Voz';
+        return;
+    }
+    const rec = new SpeechRecognition();
+    rec.lang = 'es-VE';
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.onresult = (evt) => {
+        let transcript = '';
+        for (let i = evt.resultIndex; i < evt.results.length; i++) {
+            if (evt.results[i].isFinal) transcript += evt.results[i][0].transcript + '\n';
+        }
+        if (ta && transcript.trim()) {
+            ta.value = (ta.value ? ta.value.trim() + '\n' : '') + transcript.trim();
+            previewQuickBulkPaste();
+        }
+    };
+    rec.onend = () => {
+        _catalogSpeechRec = null;
+        if (btn) btn.innerHTML = '<i class="ph ph-microphone"></i> Dictar por Voz';
+    };
+    _catalogSpeechRec = rec;
+    rec.start();
+    if (btn) btn.innerHTML = '<i class="ph ph-stop-circle"></i> Escuchando... (Pulsa para detener)';
+    showToast('🎙️ Dicta tus productos y precios (ej. "20 franelas negras a 12 dólares")...');
+}
+
+async function seedCatalogTemplateOneClick() {
+    try {
+        showToast('⚡ Cargando plantilla de productos de tu rubro...');
+        const res = await api('/api/v1/dashboard/catalog/seed-template', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        showToast(res.message || '✓ Catálogo base cargado.');
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast(e.message, true);
+    }
+}
+
+async function uploadCatalogPhotoVision(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+        showToast('La imagen no debe superar 8 MB.', true);
+        input.value = '';
+        return;
+    }
+    const meta = getBusinessProfileMeta(currentBusiness);
+    showToast('📸 Escaneando productos y precios de la foto con IA Vision...');
+    try {
+        const b64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+            reader.readAsDataURL(file);
+        });
+        const res = await api('/api/v1/dashboard/catalog/vision-extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image_base64: b64, default_category: meta.defaultCategory, auto_save: true })
+        });
+        showToast(res.message || '📸 Productos extraídos desde la foto.');
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast(e.message, true);
+    } finally {
+        input.value = '';
+    }
+}
+
+async function importCatalogExcelOrCsvFile(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    const meta = getBusinessProfileMeta(currentBusiness);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('default_category', meta.defaultCategory || 'General');
+    showToast(`📊 Subiendo y procesando ${file.name}...`);
+    try {
+        const token = localStorage.getItem(tokenKey);
+        const resp = await fetch('/api/v1/dashboard/catalog/upload-file', {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: formData
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'No se pudo importar el archivo.');
+        showToast(data.message || '✓ Archivo importado al catálogo.');
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (e) {
+        showToast('Error al subir archivo: ' + e.message, true);
+    } finally {
+        input.value = '';
+    }
 }
 
 function previewQuickBulkPaste() {
@@ -3914,10 +4048,10 @@ async function submitQuickBulkPaste() {
     const meta = getBusinessProfileMeta(currentBusiness);
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Subiendo artículos...'; }
     try {
-        const res = await api('/api/v1/dashboard/catalog/quick-bulk', {
+        const res = await api('/api/v1/dashboard/catalog/ai-extract', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ raw_text: rawText, default_category: meta.defaultCategory })
+            body: JSON.stringify({ raw_text: rawText, default_category: meta.defaultCategory, auto_save: true })
         });
         showToast(res.message || '✓ Artículos cargados.');
         if (ta) ta.value = '';
@@ -4732,7 +4866,7 @@ function parseCsv(text) {
 
 async function importCatalogCsv(event) {
     const input=event.currentTarget, file=input.files?.[0];if(!file)return;
-    if (!canCurrentPlanUseCsv()) {
+    if (false && !canCurrentPlanUseCsv()) {
         showToast('La importación por CSV está disponible a partir del Plan Smart Business ($49).', true);
         input.value = '';
         return;

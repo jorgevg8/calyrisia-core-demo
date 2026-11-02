@@ -30,8 +30,10 @@ except Exception:  # pragma: no cover
 
 from app.api import auth
 from app.db import get_connection
-from app.schemas import IncomingMessage
+from app.schemas import IncomingMessage, NormalizedOmnichannelPayload
 from app.services.autopilot_service import GalaxyAutopilotService
+from app.services.business_brain_service import BusinessBrainService
+from app.services.omnichannel_gateway_service import OmnichannelGatewayService
 from app.services.commercial_limits import AIQuotaExceeded, consume_ai_response
 
 logger = logging.getLogger(__name__)
@@ -460,9 +462,8 @@ async def _send_meta_graph_reply(
             "text": {"preview_url": False, "body": message_text[:4000]},
         }
     else:
-        # Messenger and Instagram Unified Login use the linked Facebook Page node
-        # with a Page access token. A standalone Instagram Login flow is not used here.
-        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_node}/messages"
+        # Enviar mediante Graph API de Meta (/me/messages con Page Access Token) y fallback al nodo de la Página
+        url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/messages"
         payload = {
             "recipient": {"id": recipient_id},
             "messaging_type": "RESPONSE",
@@ -471,6 +472,9 @@ async def _send_meta_graph_reply(
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(url, params={"access_token": token}, json=payload)
+            if resp.status_code >= 400 and platform != "whatsapp" and target_node and target_node != "me":
+                fallback_url = f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{target_node}/messages"
+                resp = await client.post(fallback_url, params={"access_token": token}, json=payload)
         if resp.status_code >= 400:
             try:
                 body = resp.json()
@@ -775,6 +779,8 @@ def _build_facebook_dialog_oauth_url(
     return f"https://www.facebook.com/{META_GRAPH_API_VERSION}/dialog/oauth?{urllib.parse.urlencode(params)}"
 
 
+@router.get("/channels/meta/oauth-url")
+@router.get("/auth/meta/login")
 @router.get("/dashboard/channels/meta/oauth-url")
 async def get_meta_oauth_url(
     platform: str = Query(default="instagram"),
@@ -1090,6 +1096,25 @@ async def handle_meta_oauth_callback(
 
     session_key = uuid.uuid4().hex
     candidates = discovered_ig_accounts if requested_platform == "instagram" else discovered_pages
+    auto_activated_info = None
+    if len(candidates) == 1 and not error_detail:
+        only = candidates[0]
+        try:
+            auto_res = await _activate_meta_account_in_db(
+                business_id=business_id,
+                platform=requested_platform,
+                account_name=str(only.get("name") or "Cuenta Meta")[:160],
+                page_or_ig_id=str(only.get("id") or "")[:120],
+                access_token=str(only.get("access_token") or ""),
+                subscribe_page_id=str(only.get("page_id") or only.get("id") or "")[:120],
+            )
+            auto_activated_info = {
+                "ready": auto_res["ready"],
+                "account_name": str(only.get("name") or "Cuenta Meta"),
+                "message": f"✓ {_platform_label(requested_platform)} ({only.get('name')}) vinculado automáticamente en 1 clic.",
+            }
+        except Exception as _auto_exc:
+            logger.warning("Auto-activation of single Meta candidate failed: %s", _auto_exc)
     # Keep Page tokens server-side; never embed access tokens in popup HTML/JavaScript.
     _pending_meta_oauth_sessions[session_key] = {
         "business_id": business_id,
@@ -1251,6 +1276,12 @@ if (CANDIDATES.length > 0) {{
   CANDIDATES.forEach((item, idx) => {{
     document.getElementById('cand-btn-' + idx)?.addEventListener('click', () => selectAccount(item.id, item.name));
   }});
+  const AUTO_ACTIVATED = {json.dumps(auto_activated_info)};
+  if (AUTO_ACTIVATED && AUTO_ACTIVATED.ready) {{
+    statusEl.style.color = '#34d399';
+    statusEl.textContent = AUTO_ACTIVATED.message;
+    notifyParentAndClose(AUTO_ACTIVATED.account_name, AUTO_ACTIVATED.message);
+  }}
 }} else {{
   listEl.innerHTML = `<div style="padding:12px 14px;border-radius:12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.28);color:#fde68a;font-size:12.5px;margin-bottom:10px;">
     Meta no devolvió cuentas autorizadas para este canal. No se creará una conexión ficticia. Comprueba que elegiste los activos correctos en Unified Login, que la cuenta de Instagram es Profesional y que está vinculada a una Página; después vuelve a iniciar sesión.
@@ -1663,31 +1694,41 @@ async def _process_meta_webhook_payload(body: dict[str, Any], explicit_business_
                 msg = evt.get("message") if isinstance(evt.get("message"), dict) else {}
                 if msg.get("is_echo"):
                     continue
-                text_value = msg.get("text")
+                postback = evt.get("postback") if isinstance(evt.get("postback"), dict) else {}
+                quick_reply = msg.get("quick_reply") if isinstance(msg.get("quick_reply"), dict) else {}
+                text_value = (
+                    msg.get("text")
+                    or quick_reply.get("payload")
+                    or postback.get("title")
+                    or postback.get("payload")
+                )
                 message_text = str(text_value or "").strip()
                 sender = evt.get("sender") if isinstance(evt.get("sender"), dict) else {}
                 sender_id = str(sender.get("id") or "").strip()
                 recipient = evt.get("recipient") if isinstance(evt.get("recipient"), dict) else {}
                 recipient_id = str(recipient.get("id") or entry_account_id).strip()
-                if not message_text or not sender_id:
+                if not message_text or not sender_id or sender_id in (recipient_id, entry_account_id):
                     continue
 
-                # Match the exact page/IG account. Never route unmatched messages to an arbitrary tenant.
+                # Match the exact page/IG account or parent_page_id. Never route unmatched messages to an arbitrary tenant.
                 target_business_id = explicit_business_id
                 with conn.cursor() as cur:
                     if target_business_id:
                         cur.execute(
                             """SELECT business_id::text FROM public.business_meta_channels
                                WHERE business_id = %s::uuid AND platform = %s
-                                 AND page_or_ig_id IN (%s, %s) AND enabled = true LIMIT 1""",
-                            (target_business_id, platform, recipient_id, entry_account_id),
+                                 AND (page_or_ig_id IN (%s, %s) OR parent_page_id IN (%s, %s))
+                                 AND enabled = true LIMIT 1""",
+                            (target_business_id, platform, recipient_id, entry_account_id, recipient_id, entry_account_id),
                         )
                     else:
                         cur.execute(
                             """SELECT business_id::text FROM public.business_meta_channels
-                               WHERE platform = %s AND page_or_ig_id IN (%s, %s) AND enabled = true
+                               WHERE platform = %s
+                                 AND (page_or_ig_id IN (%s, %s) OR parent_page_id IN (%s, %s))
+                                 AND enabled = true
                                ORDER BY updated_at DESC LIMIT 1""",
-                            (platform, recipient_id, entry_account_id),
+                            (platform, recipient_id, entry_account_id, recipient_id, entry_account_id),
                         )
                     matched = cur.fetchone()
                 if not matched:
