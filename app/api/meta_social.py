@@ -30,7 +30,8 @@ except Exception:  # pragma: no cover
 
 from app.api import auth
 from app.db import get_connection
-from app.schemas import IncomingMessage, NormalizedOmnichannelPayload
+from app.schemas import IncomingMessage
+from app.meta_schemas import NormalizedOmnichannelPayload
 from app.services.autopilot_service import GalaxyAutopilotService
 from app.services.business_brain_service import BusinessBrainService
 from app.services.omnichannel_gateway_service import OmnichannelGatewayService
