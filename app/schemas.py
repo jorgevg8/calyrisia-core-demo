@@ -859,3 +859,14 @@ class GovernanceEvaluateResponse(BaseModel):
 # ===============================
 class AcceptanceTestRequest(BaseModel):
     customer_message: str
+
+
+# ===============================
+# OMNICHANNEL NORMALIZATION & EVOLUTION / META SCHEMAS
+# ===============================
+from app.meta_schemas import (  # noqa: E402, F401
+    EvolutionInstanceConnectResponse,
+    MetaOAuthUrlResponse,
+    NormalizedOmnichannelPayload,
+    OmnichannelType,
+)

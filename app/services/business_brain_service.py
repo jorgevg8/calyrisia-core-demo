@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
+import re
+import unicodedata
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -12,7 +15,29 @@ except Exception:  # pragma: no cover
         def __init__(self, val):
             self.val = val
 
+from app.meta_schemas import NormalizedOmnichannelPayload
+from app.schemas import IncomingMessage
+from app.services.commercial_limits import AIQuotaExceeded, consume_ai_response
 from app.services.recommendation_engine import RecommendationEngine
+from app.services.tenant_guard import TenantGuard
+
+
+_PAYMENT_BUTTON_RE = re.compile(
+    r"\[BOTON_PAGO:\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:\|\s*ITEMS:\s*(\[[^\]]*\]))?\s*\]",
+    re.IGNORECASE | re.DOTALL,
+)
+_TOTAL_AMOUNT_RE = re.compile(
+    r"total(?:\s+a\s+pagar|\s+estimado|\s+del\s+pedido)?[^\d$]{0,20}(?:usd|\$)?\s*([0-9]+(?:\.[0-9]{1,2})?)",
+    re.IGNORECASE,
+)
+
+PAYMENT_METHOD_LABELS = {
+    "pago_movil": "Pago Móvil",
+    "transferencia": "Transferencia Bancaria",
+    "zelle": "Zelle",
+    "binance": "Binance Pay",
+    "paypal": "PayPal",
+}
 
 
 class BusinessBrainError(Exception):
@@ -20,18 +45,7 @@ class BusinessBrainError(Exception):
 
 
 class BusinessBrainService:
-    """Galaxy Business Brain V1.
-
-    Business Brain observes the operational state of a business and turns
-    factual deviations into persisted insights. It does not execute actions.
-
-    V1 scope:
-    - inventory_low
-    - inventory_out_of_stock
-
-    RecommendationEngine then turns those insights into actionable,
-    human-reviewable recommendations.
-    """
+    """Galaxy Business Brain V1 + Motor Centralizado de IA Omnicanal Multitenant."""
 
     INVENTORY_LOW = "inventory_low"
     INVENTORY_OUT = "inventory_out_of_stock"
@@ -39,6 +53,7 @@ class BusinessBrainService:
     def __init__(self, conn):
         self.conn = conn
         self.recommendation_engine = RecommendationEngine(conn)
+        self.tenant_guard = TenantGuard(conn)
 
     @staticmethod
     def _safe(value: Any) -> Any:
@@ -53,6 +68,404 @@ class BusinessBrainService:
         if isinstance(value, (list, tuple)):
             return [BusinessBrainService._safe(v) for v in value]
         return value
+
+    # ------------------------------------------------------------------
+    # CENTRALIZACIÓN Y MOTOR OMNICANAL DE IA (WHATSAPP, IG, FB, WEBCHAT)
+    # ------------------------------------------------------------------
+
+    def load_tenant_policies_and_prompts(self, tenant_id: UUID) -> dict[str, Any]:
+        """Carga las políticas, reglas e instrucciones de IA del `tenant_id` desde la base de datos."""
+        self.tenant_guard.require_business(tenant_id)
+        policies: list[dict[str, Any]] = []
+        prompt_text = ""
+
+        with self.conn.cursor() as cur:
+            try:
+                cur.execute(
+                    """
+                    SELECT title, content, item_type, priority
+                    FROM business_knowledge_items
+                    WHERE business_id = %s AND status = 'active'
+                    ORDER BY priority DESC, updated_at DESC
+                    LIMIT 25
+                    """,
+                    (str(tenant_id),),
+                )
+                for r in cur.fetchall():
+                    policies.append(
+                        {
+                            "title": str(r[0] or ""),
+                            "content": str(r[1] or ""),
+                            "item_type": str(r[2] or "policy"),
+                            "priority": int(r[3] or 50),
+                        }
+                    )
+            except Exception:
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
+
+            try:
+                cur.execute(
+                    """
+                    SELECT short_description, policies, processes
+                    FROM business_profiles
+                    WHERE business_id = %s AND status = 'active'
+                    LIMIT 1
+                    """,
+                    (str(tenant_id),),
+                )
+                prof = cur.fetchone()
+                if prof and prof[0]:
+                    prompt_text = str(prof[0])
+            except Exception:
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
+
+        return {
+            "tenant_id": str(tenant_id),
+            "policies_loaded": len(policies) + (1 if prompt_text else 0),
+            "policies": policies,
+            "prompt_summary": prompt_text,
+        }
+
+    @staticmethod
+    def _clean_omnichannel_reply(text: str) -> tuple[str, Decimal | None, list[dict[str, Any]]]:
+        amount: Decimal | None = None
+        items: list[dict[str, Any]] = []
+        match = _PAYMENT_BUTTON_RE.search(text or "")
+        if match:
+            try:
+                amount = Decimal(match.group(1)).quantize(Decimal("0.01"))
+            except (InvalidOperation, ValueError):
+                amount = None
+            if match.group(2):
+                try:
+                    parsed = json.loads(match.group(2))
+                    if isinstance(parsed, list):
+                        items = [row for row in parsed if isinstance(row, dict)]
+                except Exception:
+                    items = []
+        cleaned = _PAYMENT_BUTTON_RE.sub("", text or "")
+        cleaned = re.sub(r"\*\*(.+?)\*\*", r"\1", cleaned)
+        cleaned = re.sub(r"`([^`]+)`", r"\1", cleaned)
+        cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+        if len(cleaned) > 1900:
+            cleaned = cleaned[:1897].rstrip() + "..."
+        return cleaned, amount, items
+
+    @staticmethod
+    def _parse_recent_payment_marker(messages: list[str]) -> tuple[Decimal | None, list[dict[str, Any]]]:
+        for content in messages:
+            match = _PAYMENT_BUTTON_RE.search(content or "")
+            if match:
+                amount: Decimal | None = None
+                items: list[dict[str, Any]] = []
+                try:
+                    amount = Decimal(match.group(1)).quantize(Decimal("0.01"))
+                except (InvalidOperation, ValueError):
+                    amount = None
+                if match.group(2):
+                    try:
+                        parsed = json.loads(match.group(2))
+                        if isinstance(parsed, list):
+                            items = [row for row in parsed if isinstance(row, dict)]
+                    except Exception:
+                        items = []
+                if amount is not None and amount > 0:
+                    return amount, items
+            fallback = _TOTAL_AMOUNT_RE.search(content or "")
+            if fallback:
+                try:
+                    amount = Decimal(fallback.group(1)).quantize(Decimal("0.01"))
+                    if amount > 0:
+                        return amount, []
+                except (InvalidOperation, ValueError):
+                    continue
+        return None, []
+
+    @staticmethod
+    def _looks_like_payment_submission(text: str) -> bool:
+        decomposed = unicodedata.normalize("NFKD", text or "")
+        stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+        normalized = re.sub(r"\s+", " ", stripped).strip().lower()
+        digits = re.findall(r"\d{4,}", normalized)
+        keywords = (
+            "referencia",
+            "ref",
+            "comprobante",
+            "pago movil",
+            "transferencia",
+            "zelle",
+            "binance",
+            "paypal",
+            "operacion",
+            "capture",
+            "pague",
+            "ya pague",
+            "listo el pago",
+        )
+        return bool(digits and any(k in normalized for k in keywords)) or len(digits) >= 2
+
+    def _get_payment_options(self, business_id: str) -> list[dict[str, str]]:
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT method_code, instructions
+                    FROM public.business_payment_instructions
+                    WHERE business_id = %s::uuid
+                      AND enabled = true
+                      AND btrim(instructions) <> ''
+                    ORDER BY CASE method_code
+                        WHEN 'pago_movil' THEN 1
+                        WHEN 'transferencia' THEN 2
+                        WHEN 'zelle' THEN 3
+                        WHEN 'binance' THEN 4
+                        WHEN 'paypal' THEN 5
+                        ELSE 9
+                    END
+                    """,
+                    (business_id,),
+                )
+                rows = cur.fetchall()
+        except Exception:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            return []
+        options: list[dict[str, str]] = []
+        for code, instructions in rows:
+            code_str = str(code or "")
+            clean_instructions = str(instructions or "").strip()
+            if code_str in PAYMENT_METHOD_LABELS and clean_instructions:
+                options.append(
+                    {
+                        "code": code_str,
+                        "label": PAYMENT_METHOD_LABELS[code_str],
+                        "instructions": clean_instructions,
+                    }
+                )
+        return options
+
+    def _ensure_customer_and_conversation(
+        self,
+        *,
+        business_id: UUID,
+        channel: str,
+        sender_id: str,
+        sender_name: str,
+    ) -> tuple[UUID, UUID, str]:
+        clean_sender = str(sender_id or "").strip()[:80] or f"{channel}_user"
+        display_name = str(sender_name or "").strip()[:150] or f"Cliente {channel.title()} ({clean_sender[-4:]})"
+        bid_str = str(business_id)
+
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, full_name FROM public.customers
+                WHERE business_id = %s::uuid AND phone = %s
+                ORDER BY created_at DESC LIMIT 1
+                """,
+                (bid_str, clean_sender),
+            )
+            row = cur.fetchone()
+            if row:
+                customer_id = UUID(str(row[0]))
+                if sender_name and str(row[1] or "").startswith("Cliente "):
+                    cur.execute(
+                        "UPDATE public.customers SET full_name = %s, last_interaction_at = now() WHERE id = %s AND business_id = %s::uuid",
+                        (display_name, str(customer_id), bid_str),
+                    )
+                else:
+                    display_name = str(row[1] or display_name)
+            else:
+                customer_id = uuid4()
+                cur.execute(
+                    """
+                    INSERT INTO public.customers (id, business_id, full_name, source, channel, phone, status)
+                    VALUES (%s, %s::uuid, %s, %s, %s, %s, 'active')
+                    """,
+                    (str(customer_id), bid_str, display_name, channel, channel, clean_sender),
+                )
+
+            cur.execute(
+                """
+                SELECT id FROM public.conversations
+                WHERE business_id = %s::uuid AND customer_id = %s AND channel = %s AND status = 'active'
+                ORDER BY created_at DESC LIMIT 1
+                """,
+                (bid_str, str(customer_id), channel),
+            )
+            conv_row = cur.fetchone()
+            if conv_row:
+                conversation_id = UUID(str(conv_row[0]))
+            else:
+                conversation_id = uuid4()
+                cur.execute(
+                    """
+                    INSERT INTO public.conversations (id, business_id, customer_id, channel, status, metadata)
+                    VALUES (%s, %s::uuid, %s, %s, 'active', %s::jsonb)
+                    """,
+                    (
+                        str(conversation_id),
+                        bid_str,
+                        str(customer_id),
+                        channel,
+                        Jsonb({"channel": channel, "sender_id": clean_sender}),
+                    ),
+                )
+        self.conn.commit()
+        return customer_id, conversation_id, display_name
+
+    def process_omnichannel_chat(self, payload: NormalizedOmnichannelPayload) -> dict[str, Any]:
+        """Enruta un mensaje normalizado (`NormalizedOmnichannelPayload`) al Cerebro IA del tenant con aislamiento total."""
+        from app.services.autopilot_service import GalaxyAutopilotService
+
+        tenant_id = payload.tenant_id
+        channel = "facebook" if payload.channel == "messenger" else str(payload.channel).lower()
+        policy_info = self.load_tenant_policies_and_prompts(tenant_id)
+        text = str(payload.message_text or "").strip()
+        if not text:
+            return {
+                "success": True,
+                "tenant_id": str(tenant_id),
+                "channel": channel,
+                "sender_id": payload.sender_id,
+                "reply_text": "",
+                "customer_id": None,
+                "conversation_id": None,
+                "policies_loaded": policy_info["policies_loaded"],
+            }
+
+        customer_id, conversation_id, display_name = self._ensure_customer_and_conversation(
+            business_id=tenant_id,
+            channel=channel,
+            sender_id=payload.sender_id,
+            sender_name=payload.sender_name,
+        )
+
+        # Verificar si existe un cobro pendiente reciente en la conversación
+        recent_outbound: list[str] = []
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT content FROM public.conversation_messages
+                    WHERE business_id = %s::uuid AND customer_id = %s AND conversation_id = %s
+                      AND direction = 'outbound'
+                    ORDER BY created_at DESC LIMIT 10
+                    """,
+                    (str(tenant_id), str(customer_id), str(conversation_id)),
+                )
+                recent_outbound = [str(r[0] or "") for r in cur.fetchall()]
+        except Exception:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+
+        prior_amount, prior_items = self._parse_recent_payment_marker(recent_outbound)
+        reply_text = ""
+
+        if prior_amount is not None and prior_amount > 0 and self._looks_like_payment_submission(text):
+            payment_options = self._get_payment_options(str(tenant_id))
+            selected_label = payment_options[0]["label"] if payment_options else f"Pago ({channel.title()})"
+            payment_id = uuid4()
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO public.webchat_payment_requests
+                    (id, business_id, customer_id, amount, currency, payment_method, status, source,
+                     approval_note, items, customer_payment_details)
+                    VALUES (%s, %s::uuid, %s, %s, 'USD', %s, 'pending', %s, %s, %s, %s)
+                    """,
+                    (
+                        str(payment_id),
+                        str(tenant_id),
+                        str(customer_id),
+                        prior_amount,
+                        selected_label,
+                        channel,
+                        f"Solicitud recibida por {channel.title()}; pendiente de aprobación del dueño.",
+                        Jsonb(prior_items) if prior_items else None,
+                        text[:4000],
+                    ),
+                )
+            self.conn.commit()
+            reply_text = (
+                f"✅ Recibimos tus datos de pago por USD {prior_amount:.2f};\n"
+                f"• Estado: PENDIENTE de verificación en el panel del negocio;\n"
+                f"• Solicitud: #{str(payment_id)[:8].upper()}.\n\n"
+                "Apenas el propietario valide la operación en su cuenta, te confirmaremos por esta misma vía."
+            )
+        else:
+            try:
+                consume_ai_response(self.conn, str(tenant_id))
+                incoming = IncomingMessage(
+                    business_id=tenant_id,
+                    customer_id=customer_id,
+                    conversation_id=conversation_id,
+                    channel=channel,
+                    message=text,
+                    metadata={
+                        **(payload.metadata or {}),
+                        "channel": channel,
+                        "external_sender_id": payload.sender_id,
+                        "sender_name": display_name,
+                        "timestamp": payload.timestamp.isoformat(),
+                    },
+                )
+                result = GalaxyAutopilotService(self.conn).respond(incoming)
+                raw_reply = str(result.get("response") or "¿En qué puedo ayudarte hoy?")
+                clean_reply, pay_amount, _pay_items = self._clean_omnichannel_reply(raw_reply)
+                if pay_amount is not None and pay_amount > 0:
+                    payment_options = self._get_payment_options(str(tenant_id))
+                    if payment_options:
+                        details = "\n\n".join(
+                            f"▸ {opt['label']}:\n{opt['instructions']}" for opt in payment_options
+                        )
+                        clean_reply = (
+                            f"{clean_reply}\n\n"
+                            f"💳 MÉTODOS DE PAGO DISPONIBLES (USD {pay_amount:.2f}):\n"
+                            f"{details}\n\n"
+                            "Cuando realices el pago, envíame por este mismo chat el método utilizado y el número de referencia para registrarlo en el sistema."
+                        ).strip()
+                reply_text = clean_reply
+            except AIQuotaExceeded as exc:
+                reply_text = (
+                    f"Hemos alcanzado el límite mensual de {exc.limit} respuestas automáticas del plan actual. "
+                    "Un asesor te atenderá en breve."
+                )
+            except Exception:
+                try:
+                    self.conn.rollback()
+                except Exception:
+                    pass
+                reply_text = "Gracias por escribirnos. En este momento estamos procesando tu consulta; en breve te respondemos."
+
+        return {
+            "success": True,
+            "tenant_id": str(tenant_id),
+            "channel": channel,
+            "sender_id": payload.sender_id,
+            "reply_text": reply_text,
+            "customer_id": str(customer_id),
+            "conversation_id": str(conversation_id),
+            "policies_loaded": policy_info["policies_loaded"],
+        }
+
+    async def aprocess_omnichannel_chat(self, payload: NormalizedOmnichannelPayload) -> dict[str, Any]:
+        """Interfaz asíncrona (`async def`) para procesar mensajes omnicanal desde los webhooks de FastAPI."""
+        return self.process_omnichannel_chat(payload)
+
+    # ------------------------------------------------------------------
+    # FUNCIONES DE ANÁLISIS E INSIGHTS OPERATIVOS (GALAXY BUSINESS BRAIN)
+    # ------------------------------------------------------------------
 
     def analyze(
         self,

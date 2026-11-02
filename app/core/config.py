@@ -72,6 +72,7 @@ class Settings(BaseSettings):
     app_host: str = Field(default_factory=lambda: _env_str("APP_HOST", "127.0.0.1"), alias="APP_HOST")
     app_port: int = Field(default_factory=lambda: _env_int("APP_PORT", 8000), alias="APP_PORT")
     log_level: str = Field(default_factory=lambda: _env_str("LOG_LEVEL", "INFO"), alias="LOG_LEVEL")
+    public_base_url: str = Field(default_factory=lambda: _env_str("PUBLIC_BASE_URL", "https://calyrisia.com"), alias="PUBLIC_BASE_URL")
 
     database_url: str = Field(default_factory=lambda: _env_str("DATABASE_URL", ""), alias="DATABASE_URL")
     pg_host: str = Field(default_factory=lambda: _env_str("PGHOST", "127.0.0.1"), alias="PGHOST")
@@ -92,6 +93,21 @@ class Settings(BaseSettings):
     telegram_bot_token: str = Field(default_factory=lambda: _env_str("TELEGRAM_BOT_TOKEN", ""), alias="TELEGRAM_BOT_TOKEN")
     telegram_webhook_secret: str = Field(default_factory=lambda: _env_str("TELEGRAM_WEBHOOK_SECRET", ""), alias="TELEGRAM_WEBHOOK_SECRET")
     telegram_business_id: str = Field(default_factory=lambda: _env_str("TELEGRAM_BUSINESS_ID", ""), alias="TELEGRAM_BUSINESS_ID")
+
+    # Evolution API (WhatsApp Multitenant QR / Instancias Dinámicas)
+    evolution_api_url: str = Field(default_factory=lambda: _env_str("EVOLUTION_API_URL", ""), alias="EVOLUTION_API_URL")
+    evolution_api_key: str = Field(default_factory=lambda: _env_str("EVOLUTION_API_KEY", ""), alias="EVOLUTION_API_KEY")
+    evolution_webhook_url: str = Field(default_factory=lambda: _env_str("EVOLUTION_WEBHOOK_URL", ""), alias="EVOLUTION_WEBHOOK_URL")
+    wa_provider: str = Field(default_factory=lambda: _env_str("WA_PROVIDER", "auto"), alias="WA_PROVIDER")
+
+    # Meta OAuth & Graph API (Instagram Direct & Facebook Messenger)
+    meta_app_id: str = Field(default_factory=lambda: _env_str("META_APP_ID", "2456430845105397"), alias="META_APP_ID")
+    meta_app_secret: str = Field(default_factory=lambda: _env_str("META_APP_SECRET", ""), alias="META_APP_SECRET")
+    meta_config_id: str = Field(default_factory=lambda: _env_str("META_CONFIG_ID", "1831235794732615"), alias="META_CONFIG_ID")
+    meta_facebook_config_id: str = Field(default_factory=lambda: _env_str("META_FACEBOOK_CONFIG_ID", ""), alias="META_FACEBOOK_CONFIG_ID")
+    meta_redirect_uri: str = Field(default_factory=lambda: _env_str("META_REDIRECT_URI", "https://calyrisia.com/api/auth/meta/callback"), alias="META_REDIRECT_URI")
+    meta_webhook_verify_token: str = Field(default_factory=lambda: _env_str("META_WEBHOOK_VERIFY_TOKEN", ""), alias="META_WEBHOOK_VERIFY_TOKEN")
+    meta_graph_api_version: str = Field(default_factory=lambda: _env_str("META_GRAPH_API_VERSION", "v26.0"), alias="META_GRAPH_API_VERSION")
 
     model_config = SettingsConfigDict(
         env_file=".env",

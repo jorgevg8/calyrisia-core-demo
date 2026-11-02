@@ -29,11 +29,17 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-3.8-flash
+        value: gemini-2.5-flash
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
         sync: false
+      - key: EVOLUTION_API_URL
+        sync: false
+      - key: EVOLUTION_API_KEY
+        sync: false
+      - key: EVOLUTION_WEBHOOK_URL
+        value: https://calyrisia.com/api/webhooks/whatsapp
       - key: META_APP_ID
         sync: false
       - key: META_APP_SECRET
@@ -57,7 +63,7 @@ services:
       - key: GALAXY_JWT_ISSUER
         value: galaxy-core
       - key: CALYRISIA_CHECKOUT_ADMIN_KEY
-        value: calyrisia_admin_2026_Jorgevg8_9f4b2c8e1d7a6f3b5c0e2a4d8f1b3c5e
+        sync: false
       - key: CALYRISIA_PAGO_MOVIL_BANK
         value: BANCAMIGA
       - key: CALYRISIA_PAGO_MOVIL_PHONE
