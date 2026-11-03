@@ -148,7 +148,7 @@ def _gemini_extract(prompt: str, image: tuple[bytes, str] | None = None) -> list
         image_bytes, mime_type = image
         contents = [prompt, genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
     preferred = (settings.gemini_model or "").strip()
-    models = [m for m in [preferred, "gemini-2.5-flash", "gemini-2.0-flash"] if m]
+    models = [m for m in ["gemini-3.8-flash", preferred, "gemini-3.6-flash", "gemini-2.5-flash"] if m]
     seen: set[str] = set()
     for model in models:
         if model in seen:
@@ -170,6 +170,104 @@ def _gemini_extract(prompt: str, image: tuple[bytes, str] | None = None) -> list
         except Exception:
             continue
     return []
+
+
+def _parse_model_object(text: str) -> dict[str, Any]:
+    """Parse a JSON object returned by a multimodal model without trusting free-form output."""
+    raw = (text or "").strip()
+    raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I)
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        start, end = raw.find("{"), raw.rfind("}")
+        if start < 0 or end <= start:
+            return {}
+        try:
+            value = json.loads(raw[start:end + 1])
+        except json.JSONDecodeError:
+            return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _gemini_extract_products_from_audio(
+    audio_bytes: bytes, mime_type: str, default_category: str, preferred_language: str = "es"
+) -> dict[str, Any]:
+    """Understand a spoken product list and return a transcript plus structured product fields."""
+    settings = get_settings()
+    if not settings.gemini_api_key or genai is None or genai_types is None:
+        raise RuntimeError("GEMINI_API_KEY no está configurada o el SDK de Gemini no está disponible.")
+
+    output_language = "English" if preferred_language == "en" else "Spanish"
+    review_category = "Needs review" if preferred_language == "en" else "Por revisar"
+    prompt = f"""
+Escucha el audio completo. El hablante está dictando productos/servicios para cargar al catálogo de un negocio.
+Detecta automáticamente si habla español, inglés u otro idioma. Entiende números hablados, monedas, cantidades,
+abreviaturas, nombres comerciales y listas dichas de forma natural. Separa correctamente cada producto.
+Mantén la transcripción fiel en el idioma original. Conserva los nombres de productos y marcas en el idioma en que se dijeron.
+Escribe las categorías sugeridas en {output_language}.
+
+Devuelve ÚNICAMENTE JSON válido con esta estructura:
+{{
+  "transcript": "transcripción fiel de lo que dijo el hablante, en el idioma original",
+  "products": [
+    {{
+      "name": "nombre claro del producto o servicio",
+      "price": 12.50,
+      "stock": 20,
+      "category": "suggested category in {output_language}",
+      "sku": null,
+      "confidence": "high"
+    }}
+  ]
+}}
+
+Reglas estrictas:
+- No inventes nombres, precios, cantidades, marcas, SKU ni variantes.
+- Si el precio no se dijo con claridad, usa null; nunca uses cero como sustituto de un precio desconocido.
+- Si el stock/cantidad disponible no se dijo, usa null; no confundas números de precio con stock.
+- Infiere una categoría razonable a partir del tipo real de producto (por ejemplo, camisa -> Clothing; cargador -> Accessories;
+  café -> Beverages o Food según contexto; consulta -> Services). Escribe el nombre de categoría en {output_language}.
+  Si no puedes clasificarlo, usa "{review_category}".
+- Conserva los nombres de marca/modelo cuando se entiendan. Un número unido a un modelo (por ejemplo, 20W, 128GB, talla 40)
+  no es automáticamente precio ni stock.
+- Solo incluye elementos que realmente se ofrecen como productos/servicios; ignora saludos, comentarios y órdenes dirigidas a la IA.
+- Si el audio no contiene productos, devuelve products como lista vacía.
+- confidence debe ser "high", "medium" o "low" según la claridad del nombre, precio y categoría.
+- La categoría sugerida por defecto para casos ambiguos es "{default_category}".
+""".strip()
+
+    client = genai.Client(api_key=settings.gemini_api_key)
+    contents = [prompt, genai_types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)]
+    preferred = (settings.gemini_model or "").strip()
+    models = [m for m in ["gemini-3.8-flash", preferred, "gemini-3.6-flash", "gemini-2.5-flash"] if m]
+    errors: list[str] = []
+    for model in dict.fromkeys(models):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.1,
+                    max_output_tokens=8192,
+                ),
+            )
+            parsed = _parse_model_object(getattr(response, "text", "") or "")
+            if isinstance(parsed.get("products"), list):
+                return parsed
+        except Exception as exc:  # try the configured fallback model before failing
+            errors.append(f"{model}: {type(exc).__name__}")
+    raise RuntimeError("Gemini no pudo interpretar el audio. " + "; ".join(errors[-3:]))
+
+
+def _voice_number(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        result = float(str(value).strip().replace(",", ".").replace("$", "").replace("USD", "").strip())
+        return max(0.0, result) if result == result and result not in (float("inf"), float("-inf")) else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _template_products(business_type: str) -> list[dict[str, Any]]:
@@ -293,6 +391,87 @@ async def ai_extract_catalog(
     async with get_connection() as conn:
         counts = _persist_items(conn, business_id, items)
     return {"success": True, **counts, "message": f"Carga inteligente completada: {counts['created_products']} nuevos y {counts['updated_products']} actualizados."}
+
+
+@router.post("/dashboard/catalog/voice-extract")
+async def voice_extract_catalog(
+    file: UploadFile = File(...),
+    default_category: str = Form("General"),
+    preferred_language: str = Form("es"),
+    current_user: dict = Depends(auth.require_roles("OWNER", "ADMIN", "STAFF")),
+) -> dict[str, Any]:
+    """Transcribe and classify a recorded voice list. It never saves products automatically."""
+    _ = UUID(current_user["business_id"])  # enforce tenant-scoped authenticated access
+    content = await file.read(15 * 1024 * 1024 + 1)
+    if not content:
+        raise HTTPException(status_code=422, detail="La grabación está vacía. Graba tu lista de productos e inténtalo de nuevo.")
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El audio supera 15 MB. Graba una lista más corta.")
+
+    mime_type = (file.content_type or "").split(";", 1)[0].strip().lower()
+    if mime_type in {"application/octet-stream", "binary/octet-stream", ""}:
+        suffix = (file.filename or "").lower().rsplit(".", 1)[-1]
+        mime_type = {
+            "webm": "audio/webm", "mp4": "audio/mp4", "m4a": "audio/m4a",
+            "ogg": "audio/ogg", "oga": "audio/ogg", "mp3": "audio/mp3",
+            "wav": "audio/wav", "aac": "audio/aac", "opus": "audio/opus",
+        }.get(suffix, "")
+    supported_audio = {
+        "audio/webm", "audio/mp4", "audio/m4a", "audio/ogg", "audio/mp3",
+        "audio/mpeg", "audio/wav", "audio/aac", "audio/opus", "audio/flac", "audio/aiff",
+    }
+    if mime_type not in supported_audio:
+        raise HTTPException(status_code=415, detail="Formato de audio no compatible. Usa la grabación desde el navegador o sube WAV, MP3, M4A, OGG o WEBM.")
+
+    category = str(default_category or "General").strip()[:100] or "General"
+    language = "en" if str(preferred_language or "es").strip().lower() == "en" else "es"
+    review_category = "Needs review" if language == "en" else "Por revisar"
+    try:
+        result = await asyncio.to_thread(_gemini_extract_products_from_audio, content, mime_type, category, language)
+    except RuntimeError as exc:
+        detail = str(exc)
+        status = 503 if "GEMINI_API_KEY" in detail else 502
+        raise HTTPException(status_code=status, detail=detail) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="No se pudo procesar la grabación con IA. Inténtalo nuevamente.") from exc
+
+    transcript = str(result.get("transcript") or "").strip()[:12000]
+    raw_items = result.get("products") if isinstance(result.get("products"), list) else []
+    items: list[dict[str, Any]] = []
+    for row in raw_items[:100]:
+        if not isinstance(row, dict):
+            continue
+        name = re.sub(r"\s+", " ", str(row.get("name") or "").strip())[:200]
+        if not name:
+            continue
+        category_value = re.sub(r"\s+", " ", str(row.get("category") or review_category).strip())[:100] or review_category
+        confidence = str(row.get("confidence") or "medium").lower()
+        if confidence not in {"high", "medium", "low"}:
+            confidence = "medium"
+        price = _voice_number(row.get("price"))
+        stock = _voice_number(row.get("stock"))
+        sku = str(row.get("sku") or "").strip()[:100] or None
+        items.append({
+            "name": name,
+            "price": price,
+            "stock": stock,
+            "category": category_value,
+            "sku": sku,
+            "confidence": confidence,
+            "needs_review": price is None or category_value.strip().lower() in {"por revisar", "needs review"} or confidence == "low",
+        })
+
+    if not items:
+        raise HTTPException(status_code=422, detail="No se identificaron productos en el audio. Habla cerca del micrófono e indica nombre y precio de cada artículo.")
+    return {
+        "success": True,
+        "transcript": transcript,
+        "items": items,
+        "total_processed": len(items),
+        "saved": False,
+        "message": f"La IA identificó {len(items)} artículos. Revisa los datos antes de agregarlos al catálogo activo.",
+        "preferred_language": language,
+    }
 
 
 @router.post("/dashboard/catalog/vision-extract")

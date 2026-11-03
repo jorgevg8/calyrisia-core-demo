@@ -224,6 +224,17 @@
         .upgrade-lock h3 { font-size:22px; margin:10px 0; }
         .catalog-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
         .catalog-preview-img { width:38px;height:38px;object-fit:cover;border-radius:8px;border:1px solid var(--glass-border); }
+        .language-picker { appearance:none; border:1px solid var(--glass-border); background:rgba(255,255,255,.055); color:var(--text-main); border-radius:10px; padding:8px 30px 8px 11px; font:600 11px Inter,system-ui,sans-serif; cursor:pointer; min-width:104px; }
+        .language-picker option { color:#0f172a; background:#fff; }
+        .catalog-voice-box { display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;margin:12px 0;border:1px solid rgba(192,132,252,.28);border-radius:14px;background:linear-gradient(115deg,rgba(139,92,246,.10),rgba(0,242,254,.045)); }
+        .catalog-voice-status { color:var(--text-muted);font-size:11px;margin-top:5px; }
+        .catalog-voice-recording { animation:catalogPulse 1.2s ease-in-out infinite; }
+        @keyframes catalogPulse { 50% { box-shadow:0 0 0 7px rgba(244,63,94,.13); } }
+        .voice-review-panel { margin-top:14px;padding:16px;border-radius:14px;border:1px solid rgba(0,242,254,.25);background:rgba(0,0,0,.18); }
+        .voice-preview-row { display:grid;grid-template-columns:minmax(150px,2fr) minmax(90px,.8fr) minmax(90px,.8fr) minmax(130px,1.2fr);gap:9px;align-items:center;margin:9px 0; }
+        .voice-preview-row input { min-width:0;padding:9px 10px;font-size:12px; }
+        .voice-review-transcript { white-space:pre-wrap;max-height:130px;overflow:auto;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.035);font-size:12px;color:#cbd5e1;line-height:1.55; }
+        @media(max-width:760px){.voice-preview-head{display:none!important;} .voice-preview-row{grid-template-columns:1fr 1fr;} .voice-preview-row .voice-field-name{grid-column:1/-1;} .topbar{padding:0 14px;gap:9px;} }
         @media(max-width:1000px){ .vertical-layout{grid-template-columns:1fr;} .vertical-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .table-board{grid-template-columns:repeat(3,minmax(0,1fr));} }
         @media(max-width:640px){ .plan-usage-grid,.vertical-grid{grid-template-columns:1fr;} .table-board{grid-template-columns:repeat(2,minmax(0,1fr));} .booking-row{align-items:flex-start;flex-direction:column;} .booking-row-actions{justify-content:flex-start;} }
         /* Optimización Responsiva de Dashboard para Teléfono y Tablet */
@@ -510,6 +521,12 @@
             <img src="data:image/png;base64,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" alt="" style="width:46px;height:46px;object-fit:contain;display:block;flex-shrink:0">
             <span class="brand-text calyrisia-wordmark" style="font-size:1.55rem;font-weight:800;letter-spacing:.12em;color:#f3f6ff">CALY<span class="calyrisia-wordmark-accent">RISIA</span></span>
         </div>
+        <div style="display:flex;justify-content:flex-end;margin:-18px 0 18px;">
+            <select id="calyrisia-language-picker-login" class="language-picker" aria-label="Language" title="Change language" onchange="setDashboardLanguage(this.value)">
+                <option value="es">Español</option>
+                <option value="en">English</option>
+            </select>
+        </div>
         <form id="loginForm">
             <div style="margin-bottom: 20px;">
                 <input id="email" type="email" required autocomplete="username" placeholder="Correo Ejecutivo">
@@ -565,6 +582,10 @@
                 <strong id="display-business-id" style="font-family: monospace; font-weight: normal; color: var(--text-muted);">Cargando...</strong>
             </div>
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <select id="calyrisia-language-picker" class="language-picker" aria-label="Language" title="Change language" onchange="setDashboardLanguage(this.value)">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                </select>
                 <button class="btn-secondary" onclick="exportExecutiveDailyCloseCsv()" style="padding: 8px 14px; font-size: 11px; border-color: rgba(52, 211, 153, 0.35); color: #6ee7b7;" title="Descargar cierre diario en CSV para Excel sin copiar datos a mano"><i class="ph ph-file-csv"></i> Cierre Diario CSV</button>
                 <button class="btn-action" onclick="openBusinessWebchat()" style="padding: 8px 16px; font-size: 11px;"><i class="ph ph-chat-circle-dots"></i> Abrir Webchat IA</button>
                 <span class="badge success" id="roleBadge" style="background: rgba(16, 185, 129, 0.1); border: none; color: #34d399;"><i class="ph ph-circle-fill" style="font-size: 8px;"></i> ONLINE</span>
@@ -1260,6 +1281,549 @@ function escapeHtml(value) {
         .replaceAll("'", '&#039;');
 }
 
+// ---------------------------------------------------------------------------
+// CALYRISIA UI language support (Spanish / English)
+// Keeps original DOM strings so users can switch languages repeatedly without
+// losing the source text. Product names and customer-entered data are untouched.
+// ---------------------------------------------------------------------------
+const CALYRISIA_UI_TRANSLATIONS = {
+    'Operación del Negocio': 'Business Operations',
+    'Resumen del Negocio': 'Business Overview',
+    'Clientes & Oportunidades': 'Customers & Opportunities',
+    'Productos e Inventario': 'Products & Inventory',
+    'Pedidos y Solicitudes': 'Orders & Requests',
+    'Aprobaciones': 'Approvals',
+    'Inteligencia y Automatización': 'Intelligence & Automation',
+    'Operaciones Autónomas': 'Autonomous Operations',
+    'Copiloto Ejecutivo': 'Executive Copilot',
+    'Sistema': 'System',
+    'Configuración y Suscripción': 'Settings & Subscription',
+    'Dejar Feedback': 'Send Feedback',
+    'Tenant Actual': 'Current Workspace',
+    'Cargando...': 'Loading...',
+    'Cierre Diario CSV': 'Daily CSV Report',
+    'Abrir Webchat IA': 'Open AI Webchat',
+    'ONLINE': 'ONLINE',
+    'Cerrar sesión': 'Sign out',
+    'Actualizar datos': 'Refresh data',
+    'GESTIÓN DE INVENTARIO Y SUBIDA EXPRÉS': 'INVENTORY MANAGEMENT & QUICK UPLOAD',
+    'Catálogo de Productos': 'Product Catalog',
+    'Catálogo Corporativo': 'Business Catalog',
+    'Servicios y Tarifas': 'Services & Pricing',
+    'Menú y Precios': 'Menu & Pricing',
+    'Catálogo Multirubro, Variantes y Precios': 'Multi-category Catalog, Variants & Pricing',
+    'Catálogo de Productos': 'Product Catalog',
+    'Carga Mágica con IA': 'AI Smart Catalog Import',
+    'IA / Voz': 'AI / Voice',
+    'Foto': 'Photo',
+    'Excel / CSV': 'Excel / CSV',
+    'Tabla rápida': 'Quick table',
+    'Dicta tu catálogo en español o inglés': 'Dictate your catalog in Spanish or English',
+    'Di el nombre, precio y cantidad de cada artículo como si se lo explicaras a una persona. Gemini escucha el audio, transcribe y propone categorías.': 'Say each item name, price, and quantity naturally. Gemini listens, transcribes, and suggests categories.',
+    'El audio se envía a Gemini mediante tu API key para transcripción y clasificación. Revisa los datos antes de activarlos.': 'Audio is sent to Gemini through your API key for transcription and classification. Review the details before activating them.',
+    'Empezar a grabar': 'Start recording',
+    'Detener grabación': 'Stop recording',
+    'Plantilla del rubro': 'Industry template',
+    'O pega o escribe una lista de precios (también puedes dictarla con el teclado del móvil):': 'Or paste/type a price list (you can also use your phone keyboard dictation):',
+    'Ejemplo 1: Cargador 20W $12 stock 30\nEjemplo 2: Tengo 25 camisas de lino en 22 dolares y 15 pantalones en 28$\nEjemplo 3: Nombre | Precio USD | Stock | Categoría': 'Example 1: 20W charger $12 stock 30\nExample 2: 25 linen shirts at $22 and 15 pants at $28\nExample 3: Name | Price USD | Stock | Category',
+    'La IA puede organizar nombres, precios, existencias y categorías. Revisa antes de guardar.': 'AI can organize names, prices, stock, and categories. Review everything before saving.',
+    'Analizar texto y agregar': 'Analyze text and add',
+    'Escáner IA de Menús, Catálogos y Facturas': 'AI Scanner for Menus, Catalogs & Invoices',
+    'Sube una foto o captura de pantalla de tu lista de precios en papel, menú o factura y la IA extraerá todos los productos por ti.': 'Upload a photo or screenshot of a printed price list, menu, or invoice and AI will extract the visible items.',
+    'Acepta archivos nativos de': 'Accepts native files from',
+    'con detección automática de columnas.': 'with automatic column detection.',
+    'Descargar plantilla CSV': 'Download CSV template',
+    'Llena varios artículos a la vez como en una hoja de cálculo y guárdalos todos en un solo clic:': 'Fill in several items like a spreadsheet and save them all with one click:',
+    'Agregar otra fila': 'Add another row',
+    'Guardar todas las filas': 'Save all rows',
+    'Listado Oficial Activo': 'Active Catalog',
+    'Haz clic sobre cualquier precio para actualizarlo al instante': 'Click any price to update it instantly',
+    'Actualizar': 'Refresh',
+    'Buscar por nombre, categoría o SKU...': 'Search by name, category, or SKU...',
+    'Cargando registros...': 'Loading records...',
+    'Sin productos registrados.': 'No products registered yet.',
+    'Sin resultados para tu búsqueda.': 'No results for your search.',
+    'No hay productos activos.': 'There are no active products.',
+    'Nombre': 'Name',
+    'Precio': 'Price',
+    'Categoría': 'Category',
+    'Stock': 'Stock',
+    'Eliminar': 'Delete',
+    'Editar': 'Edit',
+    'Guardar': 'Save',
+    'Cancelar': 'Cancel',
+    'Confirmar': 'Confirm',
+    'Revisar': 'Review',
+    'Revisión de la IA': 'AI Review',
+    'Ver transcripción original': 'View original transcript',
+    'Precio *': 'Price *',
+    'Stock (opcional)': 'Stock (optional)',
+    'Nombre *': 'Name *',
+    'Categoría': 'Category',
+    'Descartar': 'Discard',
+    'Confianza: high': 'Confidence: high',
+    'Confianza: medium': 'Confidence: medium',
+    'Confianza: low': 'Confidence: low',
+    'La IA está escuchando el audio, transcribiendo y clasificando los artículos…': 'AI is listening to the audio, transcribing it, and classifying the items…',
+    'Analizando audio con IA…': 'Analyzing audio with AI…',
+    '● Grabando… habla con claridad. Máximo 90 segundos.': '● Recording… speak clearly. Maximum 90 seconds.',
+    '🎙️ Te estoy escuchando. Di cada nombre y precio con claridad.': '🎙️ Listening. Speak each item name and price clearly.',
+    'No se pudo grabar el audio. Comprueba el micrófono e inténtalo otra vez.': 'The audio could not be recorded. Check the microphone and try again.',
+    'Ocurrió un error al grabar el audio.': 'An error occurred while recording audio.',
+    'La grabación quedó demasiado corta. Intenta hablar un poco más cerca del micrófono.': 'The recording was too short. Try speaking closer to the microphone.',
+    'La grabación está vacía o es demasiado corta.': 'The recording is empty or too short.',
+    'Permite el acceso al micrófono en tu navegador para grabar.': 'Allow microphone access in your browser to record.',
+    'No se pudo abrir el micrófono. Comprueba que esté conectado y vuelve a intentarlo.': 'The microphone could not be opened. Check that it is connected and try again.',
+    'La grabación no se pudo procesar.': 'The recording could not be processed.',
+    'Grabación descartada. Puedes volver a grabar cuando quieras.': 'Recording discarded. You can record again whenever you like.',
+    'Confirma nombres, precios y categorías. Los precios no detectados quedan vacíos y deben completarse.': 'Confirm names, prices, and categories. Undetected prices stay blank and must be filled in.',
+    'Stock vacío = 0 unidades. Revisa los precios antes de guardar.': 'Blank stock = 0 units. Review prices before saving.',
+    'Revisión de la IA · ': 'AI review · ',
+    ' artículos': ' items',
+    'Confianza: ': 'Confidence: ',
+    'La IA identificó ': 'AI identified ',
+    ' artículos. Revisa los campos y confirma para activarlos.': ' items. Review the fields and confirm to activate them.',
+    '✓ Audio interpretado: ': '✓ Audio understood: ',
+    ' artículos listos para revisar.': ' items ready for review.',
+    'Completa el nombre y el precio del artículo ': 'Complete the name and price for item ',
+    ' antes de activarlo.': ' before activating it.',
+    'Completa una categoría válida para el artículo ': 'Enter a valid category for item ',
+    '.': '.',
+    'No hay artículos para guardar.': 'There are no items to save.',
+    'Guardando artículos…': 'Saving items…',
+    'Artículos activados en el catálogo oficial.': 'Items activated in the official catalog.',
+    'No se pudieron guardar los artículos.': 'The items could not be saved.',
+    'No se pudo interpretar el audio.': 'The audio could not be interpreted.',
+    'Este navegador no permite grabar audio. Actualízalo o usa el campo de texto.': 'This browser cannot record audio. Update it or use the text field.',
+    'Procesando la grabación con IA…': 'Processing the recording with AI…',
+    'La grabación está vacía. Graba tu lista de productos e inténtalo de nuevo.': 'The recording is empty. Record your product list and try again.',
+    'El audio supera 15 MB. Graba una lista más corta.': 'The audio exceeds 15 MB. Record a shorter list.',
+    'Formato de audio no compatible. Usa la grabación desde el navegador o sube WAV, MP3, M4A, OGG o WEBM.': 'Unsupported audio format. Record in the browser or upload WAV, MP3, M4A, OGG, or WEBM.',
+    'No se identificaron productos en el audio. Habla cerca del micrófono e indica nombre y precio de cada artículo.': 'No products were identified in the audio. Speak near the microphone and say each item name and price.',
+    'Needs review': 'Needs review',
+    'Confirmar y activar en el catálogo': 'Confirm and activate in catalog',
+    'No hay artículos para guardar.': 'There are no items to save.',
+    'Sin operaciones registradas aún': 'No operations recorded yet',
+    'Reciente': 'Recent',
+    'Por aprobar': 'Pending approval',
+    'Confirmadas': 'Confirmed',
+    'Todas': 'All',
+    'De hoy': 'Today',
+    'Sincronizando agenda...': 'Syncing schedule...',
+    'Monitor de Órdenes Corporativas': 'Business Orders Monitor',
+    'Actividad transaccional real del negocio.': 'Live business transaction activity.',
+    'Cola de Reposición Prioritaria': 'Priority Restock Queue',
+    'Productos críticos con recarga inmediata.': 'Critical products that need immediate restocking.',
+    'Sincronizando...': 'Syncing...',
+    'No se pudo cargar la información.': 'Could not load information.',
+    'Cargando catálogo oficial del negocio...': 'Loading the official business catalog...',
+    'Cargando alertas...': 'Loading alerts...',
+    'Cargando órdenes...': 'Loading orders...',
+    'Buscar': 'Search',
+    'Desde': 'From',
+    'Hasta': 'To',
+    'Estado': 'Status',
+    'Activo': 'Active',
+    'Inactivo': 'Inactive',
+    'Disponible': 'Available',
+    'Agotado': 'Out of stock',
+    'En espera': 'Pending',
+    'Completado': 'Completed',
+    'Pendiente': 'Pending',
+    'Ajustes': 'Settings',
+    'Información general': 'General information',
+    'Nombre del negocio': 'Business name',
+    'Guardar cambios': 'Save changes',
+    'Configuración': 'Settings',
+    'Suscripción': 'Subscription',
+    'Canales': 'Channels',
+    'Conectar': 'Connect',
+    'Desconectar': 'Disconnect',
+    'Vincular Facebook': 'Connect Facebook',
+    'Vincular Instagram': 'Connect Instagram',
+    'Pausar': 'Pause',
+    'Reanudar': 'Resume',
+    'Mensajes': 'Messages',
+    'Clientes': 'Customers',
+    'Ventas': 'Sales',
+    'Productos': 'Products',
+    'Inventario': 'Inventory',
+    'Pedidos': 'Orders',
+    'Citas': 'Appointments',
+    'Cargando datos...': 'Loading data...',
+    'No disponible': 'Not available',
+    'Exportar': 'Export',
+    'Descargar': 'Download',
+    'Ver detalles': 'View details',
+    'Ver todo': 'View all',
+    'Sin datos todavía': 'No data yet',
+    'Sin registros todavía': 'No records yet',
+    'Ocurrió un error': 'An error occurred',
+    'Inténtalo de nuevo.': 'Please try again.',
+    'CALYRISIA | Centro de Mando Premium': 'CALYRISIA | Premium Command Center',
+    'Fuentes Premium': 'Premium Fonts',
+    'Iconos Profesionales (Phosphor)': 'Professional Icons (Phosphor)',
+    'PANTALLA DE LOGIN': 'LOGIN SCREEN',
+    'Ingresar': 'Sign in',
+    'Correo Ejecutivo': 'Business email',
+    'Clave de Acceso': 'Password',
+    'DASHBOARD PRINCIPAL': 'MAIN DASHBOARD',
+    'SIDEBAR SIMPLIFICADA Y ELEGANTE': 'CLEAN, ELEGANT SIDEBAR',
+    'MAIN CONTENT': 'MAIN CONTENT',
+    'VISTA 1: PANEL EJECUTIVO (100% ANÁLISIS PURO Y TELEMETRÍA SIN BOTONES)': 'VIEW 1: EXECUTIVE DASHBOARD',
+    'TELEMETRÍA EJECUTIVA EN TIEMPO REAL': 'REAL-TIME EXECUTIVE TELEMETRY',
+    'Panel Ejecutivo': 'Executive Dashboard',
+    'Inteligencia analítica y métricas operativas de tu negocio.': 'Business analytics and operational metrics.',
+    'Sincronización automática activa · Datos reales del negocio': 'Automatic synchronization enabled · Live business data',
+    'KPIs Principales (4 indicadores clave adaptados al giro)': 'Key Performance Indicators (4 metrics tailored to your business)',
+    'Ingresos Confirmados': 'Confirmed Revenue',
+    'Acumulado histórico': 'All-time total',
+    'Ingresos de Hoy': "Today's Revenue",
+    'Jornada actual': 'Current day',
+    'Conversaciones IA': 'AI Conversations',
+    'Atención automatizada': 'Automated support',
+    'En Revisión / Pendientes': 'Under Review / Pending',
+    'Esperando validación': 'Awaiting validation',
+    'Calculando analítica del negocio...': 'Calculating business analytics...',
+    'INSIGHTS ESTRATÉGICOS DEL SISTEMA': 'STRATEGIC SYSTEM INSIGHTS',
+    'Diagnóstico e Insights Operativos': 'Operational Diagnostics & Insights',
+    'Analizando señales del negocio...': 'Analyzing business signals...',
+    'VISTA 2: MÓDULO OPERATIVO ESPECIALIZADO (Agenda de Citas / Mesas y Reservas / Logística e Inventario)': 'VIEW 2: SPECIALIZED OPERATIONS',
+    'Preparando el centro operativo del negocio...': 'Preparing the business operations center...',
+    'VISTA 3: GESTIÓN EXCLUSIVA DE CATÁLOGO / SERVICIOS Y TARIFAS / MENÚ DIGITAL': 'VIEW 3: CATALOG / SERVICES / DIGITAL MENU MANAGEMENT',
+    'VISTA BUSINESS RADAR (INTELIGENCIA PROACTIVA VERIFICABLE)': 'BUSINESS RADAR VIEW (VERIFIABLE PROACTIVE INTELLIGENCE)',
+    'INTELIGENCIA PROACTIVA Y DETECCIÓN DE OPORTUNIDADES': 'PROACTIVE INTELLIGENCE & OPPORTUNITY DETECTION',
+    'Análisis continuo basado en datos reales de tu catálogo, inventario, conversaciones, pagos y tendencias.': 'Continuous analysis based on real catalog, inventory, conversation, payment, and trend data.',
+    'Analizar ahora': 'Analyze now',
+    'Stock Crítico / Agotado': 'Critical / Out-of-Stock Items',
+    'Productos que requieren reposición': 'Products that need restocking',
+    'Alta Demanda / Catálogo': 'High Demand / Catalog',
+    'Artículos líderes y fichas por completar': 'Top items and incomplete product records',
+    'Seguimientos y Pagos': 'Follow-ups & Payments',
+    'Oportunidades y cobros por atender': 'Opportunities and payments to follow up',
+    'Ejecutando análisis de Business Radar...': 'Running Business Radar analysis...',
+    'VISTA OPERACIONES AUTÓNOMAS (NIVELES DE AUTONOMÍA 1, 2 Y 3)': 'AUTONOMOUS OPERATIONS VIEW (AUTONOMY LEVELS 1, 2 & 3)',
+    'TRAZABILIDAD E IDEMPOTENCIA OPERATIVA': 'OPERATIONAL TRACEABILITY & IDEMPOTENCY',
+    'Automatizaciones y Operaciones Ejecutadas': 'Automations & Executed Operations',
+    'Registro verificable de cada acción ejecutada o preparada por CALYRISIA según los 3 niveles de autonomía.': 'Verifiable record of every action executed or prepared by CALYRISIA across the 3 autonomy levels.',
+    'Actualizar registro': 'Refresh log',
+    'Nivel 1 · Automático': 'Level 1 · Automatic',
+    'Consultas de catálogo, precios, stock en vivo, horarios, políticas y clasificación de intención.': 'Catalog, pricing, live inventory, hours, policies, and intent-classification queries.',
+    'Nivel 2 · Preparación Automática': 'Level 2 · Automatic Preparation',
+    'Preparación de órdenes, captura de citas/reservas pendientes y creación automática de oportunidades CRM.': 'Order preparation, pending appointment/reservation capture, and automatic CRM opportunity creation.',
+    'Nivel 3 · Requiere Autorización': 'Level 3 · Requires Authorization',
+    'Confirmación de pagos, descuento definitivo de inventario, devoluciones y modificaciones sensibles.': 'Payment confirmation, final inventory deduction, returns, and sensitive changes.',
+    'Registro de Operaciones Ejecutadas por CALYRISIA': 'CALYRISIA Executed Operations Log',
+    'Cargando historial de operaciones autónomas...': 'Loading autonomous operations history...',
+    'Auditoría Técnica del Sistema': 'System Technical Audit',
+    '[SYSTEM] Sincronizando registros de auditoría...': '[SYSTEM] Syncing audit records...',
+    'VISTA CRM INTELIGENTE 100% AUTOMÁTICO (SIN FORMULARIOS MANUALES)': 'INTELLIGENT CRM VIEW · FULLY AUTOMATED',
+    'CAPTURA Y SEGUIMIENTO AUTOMÁTICO SIN CARGA MANUAL': 'AUTOMATIC CAPTURE & FOLLOW-UP, NO MANUAL ENTRY',
+    'Clientes & Oportunidades (CRM Inteligente)': 'Customers & Opportunities (Intelligent CRM)',
+    'CALYRISIA detecta y registra automáticamente clientes y oportunidades comerciales a partir de tus conversaciones, pedidos y citas.': 'CALYRISIA automatically detects and records customers and sales opportunities from conversations, orders, and appointments.',
+    'Sincronizar ahora': 'Sync now',
+    'Oportunidades Activas': 'Active Opportunities',
+    'Detectadas automáticamente por IA': 'Automatically detected by AI',
+    'Clientes Identificados': 'Identified Customers',
+    'En conversaciones, pagos o citas': 'In conversations, payments, or appointments',
+    'Clientes Recurrentes / Ganados': 'Returning / Converted Customers',
+    'Con compras o cierres confirmados': 'With confirmed purchases or closed deals',
+    'Oportunidades Comerciales Detectadas Automáticamente': 'Automatically Detected Sales Opportunities',
+    'Generadas por CALYRISIA cuando un cliente consulta precios, solicita pago, agenda o requiere seguimiento.': 'Created by CALYRISIA when a customer asks about pricing, requests payment, books, or needs follow-up.',
+    'Analizando interacciones para detectar oportunidades...': 'Analyzing interactions to detect opportunities...',
+    'Historial Consolidado de Clientes': 'Consolidated Customer History',
+    'Registro automático unificado a partir de pagos, órdenes y citas del negocio.': 'Unified automatic records from business payments, orders, and appointments.',
+    'Sincronizando cartera de clientes...': 'Syncing customer records...',
+    'Centro de Aprobaciones': 'Approval Center',
+    'Valida las solicitudes de pago recibidas por Telegram o Webchat. La aprobación registra el pedido y actualiza el inventario según los datos del pedido; no verifica transferencias bancarias.': 'Review payment requests received through Telegram or Webchat. Approval records the order and updates inventory; it does not verify bank transfers.',
+    'Pagos pendientes': 'Pending Payments',
+    'Cargando solicitudes...': 'Loading requests...',
+    'Historial de pagos recientes': 'Recent Payment History',
+    'Cargando historial...': 'Loading history...',
+    'Gestión de Equipo': 'Team Management',
+    'Administra los accesos de tu staff.': 'Manage staff access.',
+    'Panel de usuarios corporativos.': 'Business user administration.',
+    'CENTRO DE CONTROL OMNICANAL Y FINANCIERO': 'OMNICHANNEL & FINANCIAL CONTROL CENTER',
+    'Configuración, Canales y Cerebro IA': 'Settings, Channels & AI Brain',
+    'Conecta tus redes sociales y mensajería, configura tus métodos de cobro y personaliza el comportamiento de tu agente.': 'Connect social media and messaging, configure payment methods, and customize your agent.',
+    'Métodos de Pago': 'Payment Methods',
+    'Prompt IA': 'AI Prompt',
+    'Plan y Cuenta': 'Plan & Account',
+    'PESTAÑA 1: HUB OMNICANAL (ACTIVA POR DEFECTO)': 'TAB 1: OMNICHANNEL HUB (DEFAULT)',
+    'Canales de Atención y Redes Sociales': 'Support Channels & Social Media',
+    'Conecta WhatsApp, Instagram, Facebook Messenger, Telegram y Webchat al mismo Cerebro IA.': 'Connect WhatsApp, Instagram, Facebook Messenger, Telegram, and Webchat to the same AI Brain.',
+    'CANAL 1: WHATSAPP QR': 'CHANNEL 1: WHATSAPP QR',
+    'VINCULACIÓN DIRECTA POR QR': 'DIRECT QR CONNECTION',
+    'WhatsApp Business': 'WhatsApp Business',
+    'Escanea el código QR desde tu celular o vincula con código de 8 dígitos.': 'Scan the QR code with your phone or connect using an 8-digit code.',
+    'Desconectado': 'Disconnected',
+    'Tu sesión se mantiene sincronizada de forma segura para responder a tus clientes con tu catálogo actualizado.': 'Your session stays securely synced so you can answer customers using your up-to-date catalog.',
+    'Generar Código QR': 'Generate QR Code',
+    'Pausar IA': 'Pause AI',
+    'Desvincular': 'Disconnect',
+    'ESCANEA EN WHATSAPP → DISPOSITIVOS VINCULADOS': 'SCAN IN WHATSAPP → LINKED DEVICES',
+    'CANAL 2: INSTAGRAM DIRECT (AUTORIZACIÓN OFICIAL DE META)': 'CHANNEL 2: INSTAGRAM DIRECT (OFFICIAL META AUTHORIZATION)',
+    'AUTORIZACIÓN OFICIAL DE META': 'OFFICIAL META AUTHORIZATION',
+    'Instagram Direct': 'Instagram Direct',
+    'Atiende DMs, cotiza catálogo y recibe pedidos automáticamente.': 'Handle DMs, quote catalog items, and receive orders automatically.',
+    'Autoriza una cuenta profesional de Instagram (Business o Creator) vinculada a una Página. CALYRISIA te redirigirá al inicio oficial de Meta.': 'Authorize a professional Instagram account (Business or Creator) connected to a Page. CALYRISIA will redirect you to Meta login.',
+    'CANAL 3: FACEBOOK MESSENGER (AUTORIZACIÓN OFICIAL DE META)': 'CHANNEL 3: FACEBOOK MESSENGER (OFFICIAL META AUTHORIZATION)',
+    'Facebook Messenger': 'Facebook Messenger',
+    'Atiende el inbox de tu Página de Facebook 24/7 con tu catálogo en vivo.': 'Handle your Facebook Page inbox 24/7 using your live catalog.',
+    'Autoriza tu cuenta de Facebook y selecciona una Página que administres y que tenga permisos de mensajería.': 'Authorize your Facebook account and select a Page you manage with messaging permissions.',
+    'CANAL 4: TELEGRAM BUSINESS': 'CHANNEL 4: TELEGRAM BUSINESS',
+    'VINCULACIÓN POR TELÉFONO O BOT': 'PHONE OR BOT CONNECTION',
+    'Telegram Business': 'Telegram Business',
+    'Conecta tu cuenta con número y código de 5 dígitos (llega al chat oficial \'Telegram\' en tu app).': 'Connect your account using your phone number and 5-digit code (sent to the official Telegram chat).',
+    'Enviar código': 'Send code',
+    'Verificar y conectar': 'Verify & connect',
+    'Reenviar por SMS': 'Resend by SMS',
+    'Modo @BotFather (opcional)': '@BotFather mode (optional)',
+    'Guardar Bot': 'Save bot',
+    'Probar alerta': 'Test alert',
+    'CANAL 5: WEBCHAT OFICIAL IA': 'CHANNEL 5: OFFICIAL AI WEBCHAT',
+    'CANAL WEB INTERACTIVO CON CARRITO Y PAGOS': 'INTERACTIVE WEB CHANNEL WITH CART & PAYMENTS',
+    'Webchat Oficial · Enlace Directo para Clientes y Biografía': 'Official Webchat · Direct Link for Customers & Bio',
+    'Comparte tu enlace directo en tu biografía de Instagram, estados de WhatsApp o intégralo en tu sitio web.': 'Share your direct link in your Instagram bio, WhatsApp Status, or embed it on your website.',
+    'Activar Webchat': 'Enable Webchat',
+    'Abrir Webchat': 'Open Webchat',
+    'Copiar Link de Tienda': 'Copy Store Link',
+    'PESTAÑA 2: BÓVEDA DE MÉTODOS DE PAGO (5 MÉTODOS) Y TASA DEL DÍA': 'TAB 2: PAYMENT METHODS (5 OPTIONS) & DAILY EXCHANGE RATE',
+    'MÉTODOS DE COBRO Y MULTIMONEDA': 'PAYMENT METHODS & MULTI-CURRENCY',
+    'Configuración de Pagos del Negocio': 'Business Payment Settings',
+    'Activa los métodos de pago que recibes y escribe tus datos bancarios reales para tus clientes.': 'Enable the payment methods you accept and enter the real payment details your customers need.',
+    'Guardar Métodos y Tasa': 'Save Methods & Rate',
+    '1. PAGO MÓVIL': '1. MOBILE PAYMENT',
+    'Pago Móvil': 'Mobile Payment',
+    '2. TRANSFERENCIA BANCARIA': '2. BANK TRANSFER',
+    'Transferencia Bancaria': 'Bank Transfer',
+    '3. ZELLE': '3. ZELLE',
+    '4. BINANCE PAY': '4. BINANCE PAY',
+    '5. PAYPAL': '5. PAYPAL',
+    'SINCRONIZADOR DE TASA DEL DÍA': 'DAILY EXCHANGE RATE SYNC',
+    'Tasa de Cambio del Día y Contacto Humano': 'Daily Exchange Rate & Human Support',
+    'Si ingresas una tasa mayor a 0, el asistente mostrará el monto en USD y su equivalente en moneda local.': 'If you enter a rate above 0, the assistant will show the USD amount and its local-currency equivalent.',
+    'Conversión activa: Solo USD': 'Active conversion: USD only',
+    'Tasa del día (Moneda local por 1 USD)': 'Daily rate (local currency per 1 USD)',
+    'Moneda Local': 'Local Currency',
+    'VES (Bolívares · Bs.)': 'VES (Bolivars · Bs.)',
+    'COP (Pesos Colombianos)': 'COP (Colombian Pesos)',
+    'ARS (Pesos Argentinos)': 'ARS (Argentine Pesos)',
+    'MXN (Pesos Mexicanos)': 'MXN (Mexican Pesos)',
+    'CLP (Pesos Chilenos)': 'CLP (Chilean Pesos)',
+    'PEN (Soles Peruanos)': 'PEN (Peruvian Soles)',
+    'WhatsApp de Atención Humana': 'Human Support WhatsApp',
+    '🔒 Verifica siempre el ingreso en tu cuenta antes de aprobar un pedido en Aprobaciones.': '🔒 Always verify the payment in your account before approving an order.',
+    'PESTAÑA 3: ESTUDIO DE PROMPT IA Y PERSONALIDAD COMERCIAL': 'TAB 3: AI PROMPT & SALES PERSONALITY STUDIO',
+    'ENTRENAMIENTO DEL CEREBRO IA': 'AI BRAIN TRAINING',
+    'Prompt Operativo, Tono y Reglas de Negocio': 'Operating Prompt, Tone & Business Rules',
+    'Elige la personalidad de tu agente y define las reglas comerciales para todos tus canales conectados.': 'Choose your agent’s personality and define sales rules for all connected channels.',
+    'Generar según mi giro': 'Generate for my industry',
+    'Guardar Prompt IA': 'Save AI Prompt',
+    'SELECTOR DE PERSONALIDAD / TONO': 'PERSONALITY / TONE SELECTOR',
+    '🎯 Consultivo y Preciso': '🎯 Consultative & Precise',
+    'Asesora con datos exactos, clasifica por categoría y guía al cierre.': 'Advises with accurate data, classifies by category, and guides customers toward a purchase.',
+    '⚡ Cierre Rápido y Directo': '⚡ Fast & Direct Closing',
+    'Respuestas breves enfocadas en concretar el pedido y pago inmediato.': 'Brief replies focused on completing the order and immediate payment.',
+    '🤝 Cálido y Empático': '🤝 Warm & Empathetic',
+    'Trato cercano y amigable ideal para tiendas, restaurantes y servicios.': 'Friendly, approachable service for stores, restaurants, and service businesses.',
+    '📦 Corporativo / Mayorista': '📦 Corporate / Wholesale',
+    'Enfocado en compras por volumen, bultos, SKU y despacho logístico.': 'Focused on bulk orders, packages, SKUs, and logistics.',
+    'BLOQUES RÁPIDOS DE REGLAS (+1 CLIC)': 'QUICK RULE BLOCKS (ONE CLICK)',
+    '＋ Horario de Atención': '＋ Business Hours',
+    '＋ Política de Delivery y Envíos': '＋ Delivery & Shipping Policy',
+    '＋ Garantía Oficial': '＋ Official Warranty',
+    '＋ Descuento al Mayor': '＋ Wholesale Discount',
+    '＋ Regla de Verificación de Pago': '＋ Payment Verification Rule',
+    'Sincronizado con el catálogo e inventario en vivo': 'Synced with the live catalog and inventory',
+    '✓ Activo en Webchat, WhatsApp, Instagram, Facebook y Telegram': '✓ Active on Webchat, WhatsApp, Instagram, Facebook, and Telegram',
+    'PESTAÑA 4: SUSCRIPCIÓN, PLAN Y MANTENIMIENTO DE CUENTA': 'TAB 4: SUBSCRIPTION, PLAN & ACCOUNT MAINTENANCE',
+    'SUSCRIPCIÓN Y CAPACIDAD OPERATIVA': 'SUBSCRIPTION & OPERATIONAL CAPACITY',
+    'Plan Actual': 'Current Plan',
+    'Consultando límites y uso mensual de tu cuenta...': 'Checking your account limits and monthly usage...',
+    'Reinicio de Datos Operativos': 'Reset Operational Data',
+    'Limpia a cero todos los productos, clientes, oportunidades y pagos registrados en este negocio para comenzar desde cero.': 'Permanently clear this business’s products, customers, opportunities, and payments to start over.',
+    'Limpiar Cuenta a Cero': 'Reset Account Data',
+    'VISTA COPILOT EJECUTIVO (CONECTADO Y EJECUTOR DE TAREAS)': 'EXECUTIVE COPILOT VIEW (CONNECTED TASK EXECUTION)',
+    'ASISTENTE EJECUTIVO CON EJECUCIÓN REAL EN BASE DE DATOS': 'EXECUTIVE ASSISTANT WITH LIVE DATABASE ACTIONS',
+    'Copiloto Ejecutivo de tu Negocio': 'Your Business Executive Copilot',
+    'MODO EJECUTOR ACTIVO': 'EXECUTION MODE ACTIVE',
+    'Hola Jefe 👋': 'Hello, Boss 👋',
+    'Soy tu Copiloto Ejecutivo de CALYRISIA.': 'I am your CALYRISIA Executive Copilot.',
+    'Ejecutar': 'Run',
+    'BARRA DE NAVEGACIÓN INFERIOR MÓVIL / TABLET': 'MOBILE / TABLET BOTTOM NAVIGATION',
+    'Resumen': 'Overview',
+    'Catálogo': 'Catalog',
+    'Copiloto IA': 'AI Copilot',
+    'Pagos': 'Payments',
+    'Cargando solicitudes...': 'Loading requests...',
+    'Cargando alertas...': 'Loading alerts...',
+    'Organiza prendas, tallas y colores para que la IA informe con exactitud. Carga por voz, IA, foto o archivo.': 'Organize clothing, sizes, and colors so AI can provide accurate information. Import by voice, AI, photo, or file.',
+    'Organiza repuestos por código OEM/SKU, marca y compatibilidad vehicular. Carga por voz, IA o archivo.': 'Organize auto parts by OEM/SKU code, brand, and vehicle compatibility. Import by voice, AI, or file.',
+    'Organiza productos de cualquier categoría con variantes, SKU e imagen usando Carga Mágica IA o importación masiva.': 'Organize products in any category with variants, SKUs, and images using AI Smart Import or bulk import.',
+    'Organiza los artículos que tu Asistente IA cotiza y vende por chat con Carga Mágica por voz, IA o archivo.': 'Organize the items your AI Assistant quotes and sells through chat using voice, AI, or file import.',
+    'Organiza las tarifas y servicios que tu Asistente IA informa al agendar mediante voz, IA o importación.': 'Organize the fees and services your AI Assistant shares when booking using voice, AI, or file import.',
+    'Organiza artículos por pasillo y categoría, o importa lotes desde Excel y CSV.': 'Organize items by aisle and category, or import batches from Excel and CSV.',
+    'Organiza especialidades, estudios y tarifas mediante Carga Mágica IA o importación por lotes CSV.': 'Organize specialties, tests, and fees using AI Smart Import or CSV batch import.',
+    'Correo Ejecutivo': 'Business email',
+    'Clave de Acceso': 'Password',
+    'Catálogo de Equipos, Accesorios y Variantes': 'Equipment, Accessories & Variants Catalog',
+    'Administra tus productos con SKU, marca, capacidad/color y precios en tiempo real.': 'Manage products with SKUs, brands, capacity/color, and real-time pricing.',
+    'Catálogo de Ropa, Calzado y Tallas': 'Clothing, Footwear & Sizes Catalog',
+    'Catálogo de Distribución, Presentaciones y CSV': 'Wholesale Catalog, Pack Sizes & CSV',
+    'Configura productos, códigos SKU, presentaciones mayoristas o importa lotes por CSV.': 'Set up products, SKUs, wholesale packaging, or import batches through CSV.',
+    'Catálogo de Autopartes, Códigos SKU y Marcas': 'Auto Parts, SKUs & Brands Catalog',
+    'Catálogo de Ferretería, Medidas y Carga CSV': 'Hardware Catalog, Measurements & CSV Import',
+    'Administra herramientas y materiales con código SKU, marca y especificaciones.': 'Manage tools and materials with SKUs, brands, and specifications.',
+    'Catálogo Multirubro, Variantes y Precios': 'Multi-category Catalog, Variants & Pricing',
+    'Catálogo de Productos y Precios': 'Products & Pricing Catalog',
+    'Servicios, Consultas y Tarifas': 'Services, Consultations & Fees',
+    'Catálogo Comercial e Importación Masiva CSV': 'Commercial Catalog & Bulk CSV Import',
+    'Gestiona tu inventario completo o importa lotes desde CSV con precios, categorías e imágenes.': 'Manage your full inventory or import CSV batches with prices, categories, and images.',
+    'Catálogo de Bodegón, Combos y Carga CSV': 'Deli & Convenience Catalog, Bundles & CSV Import',
+    'Actualiza precios y existencias al instante o sube tu inventario completo mediante archivo CSV.': 'Update prices and stock instantly or upload your full inventory using a CSV file.',
+    'Catálogo por Departamentos e Importador CSV': 'Department Catalog & CSV Importer',
+    'Menú Digital, Platos y Carga por CSV': 'Digital Menu, Dishes & CSV Import',
+    'Administra los platos, bebidas, precios y porciones disponibles o importa tu carta vía CSV.': 'Manage dishes, drinks, prices, and available portions, or import your menu via CSV.',
+    'Aranceles, Tipos de Consulta e Importación CSV': 'Fees, Consultation Types & CSV Import',
+    'Define el listado oficial de consultas, evaluaciones y honorarios que cotiza el asistente IA.': 'Define the official list of consultations, assessments, and fees quoted by the AI assistant.',
+    'Especialidades Médicas, Estudios y Tarifario CSV': 'Medical Specialties, Tests & Fee Schedule CSV',
+    'Catálogo de Servicios Profesionales y Carga CSV': 'Professional Services Catalog & CSV Import',
+    'Configura las tarifas y categorías de servicio o impórtalas masivamente desde un archivo CSV.': 'Set service fees and categories or bulk-import them from a CSV file.',
+    'Maestro de Productos e Importación Masiva CSV': 'Master Product Catalog & Bulk CSV Import',
+    'Sincroniza miles de SKUs mediante archivos CSV o edita precios y existencias en tiempo real.': 'Sync thousands of SKUs through CSV files or edit prices and stock in real time.',
+    'Catálogo Maestro Multidepartamento (CSV)': 'Multi-department Master Catalog (CSV)',
+    'Carga por lotes CSV y administración centralizada de precios y existencias.': 'Bulk CSV imports and centralized price and stock management.',
+    'Catálogo Corporativo e Importación CSV': 'Business Catalog & CSV Import',
+    'Gestión centralizada del catálogo comercial con soporte de carga masiva CSV.': 'Centralized commercial catalog management with bulk CSV upload support.',
+    'Precio (USD)': 'Price (USD)',
+    'Tarifa (USD)': 'Fee (USD)',
+    'Honorario (USD)': 'Service Fee (USD)',
+    'Stock disponible': 'Available stock',
+    'Unidades en stock': 'Units in stock',
+    'Existencia en almacén': 'Warehouse stock',
+    'Unidades disponibles': 'Available units',
+    'Stock en tienda': 'In-store stock',
+    'Stock actual': 'Current stock',
+    'Porciones disp.': 'Available portions',
+    'Tecnología': 'Technology',
+    'Ropa y Moda': 'Clothing & Fashion',
+    'Distribución': 'Wholesale',
+    'Autopartes': 'Auto Parts',
+    'Ferretería': 'Hardware',
+    'Variedades': 'General Merchandise',
+    'Tienda': 'Store',
+    'Bodegón': 'Deli',
+    'Minimarket': 'Mini Market',
+    'Menú Principal': 'Main Menu',
+    'Consulta Profesional': 'Professional Consultation',
+    'Especialidad Médica': 'Medical Specialty',
+    'Servicio': 'Service',
+    'Supermercado': 'Supermarket',
+    'Gran Superficie': 'Hypermarket',
+    'Catálogo General': 'General Catalog'
+};
+
+const CALYRISIA_UI_ORIGINAL_TEXT = new WeakMap();
+const CALYRISIA_UI_ORIGINAL_ATTRIBUTES = new WeakMap();
+let calyrisiaUiObserver = null;
+let calyrisiaUiTranslateQueued = false;
+
+function currentDashboardLanguage() {
+    return localStorage.getItem('calyrisia_ui_language') === 'en' ? 'en' : 'es';
+}
+
+function translateDashboardValue(original, language) {
+    if (language !== 'en') return original;
+    const trimmed = String(original ?? '').trim();
+    if (!trimmed) return original;
+    const exact = CALYRISIA_UI_TRANSLATIONS[trimmed];
+    if (exact) return String(original).replace(trimmed, exact);
+    let value = String(original);
+    const fragments = [
+        ['Listado Oficial Activo', 'Active Catalog'],
+        ['Cargando catálogo oficial del negocio...', 'Loading the official business catalog...'],
+        ['Productos e Inventario', 'Products & Inventory'],
+        ['Resumen del Negocio', 'Business Overview'],
+        ['Clientes & Oportunidades', 'Customers & Opportunities'],
+        ['GESTIÓN DE INVENTARIO Y SUBIDA EXPRÉS', 'INVENTORY MANAGEMENT & QUICK UPLOAD'],
+        ['Subida Rápida de Artículos', 'Quick Item Upload'],
+        ['Registrar producto individual', 'Add a product manually'],
+        ['Buscar por nombre, categoría o SKU', 'Search by name, category, or SKU'],
+        ['Haz clic sobre cualquier precio para actualizarlo al instante', 'Click any price to update it instantly'],
+        ['Recibos de Pago', 'Payment Receipts'],
+        ['Cargando', 'Loading'],
+        ['Revisión de la IA · ', 'AI review · '],
+        [' artículos', ' items'],
+        ['Confianza: ', 'Confidence: '],
+        ['La IA identificó ', 'AI identified '],
+        [' artículos. Revisa los campos y confirma para activarlos.', ' items. Review the fields and confirm to activate them.'],
+        ['✓ Audio interpretado: ', '✓ Audio understood: '],
+        [' artículos listos para revisar.', ' items ready for review.'],
+        ['Completa el nombre y el precio del artículo ', 'Complete the name and price for item '],
+        [' antes de activarlo.', ' before activating it.'],
+    ];
+    for (const [source, target] of fragments) value = value.replaceAll(source, target);
+    return value;
+}
+
+function applyDashboardLanguage() {
+    const language = currentDashboardLanguage();
+    document.documentElement.lang = language;
+    ['calyrisia-language-picker', 'calyrisia-language-picker-login'].forEach(id => {
+        const picker = document.getElementById(id);
+        if (picker && picker.value !== language) picker.value = language;
+    });
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            const parent = node.parentElement;
+            if (!parent || parent.closest('script,style,textarea,pre,code,[data-no-translate="true"]')) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+        }
+    });
+    let node;
+    while ((node = walker.nextNode())) {
+        if (!CALYRISIA_UI_ORIGINAL_TEXT.has(node)) CALYRISIA_UI_ORIGINAL_TEXT.set(node, node.nodeValue || '');
+        const translated = translateDashboardValue(CALYRISIA_UI_ORIGINAL_TEXT.get(node), language);
+        if (node.nodeValue !== translated) node.nodeValue = translated;
+    }
+
+    const attrNames = ['placeholder', 'title', 'aria-label'];
+    document.querySelectorAll('input,button,select,textarea,[title],[aria-label]').forEach(element => {
+        let originals = CALYRISIA_UI_ORIGINAL_ATTRIBUTES.get(element);
+        if (!originals) { originals = {}; CALYRISIA_UI_ORIGINAL_ATTRIBUTES.set(element, originals); }
+        attrNames.forEach(name => {
+            if (!element.hasAttribute(name)) return;
+            if (!(name in originals)) originals[name] = element.getAttribute(name) || '';
+            const translated = translateDashboardValue(originals[name], language);
+            if (element.getAttribute(name) !== translated) element.setAttribute(name, translated);
+        });
+    });
+    document.querySelectorAll('input[data-voice-review-sentinel="true"]').forEach(element => {
+        const value = String(element.value || '').trim().toLowerCase();
+        if (value === 'por revisar' || value === 'needs review') {
+            element.value = language === 'en' ? 'Needs review' : 'Por revisar';
+        }
+    });
+}
+
+function queueDashboardLanguageTranslation() {
+    if (calyrisiaUiTranslateQueued) return;
+    calyrisiaUiTranslateQueued = true;
+    window.requestAnimationFrame(() => {
+        calyrisiaUiTranslateQueued = false;
+        applyDashboardLanguage();
+    });
+}
+
+function setDashboardLanguage(language) {
+    const normalized = language === 'en' ? 'en' : 'es';
+    localStorage.setItem('calyrisia_ui_language', normalized);
+    applyDashboardLanguage();
+    showToast(normalized === 'en' ? 'Language changed to English.' : 'Idioma cambiado a español.');
+}
+
 function normalizeBusinessText(value) {
     return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
@@ -1670,7 +2234,7 @@ function renderPaymentRow(payment, isPending) {
     const customerPaymentDetails = detailText ? `<p style="white-space:pre-wrap;overflow-wrap:anywhere;padding:10px 12px;margin-top:8px;border-radius:9px;background:rgba(15,23,42,.6);border:1px solid rgba(148,163,184,.16);"><strong>Referencia / datos enviados por el cliente:</strong> ${escapeHtml(detailText)}</p>` : '';
     return `<div class="payment-row" style="${payment.duplicate_reference_warning ? 'border-color:rgba(244,63,94,.45);' : ''}">
         <div class="payment-row-main">
-            <h4>${amount} · ${escapeHtml(payment.customer_name || 'Cliente Webchat')}</h4>
+            <h4>${amount} · <span data-no-translate="true">${escapeHtml(payment.customer_name || 'Cliente Webchat')}</span></h4>
             <p>${method} · Solicitud ${escapeHtml(payment.id).slice(0, 8)}…</p>
             <p>Solicitado: ${escapeHtml(paymentDate(payment.created_at))}</p>
             ${orderNote}${dupAlert}${customerPaymentDetails}${actions}
@@ -2200,7 +2764,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Control de Prendas, Reposición y Pedidos',
             opSubtitle: 'Monitorea artículos con pocas unidades, ajusta stock y gestiona pedidos confirmados.',
             catTitle: 'Catálogo de Ropa, Calzado y Tallas',
-            catSubtitle: 'Registra prendas indicando tallas y colores disponibles para que la IA informe con exactitud.',
+            catSubtitle: 'Organiza prendas, tallas y colores para que la IA informe con exactitud. Carga por voz, IA, foto o archivo.',
             itemNoun: 'prenda o artículo', itemNounPlural: 'prendas y artículos', priceLabel: 'Precio (USD)', stockLabel: 'Unidades en stock',
             showStock: true, allowCsv: true, defaultCategory: 'Ropa y Moda'
         },
@@ -2220,7 +2784,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Control de Repuestos, Stock Crítico y Despacho',
             opSubtitle: 'Monitorea repuestos de alta rotación, existencias mínimas y pedidos del chat.',
             catTitle: 'Catálogo de Autopartes, Códigos SKU y Marcas',
-            catSubtitle: 'Registra repuestos con código OEM/SKU, marca y modelos de vehículos compatibles.',
+            catSubtitle: 'Organiza repuestos por código OEM/SKU, marca y compatibilidad vehicular. Carga por voz, IA o archivo.',
             itemNoun: 'repuesto', itemNounPlural: 'repuestos', priceLabel: 'Precio (USD)', stockLabel: 'Unidades disponibles',
             showStock: true, allowCsv: true, defaultCategory: 'Autopartes'
         },
@@ -2240,7 +2804,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Control de Inventario Multirubro y Pedidos',
             opSubtitle: 'Supervisa existencias reales, artículos más vendidos y órdenes generadas por IA.',
             catTitle: 'Catálogo Multirubro, Variantes y Precios',
-            catSubtitle: 'Registra productos de cualquier categoría con variantes, SKU e imagen.',
+            catSubtitle: 'Organiza productos de cualquier categoría con variantes, SKU e imagen usando Carga Mágica IA o importación masiva.',
             itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
             showStock: true, allowCsv: true, defaultCategory: 'Variedades'
         },
@@ -2250,7 +2814,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Control Operativo de Inventario y Pedidos',
             opSubtitle: 'Supervisa existencias reales, ajusta unidades vendidas en mostrador y monitorea la reposición.',
             catTitle: 'Catálogo de Productos y Precios',
-            catSubtitle: 'Administra manualmente los artículos que tu Asistente IA cotiza y vende por chat.',
+            catSubtitle: 'Organiza los artículos que tu Asistente IA cotiza y vende por chat con Carga Mágica por voz, IA o archivo.',
             itemNoun: 'producto', itemNounPlural: 'productos', priceLabel: 'Precio (USD)', stockLabel: 'Stock disponible',
             showStock: true, allowCsv: false, defaultCategory: 'General'
         },
@@ -2260,7 +2824,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Central de Agenda y Aprobación de Citas',
             opSubtitle: 'El Chat IA agenda automáticamente a tus clientes. Aprueba, rechaza o marca como atendida cada cita.',
             catTitle: 'Servicios, Consultas y Tarifas',
-            catSubtitle: 'Configura manualmente las tarifas y servicios que tu Asistente IA informa al agendar.',
+            catSubtitle: 'Organiza las tarifas y servicios que tu Asistente IA informa al agendar mediante voz, IA o importación.',
             itemNoun: 'servicio o consulta', itemNounPlural: 'servicios y tarifas', priceLabel: 'Tarifa (USD)', stockLabel: '',
             showStock: false, allowCsv: false, defaultCategory: 'Consulta / Servicio'
         },
@@ -2290,7 +2854,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Gestión de Anaqueles, Stock Crítico y Pedidos',
             opSubtitle: 'Monitorea departamentos con stock bajo, repón inventario en un clic y supervisa órdenes activas.',
             catTitle: 'Catálogo por Departamentos e Importador CSV',
-            catSubtitle: 'Registra artículos por pasillo/categoría o carga lotes masivos en formato CSV.',
+            catSubtitle: 'Organiza artículos por pasillo y categoría, o importa lotes desde Excel y CSV.',
             itemNoun: 'artículo', itemNounPlural: 'artículos', priceLabel: 'Precio (USD)', stockLabel: 'Stock actual',
             showStock: true, allowCsv: true, defaultCategory: 'Minimarket'
         },
@@ -2320,7 +2884,7 @@ function getBusinessProfileMeta(business) {
             opTitle: 'Central Clínica de Citas, Especialidades y Pacientes',
             opSubtitle: 'Controla el flujo de citas médicas capturadas por IA, detecta horas pico y gestiona el directorio de pacientes.',
             catTitle: 'Especialidades Médicas, Estudios y Tarifario CSV',
-            catSubtitle: 'Administra individualmente o por lote CSV las especialidades, exámenes y tarifas del centro de salud.',
+            catSubtitle: 'Organiza especialidades, estudios y tarifas mediante Carga Mágica IA o importación por lotes CSV.',
             itemNoun: 'especialidad o estudio', itemNounPlural: 'especialidades y estudios', priceLabel: 'Tarifa (USD)', stockLabel: '',
             showStock: false, allowCsv: true, defaultCategory: 'Especialidad Médica'
         },
@@ -2587,7 +3151,7 @@ async function applyBusinessOverview(business) {
                       ${categories.length ? categories.slice(0, 6).map(cat => `
                         <div class="list-item" style="padding:12px 14px;margin-bottom:8px;">
                           <div class="list-item-content">
-                            <h4>${escapeHtml(cat.name)}</h4>
+                            <h4 data-no-translate="true">${escapeHtml(cat.name)}</h4>
                             <p>${cat.count} plato(s) activo(s) · Precio promedio: <strong>$${cat.avgPrice.toFixed(2)}</strong></p>
                           </div>
                           <span class="badge success">${Math.round(cat.stock)} porciones</span>
@@ -2711,7 +3275,7 @@ async function applyBusinessOverview(business) {
                       const pct = Math.max(8, Math.round((cat.count / Math.max(1, products.length)) * 100));
                       return `<div style="margin-bottom:12px;">
                         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
-                          <strong style="color:#f8fafc;">${escapeHtml(cat.name)}</strong>
+                          <strong data-no-translate="true" style="color:#f8fafc;">${escapeHtml(cat.name)}</strong>
                           <span class="muted">${cat.count} prod. · ${Math.round(cat.stock)} uds · $${cat.value.toFixed(2)}</span>
                         </div>
                         <div class="usage-track" style="margin:0;"><div class="usage-fill" style="width:${pct}%;"></div></div>
@@ -2753,7 +3317,7 @@ async function applyBusinessOverview(business) {
                       const valPct = inventoryValue > 0 ? Math.max(6, Math.round((cat.value / inventoryValue) * 100)) : Math.round((cat.count / Math.max(1, products.length)) * 100);
                       return `<div style="margin-bottom:13px;">
                         <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;">
-                          <strong style="color:#f8fafc;">${escapeHtml(cat.name)} <span class="muted" style="font-weight:400;">(${cat.count} SKUs · ${Math.round(cat.stock)} uds)</span></strong>
+                          <strong data-no-translate="true" style="color:#f8fafc;">${escapeHtml(cat.name)} <span class="muted" style="font-weight:400;">(${cat.count} SKUs · ${Math.round(cat.stock)} uds)</span></strong>
                           <span style="color:#34d399;font-weight:600;">$${cat.value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${valPct}%)</span>
                         </div>
                         <div class="usage-track" style="margin:0;"><div class="usage-fill" style="width:${valPct}%;"></div></div>
@@ -3135,11 +3699,6 @@ async function renderCatalogWorkspace(business) {
     if (!root || !business) return;
     const meta = getBusinessProfileMeta(business);
 
-    const stockInputHtml = meta.showStock ? `
-      <label>${escapeHtml(meta.stockLabel)} *
-        <input id="wsItemStock" type="number" step="1" min="0" value="15" required>
-      </label>` : '';
-
     root.innerHTML = `
       <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
         <div>
@@ -3149,35 +3708,41 @@ async function renderCatalogWorkspace(business) {
         </div>
       </div>
 
-      <!-- CENTRO DE CARGA RÁPIDA DE ARTÍCULOS (3 MODOS SIN PERDER TIEMPO) -->
+      <!-- CENTRO DE CARGA ASISTIDA: VOZ IA, TEXTO, IMAGEN Y ARCHIVOS -->
       <div class="panel glass-panel" style="padding:22px;margin-bottom:20px;border-color:rgba(0,242,254,.3);background:linear-gradient(145deg,rgba(12,20,38,.88),rgba(8,13,26,.92));">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
           <div>
-            <h3 style="margin:0 0 4px;font-size:1.08rem;color:#fff;"><i class="ph ph-lightning" style="color:#00f2fe;"></i> Subida Rápida de Artículos (Ahorra Tiempo)</h3>
-            <p class="muted" style="font-size:12px;margin:0;">Sube decenas de ${escapeHtml(meta.itemNounPlural)} de una sola vez pegando tu lista de precios, usando la tabla rápida o subiendo un archivo Excel/CSV.</p>
+            <h3 style="margin:0 0 4px;font-size:1.08rem;color:#fff;"><i class="ph ph-sparkles" style="color:#00f2fe;"></i> Carga Mágica con IA</h3>
+            <p class="muted" style="font-size:12px;margin:0;">Habla, escribe, fotografía o importa tu lista. La IA organiza los artículos y tú revisas los datos antes de activarlos.</p>
           </div>
           <div class="bulk-tab-bar" style="margin:0;border:none;padding:0;display:flex;gap:6px;flex-wrap:wrap;">
-            <button type="button" class="bulk-tab-btn active" onclick="switchBulkUploadTab('paste', this)"><i class="ph ph-sparkle"></i> 1. Carga Mágica IA / Voz</button>
-            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('photo', this)"><i class="ph ph-camera"></i> 2. Foto de Menú / Lista</button>
-            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('csv', this)"><i class="ph ph-file-xls"></i> 3. Archivo Excel (.xlsx) / CSV</button>
-            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('grid', this)"><i class="ph ph-table"></i> 4. Tabla Rápida</button>
+            <button type="button" class="bulk-tab-btn active" onclick="switchBulkUploadTab('paste', this)"><i class="ph ph-sparkles"></i> IA / Voz</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('photo', this)"><i class="ph ph-camera"></i> Foto</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('csv', this)"><i class="ph ph-file-xls"></i> Excel / CSV</button>
+            <button type="button" class="bulk-tab-btn" onclick="switchBulkUploadTab('grid', this)"><i class="ph ph-table"></i> Tabla rápida</button>
           </div>
         </div>
 
         <!-- MODO 1: CARGA MÁGICA IA / VOZ / PLANTILLA EN 1 CLIC -->
         <div id="bulk-tab-paste">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-            <span class="muted" style="font-size:11.5px;">Pega tu lista de precios de WhatsApp, notas o escribe como hablas (ej. <code>20 franelas negras a $12, 15 pantalones jean en $28</code>):</span>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <button type="button" class="btn-secondary" id="voice-dictation-btn" onclick="toggleCatalogVoiceDictation()" style="padding:6px 12px;font-size:11px;border-color:rgba(192,132,252,.4);color:#e9d5ff;"><i class="ph ph-microphone"></i> Dictar por Voz</button>
-              <button type="button" class="btn-secondary" onclick="seedCatalogTemplateOneClick()" style="padding:6px 12px;font-size:11px;border-color:rgba(52,211,153,.4);color:#6ee7b7;"><i class="ph ph-magic-wand"></i> Pre-cargar Plantilla de mi Rubro (1 Clic)</button>
+          <div class="catalog-voice-box">
+            <div style="min-width:220px;flex:1;">
+              <strong style="display:block;color:#f3e8ff;font-size:13px;"><i class="ph ph-microphone-stage"></i> Dicta tu catálogo en español o inglés</strong>
+              <p class="muted" style="font-size:11.5px;margin:5px 0 0;">Di el nombre, precio y cantidad de cada artículo como si se lo explicaras a una persona. Gemini escucha el audio, transcribe y propone categorías.</p>
+              <div id="catalog-voice-status" class="catalog-voice-status" role="status" aria-live="polite">El audio se envía a Gemini mediante tu API key para transcripción y clasificación. Revisa los datos antes de activarlos.</div>
             </div>
+            <button type="button" class="btn-action" id="voice-record-btn" onclick="toggleCatalogVoiceRecording()" style="padding:11px 17px;background:linear-gradient(120deg,#8b5cf6,#6d28d9);white-space:nowrap;"><i class="ph ph-microphone"></i> Empezar a grabar</button>
+            <button type="button" class="btn-secondary" onclick="seedCatalogTemplateOneClick()" style="padding:9px 12px;font-size:11px;"><i class="ph ph-magic-wand"></i> Plantilla del rubro</button>
+          </div>
+          <div id="catalog-voice-review" class="voice-review-panel hidden"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 7px;">
+            <span class="muted" style="font-size:11.5px;">O pega o escribe una lista de precios (también puedes dictarla con el teclado del móvil):</span>
           </div>
           <textarea id="quick-bulk-textarea" rows="4" oninput="previewQuickBulkPaste()" placeholder="Ejemplo 1: Cargador 20W $12 stock 30&#10;Ejemplo 2: Tengo 25 camisas de lino en 22 dolares y 15 pantalones en 28$&#10;Ejemplo 3: Nombre | Precio USD | Stock | Categoría" style="width:100%;border-radius:12px;padding:12px 14px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,242,254,0.25);color:#f8fafc;font-size:12.5px;line-height:1.55;resize:vertical;font-family:monospace;"></textarea>
           <div id="quick-bulk-preview-box" class="hidden" style="margin-top:10px;padding:10px 14px;border-radius:11px;background:rgba(0,242,254,.06);border:1px solid rgba(0,242,254,.2);font-size:12px;color:#cbd5e1;"></div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:12px;">
-            <span class="muted" style="font-size:11px;">✨ La IA detecta nombres, precios, stock, SKU y tallas automáticamente. Si ya existe, actualiza su precio y stock.</span>
-            <button type="button" class="btn-action" id="quick-bulk-submit-btn" onclick="submitQuickBulkPaste()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-rocket-launch"></i> Extraer con IA y Subir Ahora</button>
+            <span class="muted" style="font-size:11px;">La IA puede organizar nombres, precios, existencias y categorías. Revisa antes de guardar.</span>
+            <button type="button" class="btn-action" id="quick-bulk-submit-btn" onclick="submitQuickBulkPaste()" style="padding:10px 18px;font-size:12px;"><i class="ph ph-rocket-launch"></i> Analizar texto y agregar</button>
           </div>
         </div>
 
@@ -3216,7 +3781,7 @@ async function renderCatalogWorkspace(business) {
         </div>
       </div>
 
-      <div class="vertical-layout">
+      <div class="vertical-layout" style="grid-template-columns:minmax(0,1fr);">
         <div class="panel glass-panel" style="padding:22px;">
           <div class="vertical-intro">
             <div>
@@ -3229,41 +3794,6 @@ async function renderCatalogWorkspace(business) {
           <div id="workspace-catalog-list" class="booking-list" style="max-height:520px;overflow-y:auto;"><p class="muted">Cargando registros...</p></div>
         </div>
 
-        <div class="panel glass-panel" style="padding:22px;">
-          <h3 style="margin-bottom:6px;"><i class="ph ph-plus-circle"></i> Registrar ${escapeHtml(meta.itemNoun)} individual</h3>
-          <p class="muted" style="font-size:12px;margin-bottom:16px;">Con detalles opcionales de SKU, marca, variantes e imagen.</p>
-          <form class="vertical-form" onsubmit="createManualCatalogItem(event,'ws')">
-            <label>Nombre del ${escapeHtml(meta.itemNoun)} *
-              <input id="wsItemName" required maxlength="200" placeholder="Escribe el nombre claro...">
-            </label>
-            <div style="display:grid;grid-template-columns:${meta.showStock ? '1fr 1fr' : '1fr'};gap:10px;">
-              <label>${escapeHtml(meta.priceLabel)} *
-                <input id="wsItemPrice" type="number" step="0.01" min="0" required placeholder="0.00">
-              </label>
-              ${stockInputHtml}
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <label>Categoría / Rubro
-                <input id="wsItemCategory" maxlength="100" placeholder="Ej. ${escapeHtml(meta.defaultCategory)}">
-              </label>
-              <label>Código SKU / Parte (opcional)
-                <input id="wsItemSku" maxlength="100" placeholder="Ej. SKU-104">
-              </label>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <label>Marca (opcional)
-                <input id="wsItemBrand" maxlength="100" placeholder="Ej. Logitech, Samsung">
-              </label>
-              <label>Variantes / Tallas
-                <input id="wsItemVariants" maxlength="300" placeholder="Ej. Negro, Blanco">
-              </label>
-            </div>
-            <label>URL de imagen de referencia (opcional)
-              <input id="wsItemImage" placeholder="https://...">
-            </label>
-            <button type="submit" class="btn-action" style="width:100%;margin-top:6px;"><i class="ph ph-floppy-disk"></i> Guardar en el catálogo oficial</button>
-          </form>
-        </div>
       </div>`;
 
     initQuickGridRows();
@@ -3389,14 +3919,14 @@ function renderCatalogItemRow(p, showStockControls = true) {
     const kind = businessKind(currentBusiness || {});
     const appointmentMode = kind === 'appointments';
     const restaurantMode = kind === 'restaurant';
-    const skuBadge = p.sku ? ` · <span style="color:#7cecf5;">SKU: ${escapeHtml(p.sku)}</span>` : '';
-    const brandBadge = p.brand ? ` · ${escapeHtml(p.brand)}` : '';
+    const skuBadge = p.sku ? ` · <span data-no-translate="true" style="color:#7cecf5;">SKU: ${escapeHtml(p.sku)}</span>` : '';
+    const brandBadge = p.brand ? ` · <span data-no-translate="true">${escapeHtml(p.brand)}</span>` : '';
     const varLabels = Array.isArray(p.variants) && p.variants.length
-        ? ' · Variantes: ' + p.variants.map(v => escapeHtml(typeof v === 'object' ? (v.label || v.name || '') : String(v))).filter(Boolean).join(', ')
+        ? ' · Variantes: <span data-no-translate="true">' + p.variants.map(v => escapeHtml(typeof v === 'object' ? (v.label || v.name || '') : String(v))).filter(Boolean).join(', ') + '</span>'
         : '';
     const metaLabel = appointmentMode
-        ? `${escapeHtml(p.category || 'Consulta / Servicio')}${skuBadge}`
-        : `${escapeHtml(p.category || 'General')}${brandBadge}${skuBadge} · ${restaurantMode ? 'Porciones' : 'Stock'}: <strong style="color:${stockColor};font-size:.82rem;">${stockVal}</strong>${varLabels}`;
+        ? `<span data-no-translate="true">${escapeHtml(p.category || 'Consulta / Servicio')}</span>${skuBadge}`
+        : `<span data-no-translate="true">${escapeHtml(p.category || 'General')}</span>${brandBadge}${skuBadge} · ${restaurantMode ? 'Porciones' : 'Stock'}: <strong style="color:${stockColor};font-size:.82rem;">${stockVal}</strong>${varLabels}`;
     const img = Array.isArray(p.images) && p.images[0]
         ? `<img class="catalog-preview-img" src="${escapeHtml(p.images[0])}" alt="" loading="lazy" onerror="this.style.display='none'">`
         : `<span class="catalog-preview-img" style="display:grid;place-items:center;color:#38bdf8;background:rgba(56,189,248,.08);"><i class="ph ${appointmentMode ? 'ph-stethoscope' : restaurantMode ? 'ph-bowl-food' : 'ph-package'}"></i></span>`;
@@ -3407,7 +3937,7 @@ function renderCatalogItemRow(p, showStockControls = true) {
     return `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;margin-bottom:8px;flex-wrap:wrap;">
             <div style="display:flex;gap:11px;align-items:center;min-width:0;flex:1;">${img}<div style="min-width:0;">
-                <div style="font-weight:600;color:#f8fafc;font-size:.92rem;overflow-wrap:anywhere;">${escapeHtml(p.name)}</div>
+                <div data-no-translate="true" style="font-weight:600;color:#f8fafc;font-size:.92rem;overflow-wrap:anywhere;">${escapeHtml(p.name)}</div>
                 <span style="font-size:.75rem;color:#94a3b8;">${metaLabel}</span>
             </div></div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -3908,43 +4438,197 @@ function switchBulkUploadTab(tabId, btnEl) {
     });
 }
 
-let _catalogSpeechRec = null;
-function toggleCatalogVoiceDictation() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const btn = document.getElementById('voice-dictation-btn');
-    const ta = document.getElementById('quick-bulk-textarea');
-    if (!SpeechRecognition) {
-        showToast('Tu navegador no soporta dictado directo; puedes pegar texto o usar el micrófono de tu teclado.', true);
+let _catalogMediaRecorder = null;
+let _catalogMediaStream = null;
+let _catalogAudioChunks = [];
+let _catalogRecordingTimeout = null;
+let _catalogVoiceProcessing = false;
+
+async function toggleCatalogVoiceRecording() {
+    if (_catalogVoiceProcessing) return;
+    const button = document.getElementById('voice-record-btn');
+    const status = document.getElementById('catalog-voice-status');
+    if (_catalogMediaRecorder && _catalogMediaRecorder.state === 'recording') {
+        _catalogMediaRecorder.stop();
         return;
     }
-    if (_catalogSpeechRec) {
-        _catalogSpeechRec.stop();
-        _catalogSpeechRec = null;
-        if (btn) btn.innerHTML = '<i class="ph ph-microphone"></i> Dictar por Voz';
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        showToast('Este navegador no permite grabar audio. Actualízalo o usa el campo de texto.', true);
         return;
     }
-    const rec = new SpeechRecognition();
-    rec.lang = 'es-VE';
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.onresult = (evt) => {
-        let transcript = '';
-        for (let i = evt.resultIndex; i < evt.results.length; i++) {
-            if (evt.results[i].isFinal) transcript += evt.results[i][0].transcript + '\n';
+    try {
+        _catalogMediaStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        const mimeCandidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+        const mimeType = mimeCandidates.find(type => MediaRecorder.isTypeSupported(type)) || '';
+        _catalogAudioChunks = [];
+        _catalogMediaRecorder = mimeType ? new MediaRecorder(_catalogMediaStream, { mimeType }) : new MediaRecorder(_catalogMediaStream);
+        _catalogMediaRecorder.ondataavailable = event => { if (event.data?.size) _catalogAudioChunks.push(event.data); };
+        _catalogMediaRecorder.onerror = () => {
+            if (status) status.textContent = 'No se pudo grabar el audio. Comprueba el micrófono e inténtalo otra vez.';
+            cleanupCatalogRecorder();
+            showToast('Ocurrió un error al grabar el audio.', true);
+        };
+        _catalogMediaRecorder.onstop = async () => {
+            const blob = new Blob(_catalogAudioChunks, { type: _catalogAudioChunks[0]?.type || _catalogMediaRecorder?.mimeType || 'audio/webm' });
+            cleanupCatalogRecorder();
+            if (blob.size < 1200) {
+                if (status) status.textContent = 'La grabación quedó demasiado corta. Intenta hablar un poco más cerca del micrófono.';
+                showToast('La grabación está vacía o es demasiado corta.', true);
+                return;
+            }
+            await processCatalogVoiceRecording(blob);
+        };
+        _catalogMediaRecorder.start(500);
+        if (button) {
+            button.classList.add('catalog-voice-recording');
+            button.innerHTML = '<i class="ph ph-stop-circle"></i> Detener grabación';
         }
-        if (ta && transcript.trim()) {
-            ta.value = (ta.value ? ta.value.trim() + '\n' : '') + transcript.trim();
-            previewQuickBulkPaste();
-        }
-    };
-    rec.onend = () => {
-        _catalogSpeechRec = null;
-        if (btn) btn.innerHTML = '<i class="ph ph-microphone"></i> Dictar por Voz';
-    };
-    _catalogSpeechRec = rec;
-    rec.start();
-    if (btn) btn.innerHTML = '<i class="ph ph-stop-circle"></i> Escuchando... (Pulsa para detener)';
-    showToast('🎙️ Dicta tus productos y precios (ej. "20 franelas negras a 12 dólares")...');
+        if (status) status.textContent = '● Grabando… habla con claridad. Máximo 90 segundos.';
+        showToast('🎙️ Te estoy escuchando. Di cada nombre y precio con claridad.');
+        _catalogRecordingTimeout = window.setTimeout(() => {
+            if (_catalogMediaRecorder?.state === 'recording') _catalogMediaRecorder.stop();
+        }, 90000);
+    } catch (error) {
+        cleanupCatalogRecorder();
+        const message = error?.name === 'NotAllowedError' ? 'Permite el acceso al micrófono en tu navegador para grabar.' : 'No se pudo abrir el micrófono. Comprueba que esté conectado y vuelve a intentarlo.';
+        if (status) status.textContent = message;
+        showToast(message, true);
+    }
+}
+
+function cleanupCatalogRecorder() {
+    if (_catalogRecordingTimeout) window.clearTimeout(_catalogRecordingTimeout);
+    _catalogRecordingTimeout = null;
+    if (_catalogMediaStream) _catalogMediaStream.getTracks().forEach(track => track.stop());
+    _catalogMediaStream = null;
+    _catalogMediaRecorder = null;
+    const button = document.getElementById('voice-record-btn');
+    if (button) {
+        button.classList.remove('catalog-voice-recording');
+        button.innerHTML = '<i class="ph ph-microphone"></i> Empezar a grabar';
+    }
+}
+
+function voiceMimeExtension(mimeType) {
+    const base = String(mimeType || '').split(';')[0].toLowerCase();
+    return ({ 'audio/mp4': 'm4a', 'audio/m4a': 'm4a', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/wav': 'wav', 'audio/aac': 'aac', 'audio/webm': 'webm' })[base] || 'webm';
+}
+
+async function processCatalogVoiceRecording(blob) {
+    if (_catalogVoiceProcessing) return;
+    _catalogVoiceProcessing = true;
+    const status = document.getElementById('catalog-voice-status');
+    const review = document.getElementById('catalog-voice-review');
+    const recordButton = document.getElementById('voice-record-btn');
+    if (recordButton) recordButton.disabled = true;
+    const meta = getBusinessProfileMeta(currentBusiness);
+    if (status) status.textContent = 'Procesando la grabación con IA…';
+    if (review) { review.classList.remove('hidden'); review.innerHTML = '<p class="muted"><i class="ph ph-spinner ph-spin"></i> Analizando audio con IA…</p>'; }
+    try {
+        const form = new FormData();
+        form.append('file', blob, `calyrisia_catalog_voice.${voiceMimeExtension(blob.type)}`);
+        form.append('default_category', translateDashboardValue(meta.defaultCategory || 'General', currentDashboardLanguage()));
+        form.append('preferred_language', currentDashboardLanguage());
+        const result = await api('/api/v1/dashboard/catalog/voice-extract', { method: 'POST', body: form });
+        renderCatalogVoiceReview(result);
+        if (status) status.textContent = `La IA identificó ${result.items?.length || 0} artículos. Revisa los campos y confirma para activarlos.`;
+        showToast(`✓ Audio interpretado: ${result.items?.length || 0} artículos listos para revisar.`);
+    } catch (error) {
+        if (review) { review.classList.add('hidden'); review.innerHTML = ''; }
+        const errorMessage = translateDashboardValue(error.message || 'No se pudo procesar el audio.', currentDashboardLanguage());
+        if (status) status.textContent = errorMessage;
+        showToast(errorMessage, true);
+    } finally {
+        _catalogVoiceProcessing = false;
+        if (recordButton) recordButton.disabled = false;
+    }
+}
+
+function renderCatalogVoiceReview(result) {
+    const panel = document.getElementById('catalog-voice-review');
+    if (!panel) return;
+    const items = Array.isArray(result.items) ? result.items : [];
+    const transcript = String(result.transcript || 'No se recibió transcripción.');
+    const reviewCategory = currentDashboardLanguage() === 'en' ? 'Needs review' : 'Por revisar';
+    panel.classList.remove('hidden');
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        <div><strong style="color:#eaf5ff;">Revisión de la IA · ${items.length} artículos</strong><p class="muted" style="font-size:11px;margin:4px 0 10px;">Confirma nombres, precios y categorías. Los precios no detectados quedan vacíos y deben completarse.</p></div>
+        <button type="button" class="btn-secondary" onclick="discardCatalogVoiceReview()" style="padding:7px 10px;font-size:11px;">Descartar</button>
+      </div>
+      <details style="margin:4px 0 12px;"><summary style="cursor:pointer;color:#a5b4fc;font-size:11px;">Ver transcripción original</summary><div class="voice-review-transcript" style="margin-top:8px;">${escapeHtml(transcript)}</div></details>
+      <div class="voice-preview-head" style="display:grid;grid-template-columns:minmax(150px,2fr) minmax(90px,.8fr) minmax(90px,.8fr) minmax(130px,1.2fr);gap:9px;color:#94a3b8;font-size:10px;padding:0 2px;"><span>Nombre</span><span>Precio *</span><span>Stock</span><span>Categoría</span></div>
+      ${items.map((item, index) => `
+        <div class="voice-preview-row" data-index="${index}">
+          <input class="voice-field-name" type="text" maxlength="200" value="${escapeHtml(item.name || '')}" aria-label="Nombre del artículo" placeholder="Nombre *">
+          <input class="voice-field-price" type="number" min="0" step="0.01" value="${item.price == null ? '' : Number(item.price)}" aria-label="Precio" placeholder="Precio *" required>
+          <input class="voice-field-stock" type="number" min="0" step="1" value="${item.stock == null ? '' : Number(item.stock)}" aria-label="Stock" placeholder="Stock (opcional)">
+          <input class="voice-field-category" type="text" maxlength="100" data-voice-review-sentinel="${(!item.category || ['por revisar','needs review'].includes(String(item.category).trim().toLowerCase())) ? 'true' : 'false'}" value="${escapeHtml((!item.category || ['por revisar','needs review'].includes(String(item.category).trim().toLowerCase())) ? reviewCategory : item.category)}" aria-label="Categoría" placeholder="Categoría">
+          <div style="grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:-5px;"><span class="badge ${item.confidence === 'high' ? 'success' : item.confidence === 'low' ? 'warning' : 'ai'}">Confianza: ${escapeHtml(item.confidence || 'medium')}</span></div>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;">
+        <span class="muted" style="font-size:10px;">Stock vacío = 0 unidades. Revisa los precios antes de guardar.</span>
+        <button type="button" class="btn-action" onclick="saveCatalogVoicePreview()"><i class="ph ph-check-circle"></i> Confirmar y activar en el catálogo</button>
+      </div>`;
+}
+
+function discardCatalogVoiceReview() {
+    const panel = document.getElementById('catalog-voice-review');
+    if (panel) { panel.classList.add('hidden'); panel.innerHTML = ''; }
+    const status = document.getElementById('catalog-voice-status');
+    if (status) status.textContent = 'Grabación descartada. Puedes volver a grabar cuando quieras.';
+}
+
+async function saveCatalogVoicePreview() {
+    const panel = document.getElementById('catalog-voice-review');
+    const rows = Array.from(panel?.querySelectorAll('.voice-preview-row') || []);
+    const items = rows.map(row => ({
+        name: row.querySelector('.voice-field-name')?.value.trim() || '',
+        price: row.querySelector('.voice-field-price')?.value,
+        stock: row.querySelector('.voice-field-stock')?.value,
+        category: row.querySelector('.voice-field-category')?.value.trim() || 'Por revisar'
+    }));
+    if (!items.length) { showToast('No hay artículos para guardar.', true); return; }
+    const missing = items.findIndex(item => !item.name || item.price === '' || item.price == null || !Number.isFinite(Number(item.price)) || Number(item.price) < 0);
+    if (missing >= 0) {
+        showToast(`Completa el nombre y el precio válido del artículo ${missing + 1} antes de activarlo.`, true);
+        rows[missing]?.querySelector(!items[missing].name ? '.voice-field-name' : '.voice-field-price')?.focus();
+        return;
+    }
+    const uncategorized = items.findIndex(item => !item.category || ['por revisar', 'needs review'].includes(item.category.trim().toLowerCase()));
+    if (uncategorized >= 0) {
+        showToast(`Completa una categoría válida para el artículo ${uncategorized + 1}.`, true);
+        rows[uncategorized]?.querySelector('.voice-field-category')?.focus();
+        return;
+    }
+    const invalidStock = items.findIndex(item => item.stock !== '' && item.stock != null && (!Number.isFinite(Number(item.stock)) || Number(item.stock) < 0));
+    if (invalidStock >= 0) {
+        showToast(`Indica un stock válido (0 o más) para el artículo ${invalidStock + 1}.`, true);
+        rows[invalidStock]?.querySelector('.voice-field-stock')?.focus();
+        return;
+    }
+    const meta = getBusinessProfileMeta(currentBusiness);
+    const payloadItems = items.map(item => ({
+        name: item.name,
+        price: Number(item.price),
+        stock: item.stock === '' || item.stock == null ? 0 : Math.max(0, Number(item.stock) || 0),
+        category: item.category || meta.defaultCategory,
+    }));
+    const button = panel.querySelector('button.btn-action');
+    if (button) { button.disabled = true; button.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Guardando artículos…'; }
+    try {
+        const result = await api('/api/v1/dashboard/catalog/quick-bulk', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: payloadItems, default_category: meta.defaultCategory })
+        });
+        showToast(result.message || 'Artículos activados en el catálogo oficial.');
+        discardCatalogVoiceReview();
+        await refreshActiveWorkspaceCatalog();
+        await applyBusinessOverview(currentBusiness);
+    } catch (error) {
+        showToast(error.message || 'No se pudieron guardar los artículos.', true);
+        if (button) { button.disabled = false; button.innerHTML = '<i class="ph ph-check-circle"></i> Confirmar y activar en el catálogo'; }
+    }
 }
 
 async function seedCatalogTemplateOneClick() {
@@ -4446,7 +5130,7 @@ function renderFilteredBookings(type) {
         dirEl.innerHTML = patients.length ? patients.slice(0, 25).map(pt => `
           <div class="booking-row" style="padding:11px 13px;">
             <div>
-              <h4>${escapeHtml(pt.name)}</h4>
+              <h4 data-no-translate="true">${escapeHtml(pt.name)}</h4>
               <p><i class="ph ph-phone"></i> ${escapeHtml(pt.phone)} · Último: <strong>${escapeHtml(pt.lastService)}</strong></p>
             </div>
             <span class="badge ai">${pt.visits} cita(s)</span>
@@ -4461,8 +5145,8 @@ function renderFilteredBookings(type) {
             const timeLabel = new Date(b.starts_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
             return `<div class="booking-row" style="padding:11px 13px;">
               <div>
-                <h4><span style="color:#00f2fe;">${escapeHtml(timeLabel)}</span> · ${escapeHtml(b.customer_name)}</h4>
-                <p>${escapeHtml(b.service_name || (type==='reservation' ? `${Number(b.party_size||1)} comensales` : 'Consulta'))} · ${escapeHtml(b.customer_phone || '')}</p>
+                <h4><span style="color:#00f2fe;">${escapeHtml(timeLabel)}</span> · <span data-no-translate="true">${escapeHtml(b.customer_name)}</span></h4>
+                <p><span data-no-translate="true">${escapeHtml(b.service_name || (type==='reservation' ? `${Number(b.party_size||1)} comensales` : 'Consulta'))}</span> · <span data-no-translate="true">${escapeHtml(b.customer_phone || '')}</span></p>
               </div>
               <span class="badge ${b.status === 'confirmed' ? 'success' : 'warning'}">${b.status === 'confirmed' ? 'Confirmada' : 'Por aprobar'}</span>
             </div>`;
@@ -4511,7 +5195,7 @@ function renderFilteredBookings(type) {
             const notesHtml = b.notes ? `<p style="font-size:11px;color:#cbd5e1;margin-top:3px;">Observación: ${escapeHtml(b.notes)}</p>` : '';
             return `<div class="booking-row">
                 <div>
-                    <h4>${escapeHtml(b.customer_name)} · <span style="color:#7cecf5;">${escapeHtml(b.service_name || (type==='reservation'?'Reserva de mesa':'Consulta / Cita'))}</span> ${conflictAlert}</h4>
+                    <h4><span data-no-translate="true">${escapeHtml(b.customer_name)}</span> · <span data-no-translate="true" style="color:#7cecf5;">${escapeHtml(b.service_name || (type==='reservation'?'Reserva de mesa':'Consulta / Cita'))}</span> ${conflictAlert}</h4>
                     <p><i class="ph ph-calendar-blank"></i> ${formatBookingDate(b.starts_at)} · <i class="ph ph-phone"></i> ${escapeHtml(b.customer_phone||'Sin teléfono')}${type==='reservation' ? ` · <strong>${Number(b.party_size||1)} persona(s)</strong>${b.table_number ? ` · Mesa ${escapeHtml(b.table_number)}` : ''}` : ''}</p>
                     ${notesHtml}
                     <p style="color:${st.color};font-weight:700;letter-spacing:.06em;font-size:10px;margin-top:5px;">${st.label}</p>
@@ -4580,8 +5264,8 @@ async function loadRetailWorkspace() {
                     const badgeCls = st === 0 ? 'danger' : (st <= 5 ? 'warning' : 'success');
                     return `<div class="booking-row">
                       <div>
-                        <h4>${escapeHtml(p.name)}</h4>
-                        <p>${escapeHtml(p.category || 'General')} · Precio: <strong>$${Number(p.price || 0).toFixed(2)}</strong></p>
+                        <h4 data-no-translate="true">${escapeHtml(p.name)}</h4>
+                        <p><span data-no-translate="true">${escapeHtml(p.category || 'General')}</span> · Precio: <strong>$${Number(p.price || 0).toFixed(2)}</strong></p>
                       </div>
                       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <span class="badge ${badgeCls}">${st} uds</span>
@@ -4590,7 +5274,7 @@ async function loadRetailWorkspace() {
                         <button class="btn-secondary" style="padding:6px 10px;font-size:11px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${st + 5})">+5</button>
                       </div>
                     </div>`;
-                }).join('') : '<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:15px;">Sin productos registrados</h3><p class="muted" style="font-size:12px;">Registra tus productos en la sección Catálogo de Productos del menú lateral.</p></div>';
+                }).join('') : '<div class="upgrade-lock" style="padding:20px;"><h3 style="font-size:15px;">Sin productos registrados</h3><p class="muted" style="font-size:12px;">Carga tus productos desde Carga Mágica con IA, voz o archivos en la sección Catálogo.</p></div>';
             } else {
                 // En plan $49 mostramos los productos críticos y bajos con reposición rápida
                 const sortedByStock = [...products].sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0));
@@ -4599,8 +5283,8 @@ async function loadRetailWorkspace() {
                     const badgeCls = st === 0 ? 'danger' : (st <= 5 ? 'warning' : 'success');
                     return `<div class="booking-row">
                       <div>
-                        <h4>${escapeHtml(p.name)}</h4>
-                        <p>${escapeHtml(p.category || 'General')} · Precio: <strong>$${Number(p.price || 0).toFixed(2)}</strong></p>
+                        <h4 data-no-translate="true">${escapeHtml(p.name)}</h4>
+                        <p><span data-no-translate="true">${escapeHtml(p.category || 'General')}</span> · Precio: <strong>$${Number(p.price || 0).toFixed(2)}</strong></p>
                       </div>
                       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
                         <span class="badge ${badgeCls}">${st === 0 ? 'AGOTADO (0)' : `${st} uds`}</span>
@@ -4644,7 +5328,7 @@ async function loadEnterpriseWorkspace() {
         const orderList=document.getElementById('ent-orders-list');
         if(orderList) orderList.innerHTML=orders.length?orders.slice(0,15).map(o=>`<div class="booking-row"><div><h4>Pedido #${escapeHtml(o.order_number||String(o.id||'').slice(0,8))}</h4><p>${formatBookingDate(o.created_at)} · Pago: ${escapeHtml(o.payment_status||'verificado')}</p></div><div style="text-align:right;"><strong style="color:#5be7f2;">$${Number(o.total_amount||0).toFixed(2)}</strong><p>${escapeHtml(o.status||'activo')}</p></div></div>`).join(''):'<p class="muted">Todavía no hay pedidos registrados.</p>';
         const stockList=document.getElementById('ent-stock-list');
-        if(stockList) stockList.innerHTML=low.length?low.slice(0,15).map(p=>`<div class="booking-row"><div><h4>${escapeHtml(p.name)}</h4><p>${escapeHtml(p.category||'General')} · $${Number(p.price||0).toFixed(2)}</p></div><div style="display:flex;gap:8px;align-items:center;"><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} uds</span><button class="btn-secondary" style="padding:5px 9px;font-size:10px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${Number(p.stock||0)+50})">+50 uds</button></div></div>`).join(''):'<p class="muted">El inventario no muestra alertas de stock bajo.</p>';
+        if(stockList) stockList.innerHTML=low.length?low.slice(0,15).map(p=>`<div class="booking-row"><div><h4 data-no-translate="true">${escapeHtml(p.name)}</h4><p><span data-no-translate="true">${escapeHtml(p.category||'General')}</span> · $${Number(p.price||0).toFixed(2)}</p></div><div style="display:flex;gap:8px;align-items:center;"><span class="badge ${Number(p.stock||0)===0?'danger':'warning'}">${Number(p.stock||0)} uds</span><button class="btn-secondary" style="padding:5px 9px;font-size:10px;" onclick="adjustCatalogItemStock('${escapeHtml(p.id)}', ${Number(p.stock||0)+50})">+50 uds</button></div></div>`).join(''):'<p class="muted">El inventario no muestra alertas de stock bajo.</p>';
     } catch(e){ const el=document.getElementById('ent-orders-list');if(el)el.innerHTML=`<p class="muted">No se pudieron cargar las operaciones: ${escapeHtml(e.message)}</p>`; }
 }
 
@@ -4680,7 +5364,7 @@ async function loadCrmWorkspace() {
                 oppEl.innerHTML = leads.slice(0, 35).map(l => `
                     <div class="booking-row">
                         <div>
-                            <h4>${escapeHtml(l.customer_name || 'Cliente')} · <span class="badge ${l.stage === 'won' ? 'success' : 'ai'}">${escapeHtml(stageLabels[l.stage] || l.stage)}</span></h4>
+                            <h4><span data-no-translate="true">${escapeHtml(l.customer_name || 'Cliente')}</span> · <span class="badge ${l.stage === 'won' ? 'success' : 'ai'}">${escapeHtml(stageLabels[l.stage] || l.stage)}</span></h4>
                             <p>${escapeHtml(l.interest || 'Interacción comercial detectada por IA')} · Canal: <strong>${escapeHtml(l.source || 'chat')}</strong>${l.expected_value ? ` · Valor est.: <strong style="color:#34d399;">$${Number(l.expected_value).toFixed(2)}</strong>` : ''}</p>
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
@@ -4744,8 +5428,8 @@ async function loadCrmWorkspace() {
         listEl.innerHTML = customers.slice(0, 40).map(c => `
           <div class="booking-row">
             <div>
-              <h4>${escapeHtml(c.name)}</h4>
-              <p>${escapeHtml(c.contact)}${c.lastService ? ` · Último servicio: <strong>${escapeHtml(c.lastService)}</strong>` : ''}${c.totalUsd > 0 ? ` · Compras aprobadas: <strong style="color:#34d399;">$${c.totalUsd.toFixed(2)}</strong>` : ''}</p>
+              <h4 data-no-translate="true">${escapeHtml(c.name)}</h4>
+              <p><span data-no-translate="true">${escapeHtml(c.contact)}</span>${c.lastService ? ` · Último servicio: <strong data-no-translate="true">${escapeHtml(c.lastService)}</strong>` : ''}${c.totalUsd > 0 ? ` · Compras aprobadas: <strong style="color:#34d399;">$${c.totalUsd.toFixed(2)}</strong>` : ''}</p>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
               <span class="badge ${c.count >= 2 ? 'success' : 'ai'}">${c.count} interacción(es)</span>
@@ -4882,6 +5566,13 @@ async function importCatalogCsv(event) {
         await refreshActiveWorkspaceCatalog();
         await applyBusinessOverview(currentBusiness);
     } catch(e){showToast('No se pudo importar el CSV: '+e.message,true);} finally {input.value='';}
+}
+
+// Re-translate dynamically rendered dashboard panels after navigation/API updates.
+if (document.body && !calyrisiaUiObserver) {
+    applyDashboardLanguage();
+    calyrisiaUiObserver = new MutationObserver(queueDashboardLanguageTranslation);
+    calyrisiaUiObserver.observe(document.body, { childList: true, characterData: true, subtree: true });
 }
 
 window.setInterval(() => {
