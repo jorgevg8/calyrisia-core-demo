@@ -101,10 +101,8 @@ class Settings(BaseSettings):
     wa_provider: str = Field(default_factory=lambda: _env_str("WA_PROVIDER", "auto"), alias="WA_PROVIDER")
 
     # Meta OAuth & Graph API (Instagram Direct & Facebook Messenger)
-    meta_app_id: str = Field(default_factory=lambda: _env_str("META_APP_ID", "2456430845105397"), alias="META_APP_ID")
+    meta_app_id: str = Field(default_factory=lambda: _env_str("META_APP_ID", ""), alias="META_APP_ID")
     meta_app_secret: str = Field(default_factory=lambda: _env_str("META_APP_SECRET", ""), alias="META_APP_SECRET")
-    meta_config_id: str = Field(default_factory=lambda: _env_str("META_CONFIG_ID", "1831235794732615"), alias="META_CONFIG_ID")
-    meta_facebook_config_id: str = Field(default_factory=lambda: _env_str("META_FACEBOOK_CONFIG_ID", ""), alias="META_FACEBOOK_CONFIG_ID")
     meta_redirect_uri: str = Field(default_factory=lambda: _env_str("META_REDIRECT_URI", "https://calyrisia.com/api/auth/meta/callback"), alias="META_REDIRECT_URI")
     meta_webhook_verify_token: str = Field(default_factory=lambda: _env_str("META_WEBHOOK_VERIFY_TOKEN", ""), alias="META_WEBHOOK_VERIFY_TOKEN")
     meta_graph_api_version: str = Field(default_factory=lambda: _env_str("META_GRAPH_API_VERSION", "v26.0"), alias="META_GRAPH_API_VERSION")

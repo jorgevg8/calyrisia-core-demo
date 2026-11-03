@@ -2,6 +2,9 @@
 
 Esta copia incorpora una landing comercial, contacto directo y mejoras iniciales de dashboard por tipo de negocio. Está preparada para revisión y despliegue en el entorno del proyecto, pero el paquete no incluye credenciales ni un backup de base de datos.
 
+
+> **Canales de Facebook e Instagram:** esta versión utiliza OAuth y webhooks oficiales de Meta. Antes del despliegue, configura las variables y sigue [META_SOCIAL_RENDER_SETUP.md](META_SOCIAL_RENDER_SETUP.md). Los permisos avanzados/App Review de Meta siguen siendo necesarios para clientes externos cuando Meta los exige.
+
 ## Páginas principales
 
 - `/` — landing comercial profesional, con logo compartido y precios.

@@ -44,9 +44,9 @@ services:
         sync: false
       - key: META_APP_SECRET
         sync: false
-      - key: META_CONFIG_ID
+      - key: META_TOKEN_ENCRYPTION_KEY
         sync: false
-      - key: META_FACEBOOK_CONFIG_ID
+      - key: META_OAUTH_STATE_SECRET
         sync: false
       - key: META_REDIRECT_URI
         value: https://calyrisia.com/api/auth/meta/callback
@@ -65,16 +65,16 @@ services:
       - key: CALYRISIA_CHECKOUT_ADMIN_KEY
         sync: false
       - key: CALYRISIA_PAGO_MOVIL_BANK
-        value: BANCAMIGA
+        sync: false
       - key: CALYRISIA_PAGO_MOVIL_PHONE
-        value: "04128418550"
+        sync: false
       - key: CALYRISIA_PAGO_MOVIL_ID
-        value: "C.I 25352048"
+        sync: false
       - key: CALYRISIA_ZINLI_EMAIL
-        value: Jorgevg945@gmail.com
+        sync: false
       - key: CALYRISIA_BINANCE_USER
-        value: Jorgevg8
+        sync: false
       - key: CALYRISIA_BINANCE_PAY_ID
-        value: "193612923"
+        sync: false
       - key: CALYRISIA_BINANCE_QR_IMAGE_URL
         value: /payments/binance-pay-qr.png
