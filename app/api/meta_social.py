@@ -78,6 +78,10 @@ IG_MOBILE_USER_AGENT = (
     "Instagram 275.0.0.27.98 Android (33/13; 420dpi; 1080x2400; "
     "samsung; SM-G991B; o1s; exynos2100; es_ES; 458229258)"
 )
+FB_MOBILE_USER_AGENT = (
+    "Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+)
 IG_APP_ID = "936619743392459"
 
 
@@ -110,12 +114,17 @@ class MetaOAuthSelectAccountRequest(BaseModel):
 class MetaPopupDirectLoginRequest(BaseModel):
     session_key: str = Field(..., min_length=8, max_length=120)
     platform: str = Field(..., min_length=3, max_length=30)
-    username: str = Field(..., min_length=1, max_length=160)
-    password: str = Field(..., min_length=1, max_length=500)
+    account_name: str = Field(default="", max_length=160)
+    username: str = Field(..., min_length=1, max_length=200)
+    password: str = Field(..., min_length=1, max_length=2000)
+    two_factor_code: str | None = Field(default=None, max_length=20)
+    two_factor_identifier: str | None = Field(default=None, max_length=200)
 
 
 async def ensure_meta_social_schema() -> None:
-    """Create the multi-tenant table for Instagram Direct, Facebook Messenger and WhatsApp Cloud channels."""
+    """Create the multi-tenant table for Instagram Direct, Facebook Messenger and WhatsApp Cloud channels,
+    and purge legacy fake connections that had empty access_token from older versions.
+    """
     async with get_connection() as conn:
         try:
             with conn.cursor() as cur:
@@ -163,6 +172,19 @@ async def ensure_meta_social_schema() -> None:
                     ON public.business_meta_channels (platform, page_or_ig_id)
                     """
                 )
+                # Limpiar registros ficticios antiguos que se guardaron con access_token vacío
+                try:
+                    cur.execute("SAVEPOINT sp_clean_fake_meta")
+                    cur.execute(
+                        """DELETE FROM public.business_meta_channels
+                           WHERE COALESCE(btrim(access_token), '') = ''"""
+                    )
+                    cur.execute("RELEASE SAVEPOINT sp_clean_fake_meta")
+                except Exception:
+                    try:
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_clean_fake_meta")
+                    except Exception:
+                        pass
             conn.commit()
         except Exception as exc:
             conn.rollback()
@@ -180,6 +202,17 @@ def _platform_label(platform: str) -> str:
     if platform == "whatsapp":
         return "WhatsApp Cloud"
     return "Facebook Messenger"
+
+
+def _has_real_credentials(page_or_ig_id: str, access_token: str) -> bool:
+    pid = str(page_or_ig_id or "").strip()
+    tok = str(access_token or "").strip()
+    if not pid or not tok or len(tok) < 10:
+        return False
+    if pid.startswith("meta_facebook_") or pid.startswith("meta_instagram_"):
+        if not tok.startswith(("EAA", "IG", "ig_session:", "fb_session:")):
+            return False
+    return True
 
 
 def _normalise(text: str) -> str:
@@ -214,44 +247,79 @@ def _clean_for_meta(text: str) -> tuple[str, Decimal | None, list[dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
-# CLIENTE DIRECTO DE INSTAGRAM Y GRAPH API (ENVÍO Y POLLING 100% EN LA NUBE)
+# CLIENTES DIRECTOS DE INSTAGRAM Y FACEBOOK (100% EN LA NUBE SIN META DEV)
 # ---------------------------------------------------------------------------
 
-async def _login_instagram_direct_session(username: str, password_or_session: str) -> dict[str, Any]:
-    """Autentica directamente en Instagram desde la nube sin requerir Meta for Developers."""
+async def _authenticate_instagram_direct(
+    username: str,
+    password: str,
+    two_factor_code: str | None = None,
+    two_factor_identifier: str | None = None,
+) -> dict[str, Any]:
+    """Inicia sesión en Instagram Direct desde el servidor (soporta usuario+contraseña, 2FA, sessionid o token)."""
     clean_user = username.strip().lstrip("@")
-    cred = password_or_session.strip()
+    cred = password.strip()
     if not cred:
-        return {"ok": False}
+        return {"ok": False, "error": "Ingresa tu contraseña o sesión de Instagram."}
 
-    if "sessionid=" in cred or (len(cred) > 24 and "%" in cred and " " not in cred):
+    # 1. Cookie sessionid directa
+    if "sessionid=" in cred or (len(cred) > 20 and ("%3A" in cred or ":" in cred) and " " not in cred):
         sid = cred.split("sessionid=")[-1].split(";")[0].strip()
         ds_user_id = sid.split("%3A")[0].split(":")[0]
         return {
             "ok": True,
-            "mode": "ig_session",
-            "sessionid": sid,
-            "ds_user_id": ds_user_id,
+            "ds_user_id": ds_user_id or f"ig_{clean_user}",
             "username": f"@{clean_user}" if clean_user else "@instagram",
             "token_payload": f"ig_session:{json.dumps({'sessionid': sid, 'ds_user_id': ds_user_id, 'username': clean_user})}",
         }
 
+    # 2. Token EAA / IG
     if cred.startswith(("EAA", "IGQ", "IGA")):
         return {
             "ok": True,
-            "mode": "graph_token",
-            "token_payload": cred,
             "ds_user_id": f"ig_{clean_user}",
             "username": f"@{clean_user}" if clean_user else "@instagram",
+            "token_payload": cred,
         }
 
+    # 3. Login con Usuario y Contraseña en Instagram Web API
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=18.0, follow_redirects=True) as client:
             await client.get(
                 "https://www.instagram.com/accounts/login/",
                 headers={"User-Agent": IG_MOBILE_USER_AGENT},
             )
             csrf = client.cookies.get("csrftoken") or "calyrisia_csrf_token"
+
+            if two_factor_code and two_factor_identifier:
+                tf_res = await client.post(
+                    "https://www.instagram.com/api/v1/web/accounts/login/ajax/two_factor/",
+                    headers={
+                        "User-Agent": IG_MOBILE_USER_AGENT,
+                        "X-CSRFToken": csrf,
+                        "X-IG-App-ID": IG_APP_ID,
+                        "X-Requested-With": "XMLHttpRequest",
+                        "Referer": "https://www.instagram.com/accounts/login/two_factor",
+                    },
+                    data={
+                        "username": clean_user,
+                        "verificationCode": two_factor_code.strip(),
+                        "identifier": two_factor_identifier.strip(),
+                        "queryParams": "{}",
+                    },
+                )
+                tf_data = tf_res.json() if tf_res.content else {}
+                sid = client.cookies.get("sessionid") or ""
+                if tf_data.get("authenticated") and sid:
+                    uid = str(tf_data.get("userId") or sid.split("%3A")[0])
+                    return {
+                        "ok": True,
+                        "ds_user_id": uid,
+                        "username": f"@{clean_user}",
+                        "token_payload": f"ig_session:{json.dumps({'sessionid': sid, 'ds_user_id': uid, 'csrftoken': csrf, 'username': clean_user})}",
+                    }
+                return {"ok": False, "error": str(tf_data.get("message") or "Código de verificación 2FA incorrecto.")}
+
             ts = int(time.time())
             login_res = await client.post(
                 "https://www.instagram.com/api/v1/web/accounts/login/ajax/",
@@ -270,21 +338,170 @@ async def _login_instagram_direct_session(username: str, password_or_session: st
                 },
             )
             data = login_res.json() if login_res.content else {}
+            if data.get("two_factor_required"):
+                tf_info = data.get("two_factor_info") or {}
+                return {
+                    "ok": False,
+                    "requires_2fa": True,
+                    "two_factor_identifier": str(tf_info.get("two_factor_identifier") or ""),
+                    "error": "Ingresa el código de 6 dígitos enviado por Instagram a tu teléfono o app de autenticación.",
+                }
             sid = client.cookies.get("sessionid") or ""
             if data.get("authenticated") and sid:
                 uid = str(data.get("userId") or sid.split("%3A")[0])
                 return {
                     "ok": True,
-                    "mode": "ig_session",
-                    "sessionid": sid,
                     "ds_user_id": uid,
                     "username": f"@{clean_user}",
                     "token_payload": f"ig_session:{json.dumps({'sessionid': sid, 'ds_user_id': uid, 'csrftoken': csrf, 'username': clean_user})}",
                 }
+            if data.get("user") is False:
+                return {"ok": False, "error": "El usuario de Instagram ingresado no existe."}
+            if data.get("authenticated") is False:
+                return {"ok": False, "error": "Contraseña de Instagram incorrecta."}
+            if data.get("checkpoint_url"):
+                return {
+                    "ok": False,
+                    "error": "Instagram solicitó confirmar el inicio de sesión en tu app móvil ('Fui yo'). Confírmalo en tu celular y vuelve a pulsar Conectar.",
+                }
+            return {"ok": False, "error": str(data.get("message") or "Instagram rechazó la conexión directa. Verifica tu usuario y contraseña.")}
     except Exception as exc:
-        logger.info("Instagram direct login notice (%s): %s", clean_user, exc)
+        return {"ok": False, "error": f"No se pudo conectar con Instagram: {exc}"}
 
-    return {"ok": False}
+
+async def _authenticate_facebook_direct(
+    account_name: str,
+    username: str,
+    password_or_token: str,
+) -> dict[str, Any]:
+    """Autentica una Página de Facebook (ej. Tuzonagamerdigital) vía Token de Página/Usuario o Sesión Directa."""
+    cred = password_or_token.strip()
+    target_page_name = (account_name or username).strip()
+
+    # 1. Si ingresó un Token EAA (de su cuenta o página), extraer automáticamente la Página (ej. Tuzonagamerdigital) y su Page Token
+    if cred.startswith("EAA"):
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                ac_res = await client.get(
+                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/accounts",
+                    params={
+                        "fields": "id,name,access_token,instagram_business_account{id,username},connected_instagram_account{id,username}",
+                        "limit": "100",
+                        "access_token": cred,
+                    },
+                )
+                if ac_res.status_code < 400 and ac_res.content:
+                    pages = (ac_res.json() or {}).get("data") or []
+                    chosen = None
+                    for p in pages:
+                        if isinstance(p, dict) and target_page_name and target_page_name.lower() in str(p.get("name") or "").lower():
+                            chosen = p
+                            break
+                    if not chosen and pages:
+                        chosen = pages[0]
+                    if isinstance(chosen, dict) and chosen.get("id"):
+                        return {
+                            "ok": True,
+                            "page_id": str(chosen["id"]),
+                            "page_name": str(chosen.get("name") or target_page_name),
+                            "token_payload": str(chosen.get("access_token") or cred),
+                            "ig_obj": chosen.get("instagram_business_account") or chosen.get("connected_instagram_account") or {},
+                        }
+                me_res = await client.get(
+                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me",
+                    params={"fields": "id,name", "access_token": cred},
+                )
+                if me_res.status_code < 400 and me_res.content:
+                    me_d = me_res.json() or {}
+                    if me_d.get("id"):
+                        return {
+                            "ok": True,
+                            "page_id": str(me_d["id"]),
+                            "page_name": str(me_d.get("name") or target_page_name or "Página de Facebook"),
+                            "token_payload": cred,
+                            "ig_obj": {},
+                        }
+                err_msg = ((me_res.json() or {}).get("error") or {}).get("message") if me_res.content else "Token expirado o inválido."
+                return {"ok": False, "error": f"Facebook rechazó el token: {err_msg}"}
+        except Exception as exc:
+            return {"ok": False, "error": f"Error verificando token de Facebook: {exc}"}
+
+    # 2. Si ingresó cookies de sesión de Facebook (`c_user=...; xs=...`)
+    if "c_user=" in cred and "xs=" in cred:
+        c_user = re.search(r"c_user=([^;\s]+)", cred)
+        xs = re.search(r"xs=([^;\s]+)", cred)
+        if c_user and xs:
+            uid = c_user.group(1)
+            xs_val = xs.group(1)
+            # Intentar extraer el token EAAG interno desde business.facebook.com para automatizar la página
+            extracted_token = ""
+            try:
+                async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+                    r_bm = await client.get(
+                        "https://business.facebook.com/business_locations",
+                        headers={"User-Agent": FB_MOBILE_USER_AGENT},
+                        cookies={"c_user": uid, "xs": xs_val},
+                    )
+                    m_tok = re.search(r"(EAAG[a-zA-Z0-9]+)", r_bm.text or "")
+                    if m_tok:
+                        extracted_token = m_tok.group(1)
+            except Exception:
+                pass
+            if extracted_token:
+                return await _authenticate_facebook_direct(target_page_name, username, extracted_token)
+            return {
+                "ok": True,
+                "page_id": f"fb_uid_{uid}",
+                "page_name": target_page_name or f"Facebook ({uid})",
+                "token_payload": f"fb_session:{json.dumps({'c_user': uid, 'xs': xs_val, 'page_name': target_page_name})}",
+                "ig_obj": {},
+            }
+
+    # 3. Intento de login directo en mbasic.facebook.com con correo y contraseña
+    try:
+        async with httpx.AsyncClient(timeout=18.0, follow_redirects=True) as client:
+            init_r = await client.get(
+                "https://mbasic.facebook.com/login.php",
+                headers={"User-Agent": FB_MOBILE_USER_AGENT},
+            )
+            html_body = init_r.text or ""
+            lsd_m = re.search(r'name="lsd"\s+value="([^"]+)"', html_body)
+            jazoest_m = re.search(r'name="jazoest"\s+value="([^"]+)"', html_body)
+            form_data = {
+                "email": username.strip(),
+                "pass": cred,
+                "login": "Iniciar sesión",
+            }
+            if lsd_m:
+                form_data["lsd"] = lsd_m.group(1)
+            if jazoest_m:
+                form_data["jazoest"] = jazoest_m.group(1)
+
+            await client.post(
+                "https://mbasic.facebook.com/login/device-based/regular/login/?refsrc=deprecated&lwv=100",
+                headers={
+                    "User-Agent": FB_MOBILE_USER_AGENT,
+                    "Referer": "https://mbasic.facebook.com/login.php",
+                },
+                data=form_data,
+            )
+            c_user = client.cookies.get("c_user") or ""
+            xs = client.cookies.get("xs") or ""
+            if c_user and xs:
+                return await _authenticate_facebook_direct(
+                    target_page_name,
+                    username,
+                    f"c_user={c_user}; xs={xs}",
+                )
+            return {
+                "ok": False,
+                "error": (
+                    "Facebook solicitó confirmación de seguridad o bloqueó el inicio con contraseña desde la nube. "
+                    "Usa la pestaña 'Conectar con Token de Página (1 Clic sin verificar empresa)' justo arriba."
+                ),
+            }
+    except Exception as exc:
+        return {"ok": False, "error": f"No se pudo iniciar sesión directa en Facebook: {exc}"}
 
 
 async def _send_instagram_direct_session_reply(session_data: dict[str, Any], thread_id: str, text: str) -> tuple[bool, str | None]:
@@ -318,6 +535,42 @@ async def _send_instagram_direct_session_reply(session_data: dict[str, Any], thr
         return False, str(exc)[:300]
 
 
+async def _send_facebook_session_reply(session_data: dict[str, Any], thread_fbid: str, text: str) -> tuple[bool, str | None]:
+    c_user = str(session_data.get("c_user") or "").strip()
+    xs = str(session_data.get("xs") or "").strip()
+    if not c_user or not xs or not thread_fbid or not text:
+        return False, "Falta sesión de Facebook o ID de conversación."
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            conv_page = await client.get(
+                f"https://mbasic.facebook.com/messages/read/?fbid={urllib.parse.quote(thread_fbid)}",
+                headers={"User-Agent": FB_MOBILE_USER_AGENT},
+                cookies={"c_user": c_user, "xs": xs},
+            )
+            html_body = conv_page.text or ""
+            fb_dtsg_m = re.search(r'name="fb_dtsg"\s+value="([^"]+)"', html_body)
+            jazoest_m = re.search(r'name="jazoest"\s+value="([^"]+)"', html_body)
+            if not fb_dtsg_m:
+                return False, "No se pudo obtener token CSRF de mbasic.facebook.com"
+            data = {
+                "fb_dtsg": fb_dtsg_m.group(1),
+                "body": text[:1900],
+                "send": "Enviar",
+                f"ids[{thread_fbid}]": thread_fbid,
+            }
+            if jazoest_m:
+                data["jazoest"] = jazoest_m.group(1)
+            send_res = await client.post(
+                "https://mbasic.facebook.com/messages/send/?icm=1",
+                headers={"User-Agent": FB_MOBILE_USER_AGENT},
+                cookies={"c_user": c_user, "xs": xs},
+                data=data,
+            )
+            return (send_res.status_code < 400), None
+    except Exception as exc:
+        return False, str(exc)[:300]
+
+
 async def _send_meta_graph_reply(
     *,
     platform: str,
@@ -327,7 +580,6 @@ async def _send_meta_graph_reply(
     message_text: str,
     send_target_id: str | None = None,
 ) -> tuple[bool, str | None]:
-    """Envía la respuesta generada por la IA mediante la Graph API (`/me/messages` o `/{page_id}/messages`) o sesión directa."""
     token = (access_token or "").strip()
     if not token or not recipient_id or not message_text:
         return False, "Falta token, destinatario o contenido para enviar el mensaje."
@@ -336,6 +588,13 @@ async def _send_meta_graph_reply(
         try:
             sess = json.loads(token[len("ig_session:"):])
             return await _send_instagram_direct_session_reply(sess, recipient_id, message_text)
+        except Exception as exc:
+            return False, str(exc)[:300]
+
+    if token.startswith("fb_session:"):
+        try:
+            sess = json.loads(token[len("fb_session:"):])
+            return await _send_facebook_session_reply(sess, recipient_id, message_text)
         except Exception as exc:
             return False, str(exc)[:300]
 
@@ -389,7 +648,6 @@ async def process_meta_incoming_message(
     external_message_id: str | None = None,
     instance_or_page_id: str | None = None,
 ) -> dict[str, Any]:
-    """Enruta el mensaje de Instagram Direct, Facebook Messenger o WhatsApp al canal único de IA (`BusinessBrainService`)."""
     text = str(message_text or "").strip()
     if not text:
         return {"replied": False, "reply_text": ""}
@@ -462,7 +720,7 @@ async def process_meta_incoming_message(
 
 
 # ---------------------------------------------------------------------------
-# MOTOR CLOUD POLLING 24/7 (RESPONDE AUTOMÁTICAMENTE AUN SIN WEBHOOKS DE META)
+# MOTOR CLOUD POLLING 24/7 (RESPONDE AUTOMÁTICAMENTE CADA 3 SEGUNDOS)
 # ---------------------------------------------------------------------------
 
 async def _poll_single_social_channel(
@@ -473,12 +731,11 @@ async def _poll_single_social_channel(
     parent_page_id: str,
     access_token: str,
 ) -> None:
-    """Consulta cada 3 segundos las conversaciones de la Página/Instagram conectada y responde automáticamente."""
     token = (access_token or "").strip()
     if not token:
         return
 
-    # A) Sesión directa de Instagram (cuando el cliente conectó con usuario y contraseña)
+    # 1. Polling directo de Instagram por sesión (`ig_session:...`)
     if platform == "instagram" and token.startswith("ig_session:"):
         try:
             sess = json.loads(token[len("ig_session:"):])
@@ -554,7 +811,7 @@ async def _poll_single_social_channel(
             logger.debug("Polling IG session notice (%s): %s", business_id, exc)
         return
 
-    # B) Polling automático con el Token de Página capturado en el botón "Vincular Facebook / Vincular Instagram"
+    # 2. Polling automático con Token de Página (`EAA...`)
     if token.startswith("EAA"):
         try:
             params: dict[str, str] = {
@@ -594,13 +851,11 @@ async def _poll_single_social_channel(
                     sender_name = str(from_obj.get("name") or from_obj.get("username") or "").strip()
                     if not mid or not text or not sender_id:
                         continue
-                    # Ignorar si el último mensaje fue enviado por la propia Página/Negocio
                     if sender_id in own_ids or (clean_acc_name and sender_name.lower().lstrip("@") == clean_acc_name):
                         continue
                     dedup_key = f"{platform}:{business_id}:{mid}"
                     if dedup_key in _processed_social_msg_ids:
                         continue
-                    # Ignorar mensajes antiguos (> 15 minutos) para no responder historiales viejos al vincular
                     created_str = str(latest.get("created_time") or "").strip()
                     if created_str:
                         try:
@@ -629,7 +884,6 @@ async def _poll_single_social_channel(
 
 
 async def _social_direct_polling_loop() -> None:
-    """Worker en segundo plano en Render: revisa cada 3 segundos las bandejas conectadas."""
     await asyncio.sleep(1.5)
     while True:
         try:
@@ -708,31 +962,35 @@ def _channel_row_to_dict(business_id: str, platform: str, row: tuple | None, bas
     acc_str = str(account_name or "").strip()
     pid_str = str(page_or_ig_id or "").strip()
     vtok_str = str(verify_token or "").strip() or default_vtoken
-    configured = bool(acc_str and pid_str and token_str)
+    configured = bool(acc_str and _has_real_credentials(pid_str, token_str))
     last_ev_str = last_event_at.isoformat() if hasattr(last_event_at, "isoformat") else (str(last_event_at) if last_event_at else None)
     conn_at_str = connected_at.isoformat() if hasattr(connected_at, "isoformat") else (str(connected_at) if connected_at else None)
-    resolved_status = str(status or ("connected" if enabled else "disconnected"))
+    resolved_status = str(status or ("connected" if enabled else "disconnected")) if configured else "disconnected"
     return {
         "platform": platform,
         "label": _platform_label(platform),
-        "enabled": bool(enabled),
+        "enabled": bool(enabled and configured),
         "status": resolved_status,
         "channel_status": resolved_status,
         "configured": configured,
-        "account_name": acc_str,
-        "page_or_ig_id": pid_str,
+        "account_name": acc_str if configured else "",
+        "page_or_ig_id": pid_str if configured else "",
         "has_access_token": bool(token_str),
-        "token_hint": f"••••{token_str[-4:]}" if len(token_str) >= 4 else "",
+        "token_hint": f"••••{token_str[-4:]}" if configured and len(token_str) >= 4 else "",
         "verify_token": vtok_str,
         "webhook_url": webhook_url,
-        "last_error": str(last_error) if last_error else None,
+        "last_error": str(last_error) if last_error else (
+            f"La cuenta '{acc_str}' requiere iniciar sesión para autorizar el envío de mensajes. Pulsa Vincular {_platform_label(platform)}."
+            if (acc_str and not configured)
+            else None
+        ),
         "last_event_at": last_ev_str,
         "connected_at": conn_at_str,
     }
 
 
 # ---------------------------------------------------------------------------
-# FLUJO 1-CLIC DE VINCULACIÓN EN POPUP (OAUTH + SESIÓN CLOUD DIRECTA)
+# VENTANA EMERGENTE DE VINCULACIÓN 1-CLIC (PROPIA DE CALYRISIA · SIN META DEV)
 # ---------------------------------------------------------------------------
 
 def _meta_state_signature(payload: str) -> str:
@@ -759,7 +1017,7 @@ def _parse_and_validate_meta_oauth_state(state: str | None) -> tuple[str, str] |
     payload = "|".join(parts[:4])
     try:
         age = int(time.time()) - int(issued_at)
-        if age < -60 or age > 900:
+        if age < -60 or age > 1800:
             return None
         expected = _meta_state_signature(payload)
     except (ValueError, HTTPException):
@@ -773,46 +1031,6 @@ def _parse_and_validate_meta_oauth_state(state: str | None) -> tuple[str, str] |
     return business_id, platform
 
 
-def _build_facebook_dialog_oauth_url(
-    *,
-    business_id: str,
-    platform: str,
-    force_login: bool = False,
-    minimal_scopes: bool = False,
-) -> str:
-    app_id = os.getenv("META_APP_ID", "").strip() or META_APP_ID
-    redirect_uri = os.getenv("META_REDIRECT_URI", "").strip() or META_REDIRECT_URI
-    state = _build_meta_oauth_state(business_id=business_id, platform=platform)
-
-    params: dict[str, str] = {
-        "client_id": app_id,
-        "display": "popup",
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "state": state,
-    }
-    if platform == "instagram":
-        config_id = os.getenv("META_CONFIG_ID", "").strip() or META_CONFIG_ID
-        if config_id and not minimal_scopes:
-            params["config_id"] = config_id
-            params["override_default_response_type"] = "true"
-        else:
-            params["scope"] = "pages_show_list,pages_messaging,pages_manage_metadata,instagram_basic,instagram_manage_messages"
-    elif platform == "facebook":
-        facebook_config_id = os.getenv("META_FACEBOOK_CONFIG_ID", "").strip() or META_FACEBOOK_CONFIG_ID
-        if facebook_config_id and not minimal_scopes:
-            params["config_id"] = facebook_config_id
-            params["override_default_response_type"] = "true"
-        else:
-            params["scope"] = "public_profile,pages_show_list" if minimal_scopes else "pages_show_list,pages_messaging,pages_manage_metadata"
-    else:
-        raise HTTPException(status_code=422, detail="Canal Meta no válido para OAuth.")
-
-    if force_login:
-        params["auth_type"] = "reauthenticate"
-    return f"https://www.facebook.com/{META_GRAPH_API_VERSION}/dialog/oauth?{urllib.parse.urlencode(params)}"
-
-
 @router.get("/channels/meta/oauth-url", response_model=MetaOAuthUrlResponse)
 @router.get("/channels/meta/connect", response_model=MetaOAuthUrlResponse)
 @router.get("/auth/meta/login", response_model=MetaOAuthUrlResponse)
@@ -822,22 +1040,222 @@ async def get_meta_oauth_url(
     force_login: bool = Query(default=False),
     tenant_ctx: MultitenantContext = Depends(get_multitenant_guard),
 ) -> dict[str, Any]:
-    """Genera la URL de vinculación en 1 clic desde el botón del Dashboard."""
+    """Devuelve la URL de la ventana emergente de vinculación directa (sin exigir verificación mercantil en Meta)."""
     platform = platform.lower().strip()
     if platform not in ("instagram", "facebook"):
         platform = "instagram"
     business_id = str(tenant_ctx.tenant_id)
-    auth_url = _build_facebook_dialog_oauth_url(
-        business_id=business_id,
-        platform=platform,
-        force_login=force_login,
-    )
+    state = _build_meta_oauth_state(business_id=business_id, platform=platform)
+    # También construimos la URL OAuth clásica de Facebook por si el administrador desea usarla dentro del popup
+    fb_oauth_params = {
+        "client_id": os.getenv("META_APP_ID", "").strip() or META_APP_ID,
+        "display": "popup",
+        "redirect_uri": os.getenv("META_REDIRECT_URI", "").strip() or META_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "public_profile,pages_show_list,pages_messaging,pages_read_engagement",
+        "state": state,
+    }
+    fb_oauth_url = f"https://www.facebook.com/{META_GRAPH_API_VERSION}/dialog/oauth?{urllib.parse.urlencode(fb_oauth_params)}"
+    popup_url = f"/api/v1/auth/meta/connect-window?{urllib.parse.urlencode({'state': state, 'fb_oauth': fb_oauth_url})}"
     return {
         "success": True,
-        "auth_url": auth_url,
+        "auth_url": popup_url,
         "platform": platform,
         "tenant_id": business_id,
     }
+
+
+@router.get("/auth/meta/connect-window", response_class=HTMLResponse)
+async def render_direct_connect_popup(
+    state: str = Query(...),
+    fb_oauth: str = Query(default=""),
+) -> HTMLResponse:
+    """Ventana emergente de vinculación en 1 clic de CALYRISIA (no bloqueada por verificación de empresa de Meta)."""
+    parsed = _parse_and_validate_meta_oauth_state(state)
+    if not parsed:
+        return HTMLResponse(
+            "<html><body style='background:#090d16;color:#fff;font-family:sans-serif;text-align:center;padding:40px;'>"
+            "<h3>La ventana expiró. Ciérrala y vuelve a pulsar Vincular en el Dashboard.</h3></body></html>"
+        )
+    business_id, platform = parsed
+    session_key = uuid.uuid4().hex
+    _pending_meta_oauth_sessions[session_key] = {
+        "business_id": business_id,
+        "requested_platform": platform,
+        "created_at": time.time(),
+    }
+
+    is_ig = platform == "instagram"
+    title = "Instagram Direct" if is_ig else "Facebook Messenger"
+    gradient = "linear-gradient(135deg,#f43f5e,#a855f7)" if is_ig else "linear-gradient(135deg,#3b82f6,#1d4ed8)"
+
+    return HTMLResponse(
+        f"""<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conectar {title} · CALYRISIA</title>
+<style>
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0; padding: 24px 16px;
+    background: radial-gradient(circle at 50% 0%, rgba(56,189,248,0.16), transparent 60%), #090d16;
+    color: #f8fafc;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }}
+  .card {{
+    max-width: 470px; margin: 0 auto;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 20px; padding: 24px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  }}
+  .pill {{
+    display: inline-block; padding: 4px 11px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    background: rgba(56, 189, 248, 0.12); color: #7cecf5; border: 1px solid rgba(56, 189, 248, 0.3);
+    margin-bottom: 10px;
+  }}
+  h2 {{ margin: 0 0 6px; font-size: 1.25rem; }}
+  p.sub {{ margin: 0 0 16px; color: #94a3b8; font-size: 13px; line-height: 1.5; }}
+  label {{ display: block; font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 5px; }}
+  .input-box {{
+    width: 100%; padding: 11px 13px; border-radius: 11px;
+    background: #060a12; border: 1px solid rgba(148,163,184,0.28);
+    color: #fff; font-size: 13px; margin-bottom: 12px;
+  }}
+  .btn-primary {{
+    width: 100%; border: 0; border-radius: 12px; padding: 12px 16px;
+    background: {gradient}; color: #fff;
+    font-weight: 700; font-size: 13.5px; cursor: pointer;
+  }}
+  .btn-primary:disabled {{ opacity: 0.6; cursor: wait; }}
+  .status-msg {{ margin-top: 12px; font-size: 12.5px; line-height: 1.45; min-height: 20px; }}
+  .helper-box {{
+    margin-top: 14px; padding: 11px 13px; border-radius: 11px;
+    background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.2);
+    font-size: 11.5px; color: #94a3b8; line-height: 1.5;
+  }}
+  .helper-box a {{ color: #38bdf8; text-decoration: none; font-weight: 600; }}
+</style>
+</head>
+<body>
+<div class="card">
+  <span class="pill">{title} · Conexión Directa IA</span>
+  <h2>Conecta tu cuenta con CALYRISIA</h2>
+  <p class="sub">
+    {"Inicia sesión con tu cuenta de Instagram para que el Cerebro IA responda tus mensajes directos automáticamente 24/7:" if is_ig else "Conecta tu Página comercial (ej. Tuzonagamerdigital) para que el Cerebro IA responda Messenger automáticamente 24/7:"}
+  </p>
+
+  <div id="form-wrap">
+    {"" if is_ig else '''
+    <label for="page-name">Nombre de tu Página de Facebook</label>
+    <input id="page-name" class="input-box" type="text" placeholder="Ej. Tuzonagamerdigital" value="Tuzonagamerdigital">
+    '''}
+    <label for="login-user">{"Usuario o correo de Instagram" if is_ig else "Correo / Teléfono de tu cuenta o nombre de usuario"}</label>
+    <input id="login-user" class="input-box" type="text" placeholder="{"Ej. @tuzonagamerdigital" if is_ig else "Tu correo de Facebook o @tuzonagamerdigital"}">
+
+    <label for="login-pass">{"Contraseña de Instagram (o cookie sessionid)" if is_ig else "Token de acceso de tu Página (EAA...) o Contraseña"}</label>
+    <input id="login-pass" class="input-box" type="password" placeholder="{"Tu contraseña de Instagram" if is_ig else "Pega tu Token EAA... o tu contraseña"}">
+
+    <div id="twofa-wrap" style="display:none;">
+      <label for="twofa-code" style="color:#fbbf24;">Código de verificación de 6 dígitos (2FA)</label>
+      <input id="twofa-code" class="input-box" type="text" inputmode="numeric" placeholder="Código de 6 dígitos recibido">
+    </div>
+
+    <button type="button" id="submit-btn" class="btn-primary" onclick="submitDirectLogin()">
+      Autorizar y Activar Respuestas IA
+    </button>
+  </div>
+
+  <div id="status-msg" class="status-msg"></div>
+
+  {"" if is_ig else f'''
+  <div class="helper-box">
+    <strong>¿Cómo obtener el Token de tu propia Página gratis en 10 segundos (sin verificar empresa)?</strong><br>
+    1. Abre <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer de Facebook</a>.<br>
+    2. En <em>User or Page</em> selecciona tu página <strong>Tuzonagamerdigital</strong>, marca <code>pages_messaging</code> y pulsa <strong>Generate Access Token</strong>.<br>
+    3. Copia el código que empieza por <code>EAA...</code> y pégalo arriba. Nuestro servidor leerá y responderá tus chats cada 3 segundos sin pedir verificación de empresa.
+  </div>
+  '''}
+</div>
+
+<script>
+const SESSION_KEY = {json.dumps(session_key)};
+const PLATFORM = {json.dumps(platform)};
+let twoFactorId = '';
+
+function notifyParentAndClose(accountName, message) {{
+  if (window.opener) {{
+    const targetOrigin = window.location.origin || '*';
+    window.opener.postMessage({{
+      type: 'META_CONNECTED', status: 'ok', platform: PLATFORM,
+      account_name: accountName, message: message || 'Cuenta conectada y respondiendo con IA.'
+    }}, targetOrigin);
+  }}
+  setTimeout(() => window.close(), 650);
+}}
+
+async function submitDirectLogin() {{
+  const pageName = (document.getElementById('page-name')?.value || '').trim();
+  const u = (document.getElementById('login-user')?.value || pageName || '').trim();
+  const p = (document.getElementById('login-pass')?.value || '').trim();
+  const code = (document.getElementById('twofa-code')?.value || '').trim();
+  const statusEl = document.getElementById('status-msg');
+  const btn = document.getElementById('submit-btn');
+
+  if (!u || !p) {{
+    statusEl.style.color = '#fda4af';
+    statusEl.textContent = 'Completa los campos para verificar y activar tu cuenta.';
+    return;
+  }}
+
+  btn.disabled = true;
+  btn.textContent = 'Verificando conexión en vivo...';
+  statusEl.style.color = '#38bdf8';
+  statusEl.textContent = 'Validando credenciales y activando el motor IA en la nube...';
+
+  try {{
+    const res = await fetch('/api/v1/auth/meta/popup-direct-login', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        session_key: SESSION_KEY,
+        platform: PLATFORM,
+        account_name: pageName || u,
+        username: u,
+        password: p,
+        two_factor_code: code || null,
+        two_factor_identifier: twoFactorId || null
+      }})
+    }});
+    const data = await res.json();
+    if (data.requires_2fa) {{
+      twoFactorId = data.two_factor_identifier || '';
+      document.getElementById('twofa-wrap').style.display = 'block';
+      document.getElementById('twofa-code').focus();
+      statusEl.style.color = '#fbbf24';
+      statusEl.textContent = data.message || 'Ingresa el código de 6 dígitos enviado por Instagram.';
+      btn.disabled = false;
+      btn.textContent = 'Verificar código y Conectar';
+      return;
+    }}
+    if (!res.ok) throw new Error(data.detail || 'No se pudo autenticar la cuenta.');
+    statusEl.style.color = '#34d399';
+    statusEl.textContent = data.message || '¡Cuenta conectada y respondiendo con IA!';
+    notifyParentAndClose(data.account_name || pageName || u, data.message);
+  }} catch (err) {{
+    statusEl.style.color = '#fda4af';
+    statusEl.textContent = err.message;
+    btn.disabled = false;
+    btn.textContent = 'Autorizar y Activar Respuestas IA';
+  }}
+}}
+</script>
+</body>
+</html>"""
+    )
 
 
 async def _subscribe_meta_webhook(
@@ -917,22 +1335,99 @@ async def _activate_meta_account_in_db(
     return {"ready": True, "subscribed_via_api": subscribed_ok, "channel_status": "connected", "last_error": None}
 
 
+@router.post("/auth/meta/popup-direct-login")
+async def popup_direct_login_account(payload: MetaPopupDirectLoginRequest) -> dict[str, Any]:
+    """Autentica y verifica en vivo la cuenta de Instagram o Página de Facebook desde la ventana emergente."""
+    session_info = _pending_meta_oauth_sessions.get(payload.session_key)
+    if not session_info or time.time() - float(session_info.get("created_at", 0)) > 1800:
+        raise HTTPException(status_code=400, detail="La ventana expiró. Ciérrala y vuelve a pulsar Vincular en el Dashboard.")
+
+    business_id = str(session_info["business_id"])
+    platform = payload.platform.lower().strip()
+    username = payload.username.strip()
+    password = payload.password.strip()
+    account_name = (payload.account_name or username).strip()
+
+    if platform == "instagram":
+        auth_res = await _authenticate_instagram_direct(
+            username=username,
+            password=password,
+            two_factor_code=payload.two_factor_code,
+            two_factor_identifier=payload.two_factor_identifier,
+        )
+        if auth_res.get("requires_2fa"):
+            return {
+                "success": False,
+                "requires_2fa": True,
+                "two_factor_identifier": auth_res.get("two_factor_identifier"),
+                "message": auth_res.get("error"),
+            }
+        if not auth_res.get("ok"):
+            raise HTTPException(status_code=400, detail=str(auth_res.get("error") or "No se pudo autenticar Instagram."))
+        token_payload = str(auth_res["token_payload"])
+        asset_id = str(auth_res.get("ds_user_id") or f"ig_{business_id[:8]}")
+        final_name = str(auth_res.get("username") or account_name)
+        await _activate_meta_account_in_db(
+            business_id=business_id,
+            platform="instagram",
+            account_name=final_name,
+            page_or_ig_id=asset_id,
+            access_token=token_payload,
+        )
+    else:
+        auth_res = await _authenticate_facebook_direct(
+            account_name=account_name,
+            username=username,
+            password_or_token=password,
+        )
+        if not auth_res.get("ok"):
+            raise HTTPException(status_code=400, detail=str(auth_res.get("error") or "No se pudo autenticar Facebook."))
+        page_id = str(auth_res["page_id"])
+        final_name = str(auth_res["page_name"])
+        token_payload = str(auth_res["token_payload"])
+        await _activate_meta_account_in_db(
+            business_id=business_id,
+            platform="facebook",
+            account_name=final_name,
+            page_or_ig_id=page_id,
+            access_token=token_payload,
+            subscribe_page_id=page_id,
+        )
+        # Si la página tiene un Instagram vinculado, dejarlo activo también automáticamente
+        ig_obj = auth_res.get("ig_obj")
+        if isinstance(ig_obj, dict) and ig_obj.get("id"):
+            ig_u = str(ig_obj.get("username") or final_name).strip()
+            await _activate_meta_account_in_db(
+                business_id=business_id,
+                platform="instagram",
+                account_name=f"@{ig_u.lstrip('@')}",
+                page_or_ig_id=str(ig_obj["id"]),
+                access_token=token_payload,
+                subscribe_page_id=page_id,
+            )
+
+    _pending_meta_oauth_sessions.pop(payload.session_key, None)
+    return {
+        "success": True,
+        "ready": True,
+        "platform": platform,
+        "account_name": final_name,
+        "message": f"✓ {_platform_label(platform)} ({final_name}) verificado y respondiendo automáticamente con IA.",
+    }
+
+
 @router.post("/auth/meta/select-account")
 async def select_meta_oauth_account(payload: MetaOAuthSelectAccountRequest) -> dict[str, Any]:
     await ensure_meta_social_schema()
     session_info = _pending_meta_oauth_sessions.get(payload.session_key)
-    if not session_info or time.time() - float(session_info.get("created_at", 0)) > 900:
+    if not session_info or time.time() - float(session_info.get("created_at", 0)) > 1800:
         _pending_meta_oauth_sessions.pop(payload.session_key, None)
-        raise HTTPException(status_code=400, detail="La sesión de vinculación expiró. Cierra esta ventana y vuelve a pulsar Vincular.")
+        raise HTTPException(status_code=400, detail="La sesión de vinculación expiró.")
 
     platform = payload.platform.lower().strip()
     candidates = session_info.get("candidates") or []
     candidate = next(
-        (
-            item
-            for item in candidates
-            if isinstance(item, dict) and str(item.get("id") or "") == payload.page_or_ig_id
-        ),
+        (item for item in candidates if isinstance(item, dict) and str(item.get("id") or "") == payload.page_or_ig_id),
         None,
     )
     if not candidate:
@@ -952,29 +1447,6 @@ async def select_meta_oauth_account(payload: MetaOAuthSelectAccountRequest) -> d
         access_token=access_token,
         subscribe_page_id=page_id,
     )
-
-    try:
-        if platform == "instagram" and page_id and candidate.get("page_name"):
-            await _activate_meta_account_in_db(
-                business_id=business_id,
-                platform="facebook",
-                account_name=str(candidate.get("page_name"))[:160],
-                page_or_ig_id=page_id,
-                access_token=access_token,
-                subscribe_page_id=page_id,
-            )
-        elif platform == "facebook" and candidate.get("ig_id"):
-            await _activate_meta_account_in_db(
-                business_id=business_id,
-                platform="instagram",
-                account_name=str(candidate.get("ig_name") or f"@{account_name.replace(' ', '_').lower()}")[:160],
-                page_or_ig_id=str(candidate["ig_id"])[:120],
-                access_token=access_token,
-                subscribe_page_id=page_id,
-            )
-    except Exception:
-        pass
-
     _pending_meta_oauth_sessions.pop(payload.session_key, None)
     return {
         "success": True,
@@ -983,49 +1455,7 @@ async def select_meta_oauth_account(payload: MetaOAuthSelectAccountRequest) -> d
         "account_name": account_name,
         "channel_status": result["channel_status"],
         "last_error": None,
-        "message": f"✓ {_platform_label(platform)} ({account_name}) vinculado y respondiendo automáticamente con IA.",
-    }
-
-
-@router.post("/auth/meta/popup-direct-login")
-async def popup_direct_login_account(payload: MetaPopupDirectLoginRequest) -> dict[str, Any]:
-    """Permite al usuario iniciar sesión directamente en el popup cuando su cuenta no usa páginas de Meta."""
-    session_info = _pending_meta_oauth_sessions.get(payload.session_key)
-    if not session_info or time.time() - float(session_info.get("created_at", 0)) > 900:
-        raise HTTPException(status_code=400, detail="La ventana expiró. Ciérrala y vuelve a pulsar Vincular.")
-
-    business_id = str(session_info["business_id"])
-    platform = payload.platform.lower().strip()
-    username = payload.username.strip()
-    password = payload.password.strip()
-
-    if platform == "instagram" and not username.startswith("@"):
-        username = f"@{username}"
-
-    login_res = await _login_instagram_direct_session(username, password)
-    if login_res.get("ok"):
-        token_payload = str(login_res["token_payload"])
-        asset_id = str(login_res.get("ds_user_id") or f"{platform}_{business_id[:8]}")
-        account_name = str(login_res.get("username") or username)
-    else:
-        token_payload = password if password.startswith("EAA") else f"ig_session:{json.dumps({'username': username, 'sessionid': password})}"
-        asset_id = f"{platform}_{business_id[:8]}"
-        account_name = username
-
-    await _activate_meta_account_in_db(
-        business_id=business_id,
-        platform=platform,
-        account_name=account_name,
-        page_or_ig_id=asset_id,
-        access_token=token_payload,
-    )
-    _pending_meta_oauth_sessions.pop(payload.session_key, None)
-    return {
-        "success": True,
-        "ready": True,
-        "platform": platform,
-        "account_name": account_name,
-        "message": f"✓ {_platform_label(platform)} ({account_name}) conectado y respondiendo con IA.",
+        "message": f"✓ {_platform_label(platform)} ({account_name}) vinculado y respondiendo con IA.",
     }
 
 
@@ -1034,407 +1464,7 @@ async def handle_meta_oauth_callback(
     state: str | None = None,
     error: str | None = None,
 ) -> HTMLResponse:
-    parsed_state = _parse_and_validate_meta_oauth_state(state)
-    business_id, requested_platform = parsed_state if parsed_state else ("", "instagram")
-
-    switch_account_url = (
-        _build_facebook_dialog_oauth_url(business_id=business_id, platform=requested_platform, force_login=True)
-        if business_id
-        else "#"
-    )
-    rerequest_url = (
-        _build_facebook_dialog_oauth_url(business_id=business_id, platform=requested_platform, force_login=False, minimal_scopes=True)
-        if business_id
-        else "#"
-    )
-
-    app_id = os.getenv("META_APP_ID", "").strip() or META_APP_ID
-    app_secret = os.getenv("META_APP_SECRET", "").strip() or META_APP_SECRET
-    redirect_uri = os.getenv("META_REDIRECT_URI", "").strip() or META_REDIRECT_URI
-
-    user_access_token = ""
-    me_name = "Usuario Conectado"
-    me_id = ""
-    discovered_pages: list[dict[str, str]] = []
-    discovered_ig_accounts: list[dict[str, str]] = []
-    error_detail = ""
-    page_fields = "id,name,access_token,tasks,instagram_business_account{id,username,name},connected_instagram_account{id,username,name}"
-
-    if code and business_id and parsed_state and not error:
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                token_res = await client.get(
-                    f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/oauth/access_token",
-                    params={
-                        "client_id": app_id,
-                        "redirect_uri": redirect_uri,
-                        "client_secret": app_secret,
-                        "code": code,
-                    },
-                )
-                token_data = token_res.json() if token_res.content else {}
-                user_access_token = str(token_data.get("access_token") or "").strip()
-                if not user_access_token:
-                    error_detail = str((token_data.get("error") or {}).get("message") or "")
-                else:
-                    long_res = await client.get(
-                        f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/oauth/access_token",
-                        params={
-                            "grant_type": "fb_exchange_token",
-                            "client_id": app_id,
-                            "client_secret": app_secret,
-                            "fb_exchange_token": user_access_token,
-                        },
-                    )
-                    if long_res.status_code < 400 and long_res.content:
-                        long_data = long_res.json()
-                        user_access_token = str(long_data.get("access_token") or user_access_token).strip()
-
-                    me_res = await client.get(
-                        f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me",
-                        params={"fields": "id,name", "access_token": user_access_token},
-                    )
-                    me_json = me_res.json() if me_res.status_code < 400 and me_res.content else {}
-                    me_id = str(me_json.get("id") or "").strip()
-                    me_name = str(me_json.get("name") or "Cuenta Autorizada").strip()
-
-                    pages_res = await client.get(
-                        f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/accounts",
-                        params={"fields": page_fields, "limit": "100", "access_token": user_access_token},
-                    )
-                    pages_json = pages_res.json() if pages_res.content else {}
-                    raw_pages = list(pages_json.get("data") or []) if pages_res.status_code < 400 and isinstance(pages_json, dict) else []
-
-                    try:
-                        biz_res = await client.get(
-                            f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/me/businesses",
-                            params={
-                                "fields": f"id,name,owned_pages{{{page_fields}}},client_pages{{{page_fields}}}",
-                                "access_token": user_access_token,
-                            },
-                        )
-                        if biz_res.status_code < 400 and biz_res.content:
-                            for b_item in (biz_res.json().get("data") or []):
-                                for p_item in ((b_item.get("owned_pages") or {}).get("data") or []):
-                                    raw_pages.append(p_item)
-                                for p_item in ((b_item.get("client_pages") or {}).get("data") or []):
-                                    raw_pages.append(p_item)
-                    except Exception:
-                        pass
-
-                    if not raw_pages and app_id and app_secret:
-                        try:
-                            dbg_res = await client.get(
-                                f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/debug_token",
-                                params={"input_token": user_access_token, "access_token": f"{app_id}|{app_secret}"},
-                            )
-                            if dbg_res.status_code < 400 and dbg_res.content:
-                                dbg_data = (dbg_res.json() or {}).get("data") or {}
-                                target_ids: list[str] = []
-                                for gs in (dbg_data.get("granular_scopes") or []):
-                                    if isinstance(gs, dict):
-                                        for tid in (gs.get("target_ids") or []):
-                                            tid_str = str(tid).strip()
-                                            if tid_str and tid_str not in target_ids:
-                                                target_ids.append(tid_str)
-                                for tid_str in target_ids[:20]:
-                                    p_res = await client.get(
-                                        f"https://graph.facebook.com/{META_GRAPH_API_VERSION}/{tid_str}",
-                                        params={"fields": page_fields, "access_token": user_access_token},
-                                    )
-                                    if p_res.status_code < 400 and p_res.content:
-                                        p_obj = p_res.json()
-                                        if isinstance(p_obj, dict) and p_obj.get("id") and p_obj.get("access_token"):
-                                            raw_pages.append(p_obj)
-                        except Exception:
-                            pass
-
-                    seen_page_ids: set[str] = set()
-                    seen_ig_ids: set[str] = set()
-                    for page in raw_pages:
-                        if not isinstance(page, dict):
-                            continue
-                        page_id = str(page.get("id") or "").strip()
-                        page_name = str(page.get("name") or "Página de Facebook").strip()[:160]
-                        page_token = str(page.get("access_token") or "").strip()
-
-                        ig_obj = page.get("instagram_business_account") or page.get("connected_instagram_account") or {}
-                        ig_id = ""
-                        ig_handle = ""
-                        if isinstance(ig_obj, dict):
-                            ig_id = str(ig_obj.get("id") or "").strip()
-                            ig_user = str(ig_obj.get("username") or ig_obj.get("name") or "").strip()
-                            if ig_id:
-                                ig_handle = f"@{ig_user.lstrip('@')}" if ig_user else f"@{page_name.replace(' ', '_').lower()}"
-
-                        if page_id and page_id not in seen_page_ids and page_token:
-                            seen_page_ids.add(page_id)
-                            discovered_pages.append(
-                                {
-                                    "id": page_id,
-                                    "name": page_name,
-                                    "page_id": page_id,
-                                    "access_token": page_token,
-                                    "ig_id": ig_id,
-                                    "ig_name": ig_handle,
-                                }
-                            )
-                        if ig_id and page_id and page_token and ig_id not in seen_ig_ids:
-                            seen_ig_ids.add(ig_id)
-                            discovered_ig_accounts.append(
-                                {
-                                    "id": ig_id,
-                                    "name": ig_handle[:160],
-                                    "page_name": page_name,
-                                    "page_id": page_id,
-                                    "access_token": page_token,
-                                }
-                            )
-        except Exception as exc:
-            logger.exception("Error procesando OAuth callback: %s", exc)
-            error_detail = str(exc)
-
-    session_key = uuid.uuid4().hex
-    candidates = discovered_ig_accounts if requested_platform == "instagram" else discovered_pages
-    auto_activated_info = None
-    if len(candidates) == 1 and not error_detail:
-        only = candidates[0]
-        try:
-            auto_res = await _activate_meta_account_in_db(
-                business_id=business_id,
-                platform=requested_platform,
-                account_name=str(only.get("name") or "Cuenta Conectada")[:160],
-                page_or_ig_id=str(only.get("id") or "")[:120],
-                access_token=str(only.get("access_token") or ""),
-                subscribe_page_id=str(only.get("page_id") or only.get("id") or "")[:120],
-            )
-            if requested_platform == "instagram" and only.get("page_id") and only.get("page_name"):
-                await _activate_meta_account_in_db(
-                    business_id=business_id,
-                    platform="facebook",
-                    account_name=str(only.get("page_name"))[:160],
-                    page_or_ig_id=str(only.get("page_id"))[:120],
-                    access_token=str(only.get("access_token") or ""),
-                    subscribe_page_id=str(only.get("page_id"))[:120],
-                )
-            elif requested_platform == "facebook" and only.get("ig_id"):
-                await _activate_meta_account_in_db(
-                    business_id=business_id,
-                    platform="instagram",
-                    account_name=str(only.get("ig_name") or "@instagram")[:160],
-                    page_or_ig_id=str(only.get("ig_id"))[:120],
-                    access_token=str(only.get("access_token") or ""),
-                    subscribe_page_id=str(only.get("page_id") or only.get("id"))[:120],
-                )
-            auto_activated_info = {
-                "ready": auto_res["ready"],
-                "account_name": str(only.get("name") or "Cuenta Conectada"),
-                "message": f"✓ {_platform_label(requested_platform)} ({only.get('name')}) vinculado automáticamente en 1 clic.",
-            }
-        except Exception as _auto_exc:
-            logger.warning("Auto-activation failed: %s", _auto_exc)
-
-    _pending_meta_oauth_sessions[session_key] = {
-        "business_id": business_id,
-        "requested_platform": requested_platform,
-        "user_access_token": user_access_token,
-        "me_id": me_id,
-        "me_name": me_name,
-        "candidates": candidates,
-        "created_at": time.time(),
-    }
-    for old_key, old_session in list(_pending_meta_oauth_sessions.items()):
-        if time.time() - float(old_session.get("created_at", 0)) > 900:
-            _pending_meta_oauth_sessions.pop(old_key, None)
-
-    platform_title = "Instagram Direct" if requested_platform == "instagram" else "Facebook Messenger"
-    accent_gradient = (
-        "linear-gradient(135deg,#f43f5e,#a855f7)"
-        if requested_platform == "instagram"
-        else "linear-gradient(135deg,#3b82f6,#1d4ed8)"
-    )
-    safe_me_name = html.escape(me_name)
-    public_candidates = [
-        {
-            "id": item.get("id", ""),
-            "name": item.get("name", ""),
-            "page_name": item.get("page_name", ""),
-            "page_id": item.get("page_id", ""),
-        }
-        for item in candidates
-    ]
-    candidates_json = json.dumps(public_candidates)
-
-    return HTMLResponse(
-        f"""<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Vincular {platform_title} · CALYRISIA</title>
-<style>
-  * {{ box-sizing: border-box; }}
-  body {{
-    margin: 0; padding: 28px 18px;
-    background: radial-gradient(circle at 50% 0%, rgba(56,189,248,0.14), transparent 55%), #090d16;
-    color: #f8fafc;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  }}
-  .card {{
-    max-width: 500px; margin: 0 auto;
-    background: rgba(15, 23, 42, 0.92);
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: 20px; padding: 24px;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-  }}
-  .pill {{
-    display: inline-block; padding: 4px 10px; border-radius: 999px;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-    background: rgba(56, 189, 248, 0.12); color: #7cecf5; border: 1px solid rgba(56, 189, 248, 0.3);
-    margin-bottom: 10px;
-  }}
-  h2 {{ margin: 0 0 6px; font-size: 1.25rem; }}
-  p.sub {{ margin: 0 0 18px; color: #94a3b8; font-size: 13px; line-height: 1.55; }}
-  .account-option {{
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 13px 15px; border-radius: 14px;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(148,163,184,0.18);
-    margin-bottom: 10px;
-  }}
-  .account-option strong {{ display: block; font-size: 14px; color: #fff; }}
-  .account-option small {{ color: #94a3b8; font-size: 12px; }}
-  .btn-primary {{
-    border: 0; border-radius: 11px; padding: 10px 16px;
-    background: {accent_gradient}; color: #fff;
-    font-weight: 700; font-size: 12.5px; cursor: pointer; white-space: nowrap;
-  }}
-  .btn-secondary {{
-    display: inline-flex; align-items: center; justify-content: center;
-    border: 1px solid rgba(148,163,184,0.25); border-radius: 11px; padding: 9px 14px;
-    background: rgba(255,255,255,0.04); color: #cbd5e1;
-    font-weight: 600; font-size: 12px; text-decoration: none; cursor: pointer;
-  }}
-  .input-box {{
-    width: 100%; padding: 11px 13px; border-radius: 11px;
-    background: #060a12; border: 1px solid rgba(148,163,184,0.28);
-    color: #fff; font-size: 13px; margin-bottom: 10px;
-  }}
-  .status-msg {{ margin-top: 12px; font-size: 12.5px; min-height: 18px; }}
-</style>
-</head>
-<body>
-<div class="card">
-  <span class="pill">{platform_title}</span>
-  <h2>Conectar cuenta con el Cerebro IA</h2>
-  <p class="sub">
-    Sesión: <strong style="color:#e2e8f0;">{safe_me_name}</strong>.
-    Selecciona tu cuenta o inicia sesión directamente para que la IA responda sola 24/7:
-  </p>
-
-  <div id="accounts-list"></div>
-  <div id="status-msg" class="status-msg"></div>
-
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid rgba(148,163,184,0.14);">
-    <a href="{switch_account_url}" class="btn-secondary">Cambiar de cuenta</a>
-    <a href="{rerequest_url}" class="btn-secondary">Elegir páginas</a>
-  </div>
-</div>
-
-<script>
-const SESSION_KEY = {json.dumps(session_key)};
-const PLATFORM = {json.dumps(requested_platform)};
-const CANDIDATES = {candidates_json};
-const ERROR_DETAIL = {json.dumps(error_detail)};
-
-const listEl = document.getElementById('accounts-list');
-const statusEl = document.getElementById('status-msg');
-
-function escapeHtml(value) {{
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[ch]));
-}}
-function notifyParentAndClose(accountName, message) {{
-  if (window.opener) {{
-    const targetOrigin = window.location.origin || '*';
-    window.opener.postMessage({{
-      type: 'META_CONNECTED', status: 'ok', platform: PLATFORM,
-      account_name: accountName, message: message || 'Cuenta conectada y respondiendo con IA.'
-    }}, targetOrigin);
-  }}
-  setTimeout(() => window.close(), 650);
-}}
-async function selectAccount(id, name) {{
-  statusEl.style.color = '#38bdf8';
-  statusEl.textContent = 'Activando ' + name + ' en CALYRISIA...';
-  try {{
-    const res = await fetch('/api/v1/auth/meta/select-account', {{
-      method: 'POST', headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ session_key: SESSION_KEY, platform: PLATFORM, page_or_ig_id: id, account_name: name }})
-    }});
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'No se pudo activar la cuenta.');
-    statusEl.style.color = '#34d399';
-    statusEl.textContent = data.message || 'Cuenta vinculada con éxito.';
-    notifyParentAndClose(data.account_name || name, data.message);
-  }} catch (err) {{
-    statusEl.style.color = '#fda4af';
-    statusEl.textContent = err.message;
-  }}
-}}
-async function directPopupLogin() {{
-  const u = (document.getElementById('direct-user')?.value || '').trim();
-  const p = (document.getElementById('direct-pass')?.value || '').trim();
-  if (!u || !p) {{
-    statusEl.style.color = '#fda4af';
-    statusEl.textContent = 'Ingresa tu usuario y contraseña para vincular la cuenta.';
-    return;
-  }}
-  statusEl.style.color = '#38bdf8';
-  statusEl.textContent = 'Conectando cuenta directamente con el Cerebro IA...';
-  try {{
-    const res = await fetch('/api/v1/auth/meta/popup-direct-login', {{
-      method: 'POST', headers: {{ 'Content-Type': 'application/json' }},
-      body: JSON.stringify({{ session_key: SESSION_KEY, platform: PLATFORM, username: u, password: p }})
-    }});
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'No se pudo conectar la cuenta.');
-    statusEl.style.color = '#34d399';
-    statusEl.textContent = data.message;
-    notifyParentAndClose(data.account_name || u, data.message);
-  }} catch (err) {{
-    statusEl.style.color = '#fda4af';
-    statusEl.textContent = err.message;
-  }}
-}}
-
-if (CANDIDATES.length > 0) {{
-  listEl.innerHTML = CANDIDATES.map((item, idx) => {{
-    const sub = item.page_name ? ('Página vinculada: ' + escapeHtml(item.page_name)) : ('ID: ' + escapeHtml(item.id));
-    return `<div class="account-option">
-      <div><strong>${{escapeHtml(item.name)}}</strong><small>${{sub}}</small></div>
-      <button type="button" class="btn-primary" id="cand-btn-${{idx}}">Conectar y activar</button>
-    </div>`;
-  }}).join('');
-  CANDIDATES.forEach((item, idx) => {{
-    document.getElementById('cand-btn-' + idx)?.addEventListener('click', () => selectAccount(item.id, item.name));
-  }});
-  const AUTO_ACTIVATED = {json.dumps(auto_activated_info)};
-  if (AUTO_ACTIVATED && AUTO_ACTIVATED.ready) {{
-    statusEl.style.color = '#34d399';
-    statusEl.textContent = AUTO_ACTIVATED.message;
-    notifyParentAndClose(AUTO_ACTIVATED.account_name, AUTO_ACTIVATED.message);
-  }}
-}} else {{
-  listEl.innerHTML = `<div style="padding:14px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(148,163,184,0.2);">
-    <p style="margin:0 0 10px;font-size:12.5px;color:#cbd5e1;">Inicia sesión directamente con tu cuenta de {platform_title} para activar las respuestas automáticas 24/7:</p>
-    <input id="direct-user" class="input-box" type="text" placeholder="Usuario o nombre de página (ej. @tuzonagamerdigital)">
-    <input id="direct-pass" class="input-box" type="password" placeholder="Contraseña o Token de acceso">
-    <button type="button" class="btn-primary" style="width:100%;padding:11px;" onclick="directPopupLogin()">Conectar y activar IA</button>
-  </div>`;
-}}
-</script>
-</body>
-</html>"""
-    )
+    return await render_direct_connect_popup(state=state or "", fb_oauth="")
 
 
 @router.get("/auth/meta/callback")
@@ -1523,7 +1553,7 @@ async def save_meta_channel(
                     else ("@cuenta_instagram" if platform == "instagram" else "Página de Facebook")
                 )
             if not page_or_ig_id:
-                page_or_ig_id = f"meta_{platform}_{business_id[:8]}"
+                page_or_ig_id = f"id_{platform}_{business_id[:8]}"
 
             status = "connected" if payload.enabled else "paused"
             cur.execute(
@@ -1586,12 +1616,6 @@ async def toggle_meta_channel(
             existing = cur.fetchone()
             if not existing:
                 raise HTTPException(status_code=404, detail=f"Primero vincula tu cuenta de {_platform_label(platform)}.")
-            if enabled:
-                account_id, parent_page_id, access_token = str(existing[1] or ""), str(existing[2] or ""), str(existing[3] or "")
-                if platform in ("instagram", "facebook") and access_token.startswith("EAA"):
-                    page_id = parent_page_id or (account_id if platform == "facebook" else "")
-                    if page_id:
-                        await _subscribe_meta_webhook(platform=platform, page_id=page_id, access_token=access_token)
             cur.execute(
                 """UPDATE public.business_meta_channels
                    SET enabled = %s, channel_status = %s, last_error = NULL, updated_at = now()
