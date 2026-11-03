@@ -123,6 +123,33 @@ async def ensure_meta_social_schema() -> None:
                     """
                 )
                 cur.execute("ALTER TABLE public.business_meta_channels ADD COLUMN IF NOT EXISTS parent_page_id varchar(120) NOT NULL DEFAULT ''")
+                # Older production databases may have a restrictive CHECK constraint
+                # on conversations.channel that predates Meta/omnichannel support.
+                # Expand it to the channels accepted by app.schemas.Channel. NOT VALID
+                # avoids failing deployment because of historical rows, while PostgreSQL
+                # still enforces the new rule for every INSERT/UPDATE going forward.
+                try:
+                    cur.execute("SAVEPOINT sp_meta_conversation_channels")
+                    cur.execute(
+                        "ALTER TABLE public.conversations "
+                        "DROP CONSTRAINT IF EXISTS conversations_channel_check"
+                    )
+                    cur.execute(
+                        "ALTER TABLE public.conversations "
+                        "ADD CONSTRAINT conversations_channel_check "
+                        "CHECK (channel IN ('whatsapp', 'webchat', 'instagram', 'facebook', "
+                        "'messenger', 'telegram', 'email', 'phone', 'other')) NOT VALID"
+                    )
+                    cur.execute("RELEASE SAVEPOINT sp_meta_conversation_channels")
+                except Exception as migration_exc:
+                    try:
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_meta_conversation_channels")
+                    except Exception:
+                        pass
+                    logger.warning(
+                        "Could not expand conversations.channel constraint for Meta channels: %s",
+                        type(migration_exc).__name__,
+                    )
                 cur.execute(
                     """CREATE TABLE IF NOT EXISTS public.meta_oauth_pending_sessions (
                         session_key varchar(96) PRIMARY KEY,
