@@ -9,6 +9,7 @@ Channel = Literal[
     "whatsapp",
     "webchat",
     "instagram",
+    "facebook",
     "messenger",
     "telegram",
     "email",

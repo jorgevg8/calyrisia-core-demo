@@ -155,26 +155,11 @@ async def start_whatsapp_bridge() -> None:
 
     bridge_dir = Path(__file__).resolve().parents[2] / "whatsapp_bridge"
     server_mjs = bridge_dir / "server.mjs"
-    node_bin = shutil.which("node")
-    if not server_mjs.exists() or not node_bin:
-        logger.info("Node.js o whatsapp_bridge/server.mjs no disponible; omitiendo puente QR local.")
-        return
-
     node_modules = bridge_dir / "node_modules"
-    npm_bin = shutil.which("npm")
-    if not node_modules.exists() and npm_bin:
-        try:
-            logger.info("Instalando dependencias de whatsapp_bridge (Baileys)...")
-            await asyncio.to_thread(
-                subprocess.run,
-                [npm_bin, "install", "--omit=dev", "--no-audit", "--no-fund"],
-                cwd=str(bridge_dir),
-                check=False,
-                capture_output=True,
-                timeout=120,
-            )
-        except Exception as exc:
-            logger.warning("No se pudieron instalar dependencias de whatsapp_bridge: %s", exc)
+    node_bin = shutil.which("node")
+    if not server_mjs.exists() or not node_bin or not node_modules.exists():
+        logger.info("Puente Baileys local no iniciado (node_modules no instalado localmente; en Render se instala en el Dockerfile).")
+        return
 
     if _wa_bridge_proc is None or _wa_bridge_proc.poll() is not None:
         env = os.environ.copy()
@@ -193,10 +178,10 @@ async def start_whatsapp_bridge() -> None:
             logger.warning("No se pudo iniciar el subproceso de WhatsApp QR: %s", exc)
             return
 
-    for _ in range(10):
+    for _ in range(8):
         if await is_bridge_online():
             break
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(0.35)
 
     if await is_bridge_online():
         try:
@@ -255,7 +240,6 @@ async def send_whatsapp_reply_async(
         except Exception as exc:
             logger.warning("Fallo envío vía Evolution API para tenant %s: %s", tenant_id, exc)
 
-    # Fallback transparente al puente local Baileys si está corriendo en el mismo contenedor
     if await is_bridge_online():
         try:
             await _bridge_call(
@@ -409,7 +393,7 @@ async def _provision_whatsapp_instance_for_tenant(
         except Exception as exc:
             logger.warning("Puente local Baileys falló para tenant %s: %s", business_id, exc)
 
-    # 3. Fallback determinístico para que el endpoint nunca falle en pruebas sin demonio externo
+    # 3. Fallback determinístico para pruebas sin demonio externo
     qr_fallback = evo.generate_fallback_qr_data_url(instance_name, business_id)
     async with get_connection() as conn:
         with conn.cursor() as cur:
@@ -643,7 +627,6 @@ async def handle_whatsapp_webhook_event(
         if not tenant_id:
             return {"ok": False, "ignored": True, "reason": "No se encontró un tenant_id activo para la instancia recibida."}
 
-        # 1. Actualización de QR enviada por Evolution API (`qrcode.updated`)
         if event_name == "qrcode.updated":
             data = body.get("data") if isinstance(body.get("data"), dict) else {}
             qr_obj = data.get("qrcode") if isinstance(data.get("qrcode"), dict) else data
@@ -664,7 +647,6 @@ async def handle_whatsapp_webhook_event(
             conn.commit()
             return {"ok": True, "event": "qrcode.updated", "tenant_id": tenant_id, "instance_name": instance_name}
 
-        # 2. Actualización de estado de conexión (`connection.update`)
         if event_name == "connection.update":
             data = body.get("data") if isinstance(body.get("data"), dict) else {}
             raw_state = str(data.get("state") or data.get("status") or "").lower()
@@ -682,7 +664,6 @@ async def handle_whatsapp_webhook_event(
             conn.commit()
             return {"ok": True, "event": "connection.update", "tenant_id": tenant_id, "status": mapped_status}
 
-        # 3. Mensajes entrantes (`messages.upsert` o payload directo)
         normalized_messages = OmnichannelGatewayService.normalize_whatsapp_webhook(
             raw_body=body,
             tenant_id=tenant_id,

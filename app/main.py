@@ -302,6 +302,8 @@ from app.api.meta_social import (
     handle_meta_oauth_callback,
     receive_global_meta_webhook_handler,
     router as meta_social_router,
+    start_social_direct_polling,
+    stop_social_direct_polling,
     verify_global_meta_webhook_handler,
 )
 from app.api.easy_catalog import (
@@ -860,9 +862,11 @@ async def lifespan(app: FastAPI):
         print(f"[Startup Telegram MTProto Notice] {exc}")
     await start_telegram_polling()
     await start_whatsapp_bridge()
+    await start_social_direct_polling()
     try:
         yield
     finally:
+        await stop_social_direct_polling()
         await stop_whatsapp_bridge()
         await stop_telegram_polling()
         heartbeat_task.cancel()
