@@ -492,6 +492,19 @@
     .footer-links{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
     .footer-links button,.footer-links a{border:0;padding:0;background:none;color:#a9bddf;cursor:pointer;font-size:.78rem;font-weight:600}
     .footer-links button:hover,.footer-links a:hover{color:var(--cyan)}
+    .footer-language-switch{position:relative;display:inline-flex;align-items:center;}
+    .footer-language-switch select{
+      appearance:none;-webkit-appearance:none;min-width:132px;padding:9px 34px 9px 12px;
+      border-radius:11px;border:1px solid rgba(0,240,255,.32);
+      background:linear-gradient(135deg,rgba(0,240,255,.09),rgba(168,85,247,.10));
+      color:#e9f4ff;font-size:.78rem;font-weight:700;cursor:pointer;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.07);outline:none;
+    }
+    .footer-language-switch select:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,240,255,.13)}
+    .footer-language-switch::after{content:"";position:absolute;right:13px;top:50%;width:7px;height:7px;
+      border-right:1.7px solid #9ddff5;border-bottom:1.7px solid #9ddff5;transform:translateY(-68%) rotate(45deg);pointer-events:none}
+    .footer-language-switch option{background:#081225;color:#eff6ff}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
     /* Responsive Tablet & Mobile */
     @media(max-width:1024px){
@@ -935,7 +948,13 @@
         <button type="button" data-view-link="nosotros">Quiénes somos</button>
         <button type="button" data-view-link="planes">Planes</button>
         <button type="button" data-view-link="contacto">Contacto</button>
-        <a href="/dashboard/">Dashboard</a>
+        <div class="footer-language-switch">
+          <label class="sr-only" for="calyrisia-site-language">Idioma de la página</label>
+          <select id="calyrisia-site-language" aria-label="Idioma de la página" title="Cambiar idioma">
+            <option value="es">🇪🇸 Español</option>
+            <option value="en">🇺🇸 English</option>
+          </select>
+        </div>
         <a href="/privacidad/">Política de privacidad</a>
       </nav>
     </div>
@@ -943,8 +962,83 @@
 
   <script>
     (()=>{
+
+      const LANDING_UI_TRANSLATIONS = {'CALYRISIA — Tu negocio, con inteligencia propia': 'CALYRISIA — Your business, with intelligence of its own', 'Inicio': 'Home', 'Quiénes somos': 'About Us', 'Planes': 'Plans', 'Contacto': 'Contact', 'Iniciar Sesión ↗': 'Log In ↗', 'CALYRISIA · Tu negocio, con inteligencia propia': 'CALYRISIA · Your business, with intelligence of its own', 'Tu negocio no necesita otro chatbot.': 'Your business does not need another chatbot.', 'Necesita inteligencia que trabaje.': 'It needs intelligence that gets work done.', 'Atiende en WhatsApp QR, Instagram, Facebook Messenger, Telegram y Webchat con stock en vivo, pedidos automáticos y Copiloto Ejecutor.': 'Serve customers on WhatsApp QR, Instagram, Facebook Messenger, Telegram, and Webchat with live inventory, automated orders, and an execution-ready copilot.', 'Comenzar Gratis ($0)': 'Start for Free ($0)', '→': '→', 'Ver Planes Free y PRO': 'View Free and PRO Plans', '✓': '✓', 'Plan Free $0': 'Free Plan $0', 'Sin tarjeta ni pago previo': 'No credit card or upfront payment', '⚡': '⚡', 'Catálogo y Variantes': 'Catalog & Variants', 'Precios y stock en vivo': 'Live prices and inventory', '◈': '◈', 'WhatsApp · IG · FB · Telegram': 'WhatsApp · IG · FB · Telegram', '5 canales + Copiloto IA': '5 channels + AI Copilot', 'CALYRISIA · Centro de Mando Ejecutivo': 'CALYRISIA · Executive Command Center', 'Operación Activa 24/7': 'Operations Active 24/7', 'Operación': 'Operations', 'Resumen Ejecutivo': 'Executive Overview', 'Catálogo & Variantes': 'Catalog & Variants', 'Pedidos & Pagos': 'Orders & Payments', 'CRM Automático': 'Automated CRM', 'Inteligencia': 'Intelligence', 'Business Radar': 'Business Radar', 'WhatsApp QR': 'WhatsApp QR', 'Ingresos del Día': "Today's Revenue", '$1,840.00': '$1,840.00', '▲ +28% vs. ayer': '▲ +28% vs. yesterday', 'Clientes Atendidos': 'Customers Served', 'Respuesta en 1.2s': '1.2s response time', 'Pedidos Preparados': 'Orders Prepared', 'Stock sincronizado': 'Inventory synchronized', 'Canales Activos': 'Active Channels', 'Omnicanal': 'Omnichannel', 'WhatsApp · Telegram · Web': 'WhatsApp · Telegram · Web', 'Operaciones Autónomas en Vivo': 'Live Autonomous Operations', 'Tiempo real': 'Real time', 'L1': 'L1', 'Stock y variantes consultados desde el catálogo oficial': 'Inventory and variants checked against the official catalog', 'Automático': 'Automatic', 'L2': 'L2', 'Pedido armado y oportunidad registrada en CRM': 'Order prepared and opportunity recorded in CRM', 'Preparado': 'Prepared', 'L3': 'L3', 'Referencia de pago lista para tu confirmación': 'Payment reference ready for your confirmation', 'Verificado': 'Verified', 'Agente Comercial Conectado': 'Connected Sales Agent', 'En línea': 'Online', 'Hola, ¿tienen disponibilidad inmediata y qué métodos de pago aceptan?': 'Hello, do you have immediate availability, and what payment methods do you accept?', '¡Hola! Sí, contamos con stock verificado en sistema. Puedes abonar por Pago Móvil, Binance Pay o transferencia.': 'Hi! Yes, we have verified inventory in our system. You can pay by mobile payment, Binance Pay, or bank transfer.', '01': '01', 'Cerebro Comercial en Vivo': 'Live Business Brain', 'Sincroniza productos, precios, SKU, tallas y stock real al instante sin inventar respuestas.': 'Instantly sync products, prices, SKUs, sizes, and actual inventory—without making up answers.', '02': '02', 'Autonomía en 3 Niveles': 'Three Levels of Autonomy', 'Atiende dudas y prepara pedidos solo; tú autorizas cobros y ajustes de stock con un clic.': 'Answers questions and prepares orders automatically; you approve payments and inventory adjustments with one click.', '03': '03', 'Business Radar y CRM': 'Business Radar & CRM', 'Registra prospectos automáticamente y detecta productos de alta demanda con evidencia.': 'Automatically records leads and identifies high-demand products with supporting evidence.', '📱': '📱', 'Tecnología': 'Technology', 'Modelos, capacidades, garantías y precios al día.': 'Models, specifications, warranties, and up-to-date prices.', '👕': '👕', 'Ropa y Calzado': 'Clothing & Footwear', 'Tallas, colores y disponibilidad por prenda en vivo.': 'Live sizes, colors, and item availability.', '📦': '📦', 'Distribuidoras': 'Distributors', 'Cotización por unidad, caja o bulto y recompra B2B.': 'Quotes by unit, case, or bulk package, plus B2B reorders.', '🔧': '🔧', 'Repuestos y Ferretería': 'Auto Parts & Hardware', 'Búsqueda exacta por código SKU, marca y stock.': 'Exact lookup by SKU, brand, and inventory.', 'Quiénes Somos': 'About Us', 'Ingeniería de nivel internacional.': 'International-grade engineering.', 'Creada para negocios reales.': 'Built for real businesses.', 'Unificamos atención al cliente, inventario, pedidos e inteligencia ejecutiva en una sola plataforma.': 'We bring customer support, inventory, orders, and executive intelligence together in one platform.', 'Visión y Liderazgo': 'Vision & Leadership', 'JV': 'JV', 'Jorge Andrés Velásquez Gutiérrez': 'Jorge Andrés Velásquez Gutiérrez', 'Founder & Chief Systems Architect · CALYRISIA': 'Founder & Chief Systems Architect · CALYRISIA', 'Ingeniero en Computación · Full-Stack & QA Automation Architect': 'Computer Engineer · Full-Stack & QA Automation Architect', 'CALYRISIA equipa a tiendas comerciales, distribuidores y pymes con la misma velocidad, orden y precisión operativa de las grandes empresas tecnológicas.': 'CALYRISIA equips retailers, distributors, and small businesses with the same speed, structure, and operational precision as major technology companies.', 'Arquitectura Multi-Tenant': 'Multi-Tenant Architecture', 'Stock en Tiempo Real': 'Real-Time Inventory', 'Autonomía Controlada': 'Controlled Autonomy', 'Diseño Ejecutivo': 'Executive Design', 'Cero inventos:': 'No Guesswork:', 'respuestas basadas en tu catálogo oficial.': 'answers grounded in your official catalog.', 'Control humano:': 'Human Control:', 'tú apruebas pagos y despachos.': 'you approve payments and dispatches.', 'Omnicanal:': 'Omnichannel:', 'WhatsApp QR, Telegram y Webchat.': 'WhatsApp QR, Telegram, and Webchat.', 'Cerebro Comercial': 'Business Brain', 'Conoce tus productos, variantes, horarios y reglas operativas al instante.': 'Knows your products, variants, business hours, and operating rules instantly.', 'Catálogo e Inventario': 'Catalog & Inventory', 'Precios y existencias sincronizadas para cotizar y armar pedidos sin errores.': 'Synchronized prices and inventory for accurate quotes and order preparation.', 'CRM sin Formularios': 'CRM Without Forms', 'Detecta intención de compra en cada chat y organiza tus oportunidades solo.': 'Detects purchase intent in every chat and organizes your opportunities automatically.', 'Identifica productos agotados, demanda activa y alertas con evidencia real.': 'Identifies out-of-stock products, active demand, and alerts backed by real evidence.', 'Activación en 3 Pasos': 'Get Started in 3 Steps', 'De tu registro al Dashboard en minutos': 'From sign-up to your dashboard in minutes', 'PASO 01': 'STEP 01', 'Elige tu Plan': 'Choose Your Plan', 'Inicia en Free ($0) o activa el Plan PRO.': 'Start with Free ($0) or activate the PRO Plan.', 'PASO 02': 'STEP 02', 'Crea tu Cuenta': 'Create Your Account', 'Define el giro y nombre de tu negocio.': 'Set your business type and business name.', 'PASO 03': 'STEP 03', 'Opera en Vivo': 'Go Live', 'Carga tu catálogo y conecta tus canales.': 'Upload your catalog and connect your channels.', 'Especialización': 'Industry Expertise', 'Sectores donde operamos': 'Industries We Serve', 'Tiendas de Tecnología': 'Technology Stores', 'Ropa, Calzado y Moda': 'Clothing, Footwear & Fashion', 'Distribuidoras y Mayoristas': 'Distributors & Wholesalers', 'Repuestos y Ferreterías': 'Auto Parts & Hardware Stores', 'Bodegones y Minimarkets': 'Delis & Convenience Stores', 'Restaurantes y Servicios': 'Restaurants & Services', 'Modelo Comercial Transparente · 2 Planes': 'Transparent Pricing · 2 Plans', 'Empieza gratis hoy mismo.': 'Start for free today.', 'Activa la potencia total con PRO.': 'Unlock the full power of PRO.', 'Comienza en el Plan Free ($0) sin tarjeta ni pago previo, o contrata PRO para desbloquear WhatsApp QR, CRM y Business Radar.': 'Start with the Free Plan ($0), with no card or upfront payment, or choose PRO to unlock WhatsApp QR, CRM, and Business Radar.', 'Para empezar y probar el valor real': 'A great way to get started and experience the value', 'Plan Free': 'Free Plan', 'Configura tu negocio sin pago previo y opera con tu propio catálogo en vivo.': 'Set up your business at no upfront cost and operate with your own live catalog.', '$0': '$0', 'USD / mes · Gratis': 'USD / month · Free', '1 Agente IA · Canal Webchat activo': '1 AI Agent · Active Webchat channel', 'Creación inmediata de cuenta y negocio': 'Instant account and business setup', 'Catálogo de': 'Catalog of', '50 productos': '50 products', 'con carga rápida': 'with quick import', 'Consulta de precios y existencias en vivo': 'Live price and inventory lookup', 'Atención automática en canal': 'Automated support through the', 'Webchat': 'Webchat channel', 'Captura de pedidos y referencias de pago': 'Order capture and payment references', 'Hasta': 'Up to', '150 operaciones de IA al mes': '150 AI operations per month', 'Crear Cuenta Gratis ($0)': 'Create a Free Account ($0)', '★ Producto Comercial Principal': '★ Main Commercial Product', 'Inteligencia y Automatización Completa': 'Complete Intelligence & Automation', 'Plan PRO': 'PRO Plan', 'Automatización total en WhatsApp, Instagram, Facebook, Telegram y Webchat con Copiloto.': 'Full automation across WhatsApp, Instagram, Facebook, Telegram, and Webchat with an AI Copilot.', '$39': '$39', 'USD / mes': 'USD / month', 'WhatsApp QR + Instagram + Facebook + Telegram + Web': 'WhatsApp QR + Instagram + Facebook + Telegram + Web', '5.000 productos': '5,000 products', ', SKU y variantes': ', SKUs, and variants', 'WhatsApp QR, Instagram DM, Facebook': 'WhatsApp QR, Instagram DMs, Facebook', 'y Telegram': 'and Telegram', 'Business Brain': 'Business Brain', 'con stock real y multimoneda': 'with live inventory and multi-currency support', 'CRM Inteligente 100% automático': '100% Automated Smart CRM', 'sin formularios': 'with no forms', 'con alertas y evidencia verificable': 'with alerts and verifiable evidence', '3.500 operaciones IA/mes': '3,500 AI operations/month', 'y soporte prioritario': 'and priority support', 'Contratar Plan PRO': 'Choose PRO', 'Contacto Directo': 'Direct Contact', 'Hablemos de tu negocio': "Let's talk about your business", 'sin intermediarios.': '— no middlemen.', 'Escríbenos directamente por WhatsApp o correo electrónico para atención comercial inmediata.': 'Contact us directly via WhatsApp or email for immediate sales assistance.', 'Canales Oficiales': 'Official Channels', 'Atención directa personalizada': 'Personalized direct support', 'Resolvemos tus dudas sobre implementación, planes y configuración de tu tienda o distribuidora.': 'We answer your questions about implementation, plans, and setup for your store or distribution business.', 'WA': 'WA', 'WhatsApp Comercial': 'Business WhatsApp', '+58 412-8418550 · Respuesta inmediata': '+58 412-8418550 · Immediate response', 'Abrir ↗': 'Open ↗', '@': '@', 'Correo Empresarial': 'Business Email', 'Escribir ↗': 'Email Us ↗', '¿Prefieres probar ahora mismo?': 'Would you rather try it right now?', 'Crear Cuenta Free ($0) →': 'Create a Free Account ($0) →', 'Mensaje Rápido': 'Quick Message', 'Envíanos tu consulta en 1 clic': 'Send us your inquiry in one click', 'Nombre y apellido': 'Full name', 'Negocio o rubro': 'Business or industry', 'Mensaje': 'Message', 'Enviar a WhatsApp ↗': 'Send via WhatsApp ↗', '© 2026': '© 2026', 'CALYRISIA': 'CALYRISIA', '· Autonomous Business Intelligence': '· Autonomous Business Intelligence', 'Dashboard': 'Dashboard', 'Política de privacidad': 'Privacy Policy', 'Idioma de la página': 'Page language', 'Cambiar idioma': 'Change language',
+    'Navegación principal': 'Main navigation', 'CALYRISIA, inicio': 'CALYRISIA, home',
+    'Ventajas principales': 'Key benefits', 'Vista previa del Centro de Mando CALYRISIA': 'CALYRISIA Command Center preview',
+    'Sectores comerciales': 'Business sectors', 'Enlaces del pie': 'Footer links', 'Logo CALYRISIA': 'CALYRISIA logo',
+    'Tu nombre': 'Your name',
+    'Ej. Tienda de tecnología, Distribuidora': 'e.g. Technology store, distributor',
+    '¿En qué podemos ayudarte?': 'How can we help you?', 'Abrir menú': 'Open menu', 'Cerrar menú': 'Close menu'};
+      const landingOriginalText = new WeakMap();
+      const landingOriginalAttributes = new WeakMap();
+      function landingLanguage(){ return localStorage.getItem('calyrisia_ui_language') === 'en' ? 'en' : 'es'; }
+      function translateLandingValue(original, language){
+        if(language !== 'en') return original;
+        const raw = String(original ?? '');
+        const trimmed = raw.trim();
+        if(!trimmed) return original;
+        const translated = LANDING_UI_TRANSLATIONS[trimmed];
+        if(!translated) return original;
+        return raw.replace(trimmed, translated);
+      }
+      function applyLandingLanguage(){
+        const language = landingLanguage();
+        document.documentElement.lang = language;
+        document.title = language === 'en' ? 'CALYRISIA — Your business, with intelligence of its own' : 'CALYRISIA — Tu negocio, con inteligencia propia';
+        const meta = {
+          description: language === 'en' ? 'CALYRISIA — Your business, with intelligence of its own. AI-powered business intelligence and sales automation for retailers, distributors, and small businesses.' : 'CALYRISIA — Tu negocio, con inteligencia propia. Plataforma SaaS de inteligencia artificial y automatización comercial para tiendas, distribuidores y pymes.',
+          ogtitle: language === 'en' ? 'CALYRISIA — Your business, with intelligence of its own' : 'CALYRISIA — Tu negocio, con inteligencia propia',
+          ogdescription: language === 'en' ? 'Your business does not need another chatbot. It needs intelligence that gets work done.' : 'Tu negocio no necesita otro chatbot. Necesita inteligencia que trabaje.'
+        };
+        document.querySelector('meta[name="description"]')?.setAttribute('content', meta.description);
+        document.querySelector('meta[property="og:title"]')?.setAttribute('content', meta.ogtitle);
+        document.querySelector('meta[property="og:description"]')?.setAttribute('content', meta.ogdescription);
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+          acceptNode(node){
+            const parent = node.parentElement;
+            if(!parent || parent.closest('script,style,textarea,pre,code,[data-no-translate="true"]')) return NodeFilter.FILTER_REJECT;
+            if(parent.closest('#calyrisia-site-language')) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        });
+        let node;
+        while((node = walker.nextNode())){
+          if(!landingOriginalText.has(node)) landingOriginalText.set(node, node.nodeValue || '');
+          const translated = translateLandingValue(landingOriginalText.get(node), language);
+          if(node.nodeValue !== translated) node.nodeValue = translated;
+        }
+        const attrNames = ['placeholder','title','aria-label','alt'];
+        document.querySelectorAll('[placeholder],[title],[aria-label],img[alt]').forEach(element => {
+          let originals = landingOriginalAttributes.get(element);
+          if(!originals){ originals = {}; landingOriginalAttributes.set(element, originals); }
+          attrNames.forEach(name => {
+            if(!element.hasAttribute(name)) return;
+            if(!(name in originals)) originals[name] = element.getAttribute(name) || '';
+            const translated = translateLandingValue(originals[name], language);
+            if(element.getAttribute(name) !== translated) element.setAttribute(name, translated);
+          });
+        });
+        const picker = document.getElementById('calyrisia-site-language');
+        if(picker && picker.value !== language) picker.value = language;
+        const menuToggle = document.getElementById('menuToggle');
+        if(menuToggle) menuToggle.setAttribute('aria-label', language === 'en' ? 'Open menu' : 'Abrir menú');
+      }
+      function setLandingLanguage(language){
+        const normalized = language === 'en' ? 'en' : 'es';
+        localStorage.setItem('calyrisia_ui_language', normalized);
+        applyLandingLanguage();
+      }
+      window.setLandingLanguage = setLandingLanguage;
+      window.addEventListener('storage', event => {
+        if(event.key === 'calyrisia_ui_language') applyLandingLanguage();
+      });
+
       const views=[...document.querySelectorAll('[data-view]')], links=[...document.querySelectorAll('[data-view-link]')];
       const menu=document.getElementById('menuToggle'), nav=document.getElementById('navlinks');
+      const languagePicker = document.getElementById('calyrisia-site-language');
+      languagePicker?.addEventListener('change', event => setLandingLanguage(event.target.value));
+      applyLandingLanguage();
       function activate(name,update=true){
         if(!views.some(v=>v.dataset.view===name))name='inicio';
         views.forEach(v=>{const on=v.dataset.view===name;v.classList.toggle('active',on);v.setAttribute('aria-hidden',String(!on));});
@@ -972,9 +1066,12 @@
         qform.addEventListener('submit',e=>{
           e.preventDefault();
           const name=document.getElementById('qcName').value.trim();
-          const biz=document.getElementById('qcBusiness').value.trim()||'Por definir';
-          const need=document.getElementById('qcNeed').value.trim()||'Quiero conocer más sobre CALYRISIA.';
-          const msg=`Hola CALYRISIA, quiero información comercial.\nNombre: ${name}\nNegocio: ${biz}\nConsulta: ${need}`;
+          const en = landingLanguage() === 'en';
+          const biz=document.getElementById('qcBusiness').value.trim()||(en?'Not specified':'Por definir');
+          const need=document.getElementById('qcNeed').value.trim()||(en?'I would like to learn more about CALYRISIA.':'Quiero conocer más sobre CALYRISIA.');
+          const msg = en
+            ? `Hello CALYRISIA, I would like business information.\nName: ${name}\nBusiness: ${biz}\nInquiry: ${need}`
+            : `Hola CALYRISIA, quiero información comercial.\nNombre: ${name}\nNegocio: ${biz}\nConsulta: ${need}`;
           window.open('https://wa.me/584128418550?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
         });
       }
