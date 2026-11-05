@@ -1,0 +1,23 @@
+CALYRISIA — PAQUETE CONSOLIDADO PARA RENDER
+
+1) Extrae los archivos de este ZIP directamente dentro de la carpeta existente:
+   C:\Proyecto Galaxy\galaxy_core_v1
+   Acepta reemplazar los archivos cuando Windows lo pregunte. No borres .git ni tu .env local.
+
+2) Haz doble clic en SUBIR_A_RENDER.bat.
+   El archivo valida sintaxis, revisa los diffs, agrega solo archivos seleccionados, crea un commit y ejecuta git push origin main. No usa git add . y no agrega .env, .venv, backups ni test.py.
+
+3) Si Render tiene Auto Deploy activado, espera a que el deployment termine en el panel de Render. Revisa /health.
+
+4) Para que webchat/dashboard funcionen, en Render > Environment deben existir:
+   PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD, PGSSLMODE=require y GEMINI_API_KEY.
+   GEMINI_MODEL queda definido como gemini-3.8-flash por render.yaml y puede cambiarse si tu clave no tiene acceso a ese modelo.
+
+5) PGHOST tiene que apuntar a PostgreSQL remoto accesible desde Render. La base debe incluir las tablas y datos demo de CALYRISIA y las migraciones correspondientes. Este ZIP incluye las migraciones de los pasos actuales, pero no contiene un volcado de tu base de datos local ni contraseñas.
+
+Diagnostico:
+- /health: el proceso FastAPI arrancó.
+- /health/ready: comprueba PostgreSQL, las tablas requeridas y la configuración de Gemini.
+- /docs: documentación interactiva de la API.
+
+Se han omitido intencionalmente .env, .venv, cachés, archivos temporales y respaldos del paquete.

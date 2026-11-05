@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Dashboard — Owner View</title>
+    <style>
+        :root { color-scheme: dark; }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Inter, Arial, sans-serif; background: #0b1020; color: #eef2ff; }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 28px; }
+        .card { background: #141a2d; border: 1px solid #28314d; border-radius: 14px; padding: 18px; }
+        .hidden { display: none !important; }
+        h1,h2,h3,p { margin-top: 0; }
+        input, button { width: 100%; border-radius: 10px; padding: 12px 14px; border: 1px solid #35415f; font-size: 14px; }
+        input { background: #0e1425; color: #fff; }
+        button { background: #2563eb; color: #fff; cursor: pointer; border: 0; font-weight: 700; }
+        button.secondary { background: #27324e; }
+        .grid { display: grid; gap: 16px; }
+        .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+        .two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+        .muted { color: #9aa7c7; }
+        .value { font-size: 30px; font-weight: 800; margin-top: 8px; }
+        ul { padding-left: 0; list-style: none; margin: 0; }
+        li { background: #0f1527; border: 1px solid #222c47; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+        .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .row > * { flex: 1; }
+        .right { text-align:right; }
+        .badge { display:inline-block; padding: 5px 9px; border-radius: 999px; font-size: 12px; background:#173522; color:#8ef0af; }
+        .error { color:#ff9e9e; min-height:20px; }
+        .success { color:#8ef0af; }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div id="loginView" class="card" style="max-width:460px;margin:60px auto;">
+        <h1>Galaxy Dashboard</h1>
+        <p class="muted">Acceso autenticado del propietario / administrador.</p>
+        <form id="loginForm">
+            <label>Correo</label>
+            <input id="email" type="email" required autocomplete="username" placeholder="owner@galaxy.test">
+            <div style="height:12px"></div>
+            <label>Contraseña</label>
+            <input id="password" type="password" required autocomplete="current-password">
+            <div style="height:16px"></div>
+            <button type="submit">Entrar a Galaxy</button>
+            <div id="loginError" class="error"></div>
+        </form>
+    </div>
+
+    <div id="dashboardView" class="hidden">
+        <div class="card" style="margin-bottom:18px;">
+            <div class="row">
+                <div>
+                    <div class="muted">GALAXY BUSINESS AUTOPILOT</div>
+                    <h1 id="businessName">Cargando...</h1>
+                    <p id="businessMeta" class="muted"></p>
+                </div>
+                <div class="right">
+                    <span class="badge" id="roleBadge">ONLINE</span>
+                    <div style="height:8px"></div>
+                    <button class="secondary" id="logoutBtn">Cerrar sesión</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid kpis" style="margin-bottom:18px;">
+            <div class="card"><div class="muted">Ventas totales</div><div class="value" id="sales">$0.00</div></div>
+            <div class="card"><div class="muted">Pedidos</div><div class="value" id="orders">0</div></div>
+            <div class="card"><div class="muted">Conversaciones</div><div class="value" id="conversations">0</div></div>
+            <div class="card"><div class="muted">Stock bajo</div><div class="value" id="lowStock">0</div></div>
+            <div class="card"><div class="muted">Handoffs</div><div class="value" id="handoffs">0</div></div>
+            <div class="card"><div class="muted">Auditorías hoy</div><div class="value" id="audits">0</div></div>
+        </div>
+
+        <div class="grid two">
+            <div class="card">
+                <h2>🧠 Insights</h2>
+                <ul id="insights"><li class="muted">Cargando...</li></ul>
+            </div>
+            <div class="card">
+                <h2>💡 Recomendaciones</h2>
+                <ul id="recommendations"><li class="muted">Cargando...</li></ul>
+            </div>
+            <div class="card">
+                <h2>📦 Inventario</h2>
+                <p id="inventoryMeta" class="muted"></p>
+            </div>
+            <div class="card">
+                <h2>🏆 Top productos</h2>
+                <ul id="products"><li class="muted">Cargando...</li></ul>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:18px;">
+            <div class="row">
+                <div>
+                    <span class="muted">Business ID</span>
+                    <div class="mono" id="businessId"></div>
+                </div>
+                <button id="refreshBtn">Actualizar dashboard</button>
+            </div>
+            <div id="dashboardError" class="error"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const tokenKey = 'galaxy_access_token';
+const roleKey = 'galaxy_role';
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function showLogin(message = '') {
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('dashboardView').classList.add('hidden');
+    document.getElementById('loginError').textContent = message;
+}
+
+function showDashboard() {
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('dashboardView').classList.remove('hidden');
+}
+
+async function api(path, options = {}) {
+    const token = localStorage.getItem(tokenKey);
+    const headers = { ...(options.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const response = await fetch(path, { ...options, headers });
+    if (response.status === 401) {
+        localStorage.removeItem(tokenKey);
+        localStorage.removeItem(roleKey);
+        showLogin('Sesión expirada. Vuelve a iniciar sesión.');
+        throw new Error('unauthorized');
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+    return data;
+}
+
+async function loadDashboard() {
+    document.getElementById('dashboardError').textContent = '';
+    try {
+        const me = await api('/api/v1/auth/me');
+        const user = me.user;
+        if (!['OWNER', 'ADMIN'].includes(user.role)) {
+            throw new Error('Tu usuario no tiene permisos para el Dashboard.');
+        }
+        const data = await api('/api/v1/dashboard/overview');
+
+        document.getElementById('businessName').textContent = data.business?.name || 'Galaxy';
+        document.getElementById('businessMeta').textContent = `${data.business?.industry || ''} · ${data.business?.currency || ''} · ${user.full_name || user.email}`;
+        document.getElementById('roleBadge').textContent = user.role;
+        document.getElementById('businessId').textContent = data.business?.id || user.business_id;
+
+        const a = data.analytics || {};
+        document.getElementById('sales').textContent = `$${Number(a.orders?.sales_total || 0).toFixed(2)}`;
+        document.getElementById('orders').textContent = Number(a.orders?.total || 0);
+        document.getElementById('conversations').textContent = Number(a.conversations_total || 0);
+        document.getElementById('lowStock').textContent = Number(a.inventory?.low_stock || 0);
+        document.getElementById('handoffs').textContent = Number(a.handoffs_total || 0);
+        document.getElementById('audits').textContent = Number(a.audits_today || 0);
+        document.getElementById('inventoryMeta').textContent = `Registros: ${Number(a.inventory?.records || 0)} · Fuera de stock: ${Number(a.inventory?.out_of_stock || 0)}`;
+
+        const insights = document.getElementById('insights');
+        insights.innerHTML = '';
+        (data.insights || []).forEach(item => {
+            insights.innerHTML += `<li><strong>${escapeHtml(item.title || 'Insight')}</strong><br>${escapeHtml(item.description || '')}<br><span class="muted">Prioridad: ${escapeHtml(item.priority || 'normal')} · Estado: ${escapeHtml(item.status || '')}</span></li>`;
+        });
+        if (!insights.children.length) insights.innerHTML = '<li class="muted">No hay insights abiertos.</li>';
+
+        const recs = document.getElementById('recommendations');
+        recs.innerHTML = '';
+        (data.recommendations || []).forEach(item => {
+            recs.innerHTML += `<li><strong>${escapeHtml(item.title || 'Recomendación')}</strong><br>${escapeHtml(item.description || '')}<br><span class="muted">Prioridad: ${escapeHtml(item.priority || 'normal')} · Aprobación: ${item.requires_approval ? 'sí' : 'no'}</span></li>`;
+        });
+        if (!recs.children.length) recs.innerHTML = '<li class="muted">No hay recomendaciones pendientes.</li>';
+
+        const products = document.getElementById('products');
+        products.innerHTML = '';
+        (data.top_products || []).forEach(item => {
+            products.innerHTML += `<li><strong>${escapeHtml(item.product_name || 'Producto')}</strong><br>${Number(item.units || 0)} unidades · $${Number(item.revenue || 0).toFixed(2)}</li>`;
+        });
+        if (!products.children.length) products.innerHTML = '<li class="muted">Todavía no hay ventas registradas.</li>';
+        showDashboard();
+    } catch (err) {
+        if (err.message !== 'unauthorized') document.getElementById('dashboardError').textContent = err.message;
+    }
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const error = document.getElementById('loginError');
+    error.textContent = '';
+    const body = new URLSearchParams();
+    body.set('username', document.getElementById('email').value.trim());
+    body.set('password', document.getElementById('password').value);
+    try {
+        const response = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || 'No se pudo iniciar sesión.');
+        if (!['OWNER', 'ADMIN'].includes(data.role)) throw new Error('El usuario no tiene acceso al Dashboard.');
+        localStorage.setItem(tokenKey, data.access_token);
+        localStorage.setItem(roleKey, data.role);
+        await loadDashboard();
+    } catch (err) {
+        error.textContent = err.message;
+    }
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem(tokenKey);
+    localStorage.removeItem(roleKey);
+    showLogin('Sesión cerrada.');
+});
+
+if (localStorage.getItem(tokenKey)) loadDashboard();
+else showLogin();
+</script>
+</body>
+</html>

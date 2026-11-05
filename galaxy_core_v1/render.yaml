@@ -1,0 +1,80 @@
+services:
+  - type: web
+    name: calyrisia-core
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: CALYRISIA Core
+      - key: APP_ENV
+        value: production
+      - key: APP_HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PGHOST
+        sync: false
+      - key: PGPORT
+        value: "5432"
+      - key: PGDATABASE
+        sync: false
+      - key: PGUSER
+        sync: false
+      - key: PGPASSWORD
+        sync: false
+      - key: PGSSLMODE
+        value: require
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: TELEGRAM_API_ID
+        sync: false
+      - key: TELEGRAM_API_HASH
+        sync: false
+      - key: EVOLUTION_API_URL
+        sync: false
+      - key: EVOLUTION_API_KEY
+        sync: false
+      - key: EVOLUTION_WEBHOOK_URL
+        value: https://calyrisia.com/api/webhooks/whatsapp
+      - key: META_APP_ID
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_TOKEN_ENCRYPTION_KEY
+        sync: false
+      - key: META_OAUTH_STATE_SECRET
+        sync: false
+      - key: META_REDIRECT_URI
+        value: https://calyrisia.com/api/auth/meta/callback
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: META_GRAPH_API_VERSION
+        value: v26.0
+      - key: GALAXY_JWT_SECRET
+        generateValue: true
+      - key: GALAXY_JWT_ALGORITHM
+        value: HS256
+      - key: GALAXY_JWT_EXP_MINUTES
+        value: "1440"
+      - key: GALAXY_JWT_ISSUER
+        value: galaxy-core
+      - key: CALYRISIA_CHECKOUT_ADMIN_KEY
+        sync: false
+      - key: CALYRISIA_PAGO_MOVIL_BANK
+        sync: false
+      - key: CALYRISIA_PAGO_MOVIL_PHONE
+        sync: false
+      - key: CALYRISIA_PAGO_MOVIL_ID
+        sync: false
+      - key: CALYRISIA_ZINLI_EMAIL
+        sync: false
+      - key: CALYRISIA_BINANCE_USER
+        sync: false
+      - key: CALYRISIA_BINANCE_PAY_ID
+        sync: false
+      - key: CALYRISIA_BINANCE_QR_IMAGE_URL
+        value: /payments/binance-pay-qr.png

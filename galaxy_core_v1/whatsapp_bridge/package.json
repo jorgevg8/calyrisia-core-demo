@@ -1,0 +1,16 @@
+{
+  "name": "calyrisia-whatsapp-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Puente ligero multi-negocio de WhatsApp QR (Baileys) para CALYRISIA con persistencia en Supabase",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: galaxy_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-galaxy_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-GalaxySecure2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-galaxy_core_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U galaxy_admin -d galaxy_core_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: galaxy_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-galaxy_admin}:${POSTGRES_PASSWORD:-GalaxySecure2026!}@db:5432/${POSTGRES_DB:-galaxy_core_db}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-galaxy_super_secret_jwt_key_2026}
+      APP_ENV: production
+    ports:
+      - "8000:8000"
+
+volumes:
+  postgres_data:
+    driver: local
