@@ -462,6 +462,489 @@
             #floating-toast { bottom: 78px !important; right: 16px !important; left: 16px !important; }
         }
 
+
+        /* =====================================================================
+           REDISEÑO EJECUTIVO MÓVIL Y TABLETA DE ALTA GAMA (CALYRISIA V5)
+           ===================================================================== */
+        /* Simetría milimétrica en tarjetas KPI */
+        .kpi-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 126px;
+            background:
+                radial-gradient(circle at 92% 14%, rgba(0, 242, 254, 0.11), transparent 52%),
+                linear-gradient(165deg, rgba(16, 26, 48, 0.88) 0%, rgba(7, 12, 24, 0.95) 100%);
+            border: 1px solid rgba(130, 180, 255, 0.16);
+            border-top: 1px solid rgba(0, 242, 254, 0.32);
+            box-shadow: 0 14px 34px -10px rgba(0, 0, 0, 0.55);
+        }
+        .kpi-card-header {
+            min-height: 32px;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .kpi-card-header h3 {
+            line-height: 1.3;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+        .kpi-card-header i {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.24);
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .kpi-card .value {
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-top: auto;
+        }
+
+        /* Quick Action Launcher inside Overview */
+        .mobile-quick-launcher {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin: 0 0 20px;
+        }
+        .quick-launch-btn {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: linear-gradient(145deg, rgba(15, 25, 48, 0.85), rgba(8, 14, 28, 0.92));
+            border: 1px solid rgba(0, 242, 254, 0.22);
+            color: #f8fafc;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: 0;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.45);
+        }
+        .quick-launch-btn:hover, .quick-launch-btn:active {
+            transform: translateY(-2px);
+            border-color: rgba(0, 242, 254, 0.5);
+            background: linear-gradient(145deg, rgba(0, 242, 254, 0.14), rgba(139, 92, 246, 0.12));
+        }
+        .quick-launch-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.18), rgba(168, 85, 247, 0.18));
+            border: 1px solid rgba(0, 242, 254, 0.32);
+            color: #00f2fe;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+        .quick-launch-copy {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+            min-width: 0;
+        }
+        .quick-launch-copy strong {
+            font-size: 12px;
+            color: #ffffff;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .quick-launch-copy small {
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 400;
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+
+        /* Executive Overview Header Card */
+        .overview-hero-card {
+            padding: 20px 22px;
+            border-radius: 20px;
+            background:
+                radial-gradient(circle at 90% 10%, rgba(0, 242, 254, 0.14), transparent 45%),
+                radial-gradient(circle at 10% 90%, rgba(168, 85, 247, 0.12), transparent 45%),
+                linear-gradient(155deg, rgba(14, 23, 46, 0.9), rgba(7, 12, 25, 0.95));
+            border: 1px solid rgba(0, 242, 254, 0.24);
+            box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.55);
+            margin-bottom: 18px !important;
+        }
+
+        /* Tablet Optimization (601px - 1024px) */
+        @media (min-width: 601px) and (max-width: 1024px) {
+            .sidebar {
+                background: rgba(3, 7, 18, 0.94);
+                border-bottom: 1px solid rgba(0, 242, 254, 0.2);
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            }
+            .sidebar-brand {
+                padding: 12px 20px 6px !important;
+                justify-content: flex-start !important;
+                gap: 12px !important;
+            }
+            .sidebar > div:nth-child(2) {
+                padding: 6px 20px 12px !important;
+                gap: 8px !important;
+            }
+            .sidebar .nav-item {
+                border-radius: 999px !important;
+                padding: 8px 15px !important;
+                font-size: 12.5px !important;
+                background: rgba(15, 23, 42, 0.75);
+                border: 1px solid rgba(148, 163, 184, 0.16);
+            }
+            .sidebar .nav-item.active {
+                background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(168, 85, 247, 0.18)) !important;
+                border-color: rgba(0, 242, 254, 0.48) !important;
+                box-shadow: 0 4px 15px rgba(0, 242, 254, 0.18);
+            }
+            .topbar {
+                padding: 10px 20px !important;
+                min-height: 56px !important;
+                background: rgba(6, 11, 24, 0.78) !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+            .view-section {
+                padding: 20px 20px 96px !important;
+            }
+            .kpi-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+            }
+            .kpi-card {
+                padding: 16px 14px !important;
+                min-height: 118px;
+            }
+            .kpi-card .value {
+                font-size: 22px !important;
+            }
+            .mobile-quick-launcher {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .channels-modern-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 14px !important;
+            }
+            .vertical-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                gap: 12px !important;
+            }
+            .panel-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 16px !important;
+            }
+        }
+
+        /* Mobile Phone Experience (<= 600px) — Ergonomic, Fluid & App-Native */
+        @media (max-width: 600px) {
+            .sidebar {
+                background: rgba(3, 7, 18, 0.95);
+                border-bottom: 1px solid rgba(0, 242, 254, 0.18);
+                box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
+            }
+            .sidebar-brand {
+                padding: 10px 14px 4px !important;
+                justify-content: flex-start !important;
+                gap: 10px !important;
+            }
+            .sidebar-brand img {
+                width: 30px !important;
+                height: 30px !important;
+            }
+            .sidebar-brand .brand-text {
+                font-size: 0.96rem !important;
+                letter-spacing: 0.12em !important;
+            }
+            .sidebar > div:nth-child(2) {
+                padding: 6px 12px 10px !important;
+                gap: 7px !important;
+            }
+            .sidebar .nav-item {
+                border-radius: 999px !important;
+                padding: 7px 13px !important;
+                font-size: 11.5px !important;
+                font-weight: 600 !important;
+                background: rgba(15, 23, 42, 0.8);
+                border: 1px solid rgba(148, 163, 184, 0.15);
+                gap: 7px !important;
+            }
+            .sidebar .nav-item i { font-size: 15px !important; }
+            .sidebar .nav-item.active {
+                background: linear-gradient(135deg, rgba(0, 242, 254, 0.22), rgba(168, 85, 247, 0.2)) !important;
+                border-color: rgba(0, 242, 254, 0.5) !important;
+                box-shadow: 0 4px 14px rgba(0, 242, 254, 0.2);
+                color: #ffffff !important;
+            }
+
+            /* Unified Single-Row Top Action Bar on Mobile (No messy multi-row wrapping!) */
+            .topbar {
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 8px 12px !important;
+                min-height: 50px !important;
+                gap: 6px !important;
+                background: rgba(7, 13, 28, 0.88) !important;
+                border-bottom: 1px solid rgba(130, 180, 255, 0.14) !important;
+            }
+            .topbar-info {
+                display: none !important;
+            }
+            .topbar > div:last-child {
+                width: 100%;
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 6px !important;
+            }
+            .topbar > div:last-child button,
+            .topbar > div:last-child .btn-action,
+            .topbar > div:last-child .btn-secondary,
+            .topbar > div:last-child .btn-logout {
+                white-space: nowrap !important;
+                min-height: 36px !important;
+                height: 36px !important;
+                padding: 0 11px !important;
+                font-size: 11px !important;
+                border-radius: 10px !important;
+                letter-spacing: 0.2px !important;
+            }
+            .topbar > div:last-child .btn-action {
+                flex: 1.2 !important;
+                min-width: 0;
+                box-shadow: 0 6px 16px -4px rgba(0, 242, 254, 0.45) !important;
+            }
+            .topbar > div:last-child button[onclick*="exportExecutiveDailyCloseCsv"] {
+                flex: 0.95 !important;
+                min-width: 0;
+            }
+            .topbar > div:last-child button[onclick*="loadDashboard"],
+            .topbar > div:last-child .btn-logout {
+                flex: 0 0 36px !important;
+                width: 36px !important;
+                padding: 0 !important;
+            }
+            #roleBadge {
+                display: none !important;
+            }
+
+            /* Main View Section & Overview Card on Mobile */
+            .view-section {
+                padding: 14px 12px 96px !important;
+            }
+            .overview-hero-card {
+                padding: 15px 15px !important;
+                border-radius: 17px !important;
+                margin-bottom: 14px !important;
+                gap: 10px !important;
+            }
+            #overview-plan-kicker {
+                font-size: 9.5px !important;
+                letter-spacing: 1.1px !important;
+                margin-bottom: 4px !important;
+            }
+            .section-header h2 {
+                font-size: 1.35rem !important;
+                line-height: 1.2 !important;
+                margin-bottom: 4px !important;
+            }
+            #businessMeta {
+                font-size: 12px !important;
+                line-height: 1.45 !important;
+            }
+            #overview-period-pill {
+                font-size: 10.5px !important;
+                padding: 6px 11px !important;
+                width: 100%;
+                text-align: center;
+                background: rgba(0, 242, 254, 0.06) !important;
+                border-color: rgba(0, 242, 254, 0.22) !important;
+                color: #bae6fd !important;
+            }
+
+            /* 2x2 Quick Action Launcher on Phone */
+            .mobile-quick-launcher {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .quick-launch-btn {
+                padding: 10px 11px;
+                border-radius: 13px;
+                gap: 9px;
+            }
+            .quick-launch-icon {
+                width: 32px;
+                height: 32px;
+                border-radius: 9px;
+                font-size: 16px;
+            }
+            .quick-launch-copy strong { font-size: 11.5px; }
+            .quick-launch-copy small { font-size: 9.5px; }
+
+            /* 2x2 Symmetrical KPI Grid on Phone */
+            .kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+                margin-bottom: 16px !important;
+            }
+            .kpi-card {
+                padding: 13px 12px !important;
+                border-radius: 15px !important;
+                min-height: 114px !important;
+            }
+            .kpi-card-header {
+                min-height: 28px !important;
+                margin-bottom: 6px !important;
+            }
+            .kpi-card-header h3 {
+                font-size: 10px !important;
+                letter-spacing: 0.6px !important;
+                line-height: 1.25 !important;
+            }
+            .kpi-card-header i {
+                width: 28px !important;
+                height: 28px !important;
+                border-radius: 8px !important;
+                font-size: 14px !important;
+            }
+            .kpi-card .value {
+                font-size: 1.38rem !important;
+            }
+
+            /* Vertical Cards, Panels & Rows on Phone */
+            .vertical-card {
+                padding: 15px 14px !important;
+                border-radius: 15px !important;
+            }
+            .vertical-number {
+                font-size: 1.45rem !important;
+            }
+            .panel {
+                padding: 16px 14px !important;
+                border-radius: 16px !important;
+            }
+            .panel h3 {
+                font-size: 14.5px !important;
+                margin-bottom: 14px !important;
+            }
+            .settings-filter-bar {
+                width: 100% !important;
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 6px !important;
+                padding: 6px !important;
+            }
+            .settings-filter-pill {
+                justify-content: center !important;
+                padding: 9px 10px !important;
+                font-size: 11.5px !important;
+            }
+            .quick-grid-row {
+                grid-template-columns: 1fr 1fr !important;
+                padding: 10px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.025);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+            }
+            .quick-grid-row .qg-name { grid-column: 1 / -1; }
+
+            /* Copilot Mobile Experience */
+            .copilot-chip-bar {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                padding-bottom: 6px !important;
+                margin: 6px 0 10px !important;
+                scrollbar-width: none;
+            }
+            .copilot-chip-bar::-webkit-scrollbar { display: none; }
+            .copilot-chip {
+                flex-shrink: 0 !important;
+                white-space: nowrap !important;
+                padding: 8px 13px !important;
+                font-size: 11.5px !important;
+                background: rgba(0, 242, 254, 0.08) !important;
+                border-color: rgba(0, 242, 254, 0.26) !important;
+            }
+            #view-copilot .chat-container {
+                height: calc(100dvh - 285px) !important;
+                min-height: 360px !important;
+                border-radius: 16px !important;
+            }
+            #view-copilot .chat-box {
+                padding: 14px 12px !important;
+                gap: 11px !important;
+            }
+            #view-copilot .chat-msg {
+                max-width: 90% !important;
+                padding: 12px 14px !important;
+                font-size: 12.8px !important;
+            }
+            #view-copilot .chat-input-area {
+                padding: 10px 12px !important;
+                gap: 8px !important;
+            }
+            #view-copilot .chat-input-area button {
+                padding: 12px 15px !important;
+                flex-shrink: 0;
+            }
+        }
+
+        /* Enhanced Native-Style Mobile Bottom Nav Dock (<= 900px) */
+        @media (max-width: 900px) {
+            .mobile-bottom-nav {
+                height: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+                padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+                background: rgba(4, 8, 20, 0.94) !important;
+                border-top: 1px solid rgba(0, 242, 254, 0.24) !important;
+                box-shadow: 0 -14px 36px rgba(0, 0, 0, 0.72) !important;
+            }
+            .mobile-bottom-item {
+                flex: 1;
+                min-width: 0;
+                padding: 6px 4px !important;
+                border-radius: 13px !important;
+                font-size: 10px !important;
+                font-weight: 700 !important;
+            }
+            .mobile-bottom-item i { font-size: 20px !important; }
+            .mobile-bottom-item.active {
+                color: #00f2fe !important;
+                background: linear-gradient(135deg, rgba(0, 242, 254, 0.16), rgba(168, 85, 247, 0.14)) !important;
+                border: 1px solid rgba(0, 242, 254, 0.34) !important;
+                box-shadow: 0 4px 14px rgba(0, 242, 254, 0.16);
+            }
+            .mobile-bottom-item[data-view="copilot"] {
+                color: #e9d5ff;
+            }
+            .mobile-bottom-item[data-view="copilot"] i {
+                color: #00f2fe;
+                filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.5));
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -582,17 +1065,37 @@
             </div>
         </div>
 
-        <!-- VISTA 1: PANEL EJECUTIVO (100% ANÁLISIS PURO Y TELEMETRÍA SIN BOTONES) -->
+        <!-- VISTA 1: PANEL EJECUTIVO (100% ANÁLISIS PURO Y TELEMETRÍA + ACCESO RÁPIDO MÓVIL) -->
         <div id="view-overview" class="view-section active">
-            <div class="section-header animate-fade-up" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
+            <div class="section-header overview-hero-card animate-fade-up" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;">
                 <div>
                     <span id="overview-plan-kicker" style="font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#00f2fe;font-weight:700;display:block;margin-bottom:6px;">TELEMETRÍA EJECUTIVA EN TIEMPO REAL</span>
                     <h2 id="businessName">Panel Ejecutivo</h2>
                     <p id="businessMeta" class="muted">Inteligencia analítica y métricas operativas de tu negocio.</p>
                 </div>
                 <div id="overview-period-pill" style="padding:8px 14px;border-radius:999px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.03);font-size:11px;color:#cbd5e1;">
-                    Sincronización automática activa · Datos reales del negocio
+                    <span class="status-dot-live"></span> Sincronización activa · Datos en tiempo real
                 </div>
+            </div>
+
+            <!-- ACCiones Rápidas Táctiles para Móvil, Tablet y Desktop -->
+            <div class="mobile-quick-launcher animate-fade-up delay-1">
+                <button type="button" class="quick-launch-btn" onclick="switchView('copilot')">
+                    <span class="quick-launch-icon"><i class="ph ph-sparkle"></i></span>
+                    <span class="quick-launch-copy"><strong>Copiloto IA</strong><small>Asesoría y órdenes</small></span>
+                </button>
+                <button type="button" class="quick-launch-btn" onclick="switchView('catalog')">
+                    <span class="quick-launch-icon"><i class="ph ph-package"></i></span>
+                    <span class="quick-launch-copy"><strong>Catálogo IA</strong><small>Precios y stock</small></span>
+                </button>
+                <button type="button" class="quick-launch-btn" onclick="switchView('radar')">
+                    <span class="quick-launch-icon"><i class="ph ph-radar"></i></span>
+                    <span class="quick-launch-copy"><strong>Business Radar</strong><small>Alertas y demanda</small></span>
+                </button>
+                <button type="button" class="quick-launch-btn" onclick="switchView('crm')">
+                    <span class="quick-launch-icon"><i class="ph ph-users"></i></span>
+                    <span class="quick-launch-copy"><strong>CRM Clientes</strong><small>Oportunidades</small></span>
+                </button>
             </div>
 
             <!-- KPIs Principales (4 indicadores clave adaptados al giro) -->
@@ -1187,28 +1690,29 @@
             </div>
 
             <div class="copilot-chip-bar animate-fade-up">
-                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Agrégame 5 Teclados RGB')">➕ "Agrégame 5 Teclados RGB"</button>
-                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('¿Qué productos tienen poco stock?')">📦 "¿Qué productos tienen poco stock?"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('¿Qué producto me recomiendas promocionar hoy y cómo lo vendo?')">💡 "Asesórame: ¿qué promociono hoy?"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('¿Qué combos o paquetes me sugieres armar con mi inventario actual?')">🎁 "Sugerir combos rentables"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('¿Cómo asesoro a un cliente indeciso o que dice que está caro?')">🤝 "Cómo cerrar clientes indecisos"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('¿Qué productos tienen poco stock?')">📦 "¿Qué tiene poco stock?"</button>
                 <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Reabastece todos los productos con poco stock')">⚡ "Reabastecer +10 a stock bajo"</button>
-                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Crea el producto Monitor Gamer 27 a $195 con 8 en stock')">🆕 "Crear Monitor Gamer 27 a $195"</button>
-                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Dame un resumen ejecutivo de ventas e inventario')">📊 "Resumen ejecutivo del negocio"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Agrégame 5 Teclados RGB')">➕ "Agrégame 5 Teclados RGB"</button>
+                <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Dame un resumen ejecutivo y diagnóstico honesto de mi negocio')">📊 "Diagnóstico del negocio"</button>
                 <button type="button" class="copilot-chip" onclick="sendCopilotMessage('Actualiza la tasa del día a 46.50')">💱 "Actualizar tasa a 46.50"</button>
             </div>
 
             <div class="chat-container glass-panel animate-fade-up delay-1" style="height:calc(100vh - 270px);min-height:420px;">
                 <div class="chat-box" id="copilot-chat-box">
                     <div class="chat-msg chat-bot">
-                        <strong>Hola Jefe 👋</strong> Soy tu Copiloto Ejecutivo de CALYRISIA.<br><br>
-                        Estoy conectado en tiempo real a tu inventario, ventas y configuración. Puedes escribirme o tocar cualquiera de los botones de arriba para:<br>
-                        • <strong>Sumar stock o crear artículos al instante:</strong> <code>"agrégame 5 teclados rgb"</code> o <code>"suma 10 mouse inalámbrico"</code>;<br>
-                        • <strong>Reponer todo el stock bajo en 1 orden:</strong> <code>"reabastece todos los productos con poco stock"</code>;<br>
-                        • <strong>Cambiar precios o tasa del día:</strong> <code>"cambia el precio de auriculares a $28"</code>;<br>
-                        • <strong>Consultar métricas reales:</strong> <code>"¿qué productos tienen poco stock?"</code> o <code>"resumen de ventas"</code>.
+                        <strong>¡Hola Jefe! 👋 Qué gusto saludarte.</strong> Soy tu Copiloto Ejecutivo de CALYRISIA.<br><br>
+                        Hablo contigo de tú a tú como tu socio comercial y estoy conectado en vivo a tu inventario, ventas, clientes y canales. Pregúntame lo que quieras o pídele acciones directas:<br>
+                        • <strong>Asesoría comercial y sobre artículos:</strong> <code>"¿qué producto me recomiendas impulsar hoy?"</code>, <code>"¿qué combos puedo armar?"</code> o <code>"¿cómo vendo mejor este artículo?"</code>;<br>
+                        • <strong>Preguntas abiertas o inesperadas del negocio:</strong> estrategia de precios, manejo de objeciones, envíos, garantías o rotación de capital;<br>
+                        • <strong>Ejecución inmediata en base de datos:</strong> <code>"agrégame 5 teclados rgb"</code>, <code>"vendí 2 mouse en mostrador"</code>, <code>"cambia el precio de X a $28"</code> o <code>"reabastece todo el stock bajo"</code>.
                     </div>
                 </div>
                 <div class="chat-input-area">
-                    <input type="text" id="copilot-input" placeholder="Ej: Agrégame 5 teclados rgb · ¿Qué productos tienen poco stock? · Cambia el precio de..." onkeypress="if(event.key === 'Enter') sendCopilotMessage()">
-                    <button class="btn-action" style="padding: 12px 20px;" onclick="sendCopilotMessage()"><i class="ph ph-paper-plane-right"></i> Ejecutar</button>
+                    <input type="text" id="copilot-input" placeholder="Pregúntame sobre tu negocio, pide asesoría de artículos u ordéname una tarea..." onkeypress="if(event.key === 'Enter') sendCopilotMessage()">
+                    <button class="btn-action" style="padding: 12px 20px;" onclick="sendCopilotMessage()"><i class="ph ph-paper-plane-right"></i> Enviar</button>
                 </div>
             </div>
         </div>
@@ -1993,7 +2497,10 @@ function switchView(viewId) {
     const targetView = document.getElementById('view-' + viewId);
     if (targetView) targetView.classList.add('active');
     const navItem = Array.from(document.querySelectorAll('.sidebar .nav-item')).find(el => (el.getAttribute('onclick') || '').includes("'" + viewId + "'"));
-    if (navItem) navItem.classList.add('active');
+    if (navItem) {
+        navItem.classList.add('active');
+        try { navItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch (_) {}
+    }
     if (viewId === 'overview') applyBusinessOverview(currentBusiness);
     if (viewId === 'crm') loadCrmWorkspace();
     if (viewId === 'radar') loadBusinessRadarWorkspace();
@@ -2669,6 +3176,7 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
 /* ---------------------------------------------------------
    LÓGICA DE OWNER COPILOT
 --------------------------------------------------------- */
+let copilotConversationHistory = [];
 async function sendCopilotMessage(forcedMessage = null) {
     const inputEl = document.getElementById('copilot-input');
     const message = forcedMessage || (inputEl ? inputEl.value.trim() : '');
@@ -2680,15 +3188,19 @@ async function sendCopilotMessage(forcedMessage = null) {
     chatBox.scrollTop = chatBox.scrollHeight;
 
     const loadingId = 'loading-' + Date.now();
-    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-style: italic;"><i class="ph ph-spinner ph-spin"></i> Analizando y ejecutando en tu negocio...</div>`;
+    chatBox.innerHTML += `<div id="${loadingId}" class="chat-msg chat-bot muted" style="font-style: italic;"><i class="ph ph-spinner ph-spin"></i> Analizando tu negocio en tiempo real...</div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
 
     try {
         const data = await api("/api/v1/owner/copilot", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: message })
+            body: JSON.stringify({ message: message, history: copilotConversationHistory.slice(-6) })
         });
+        copilotConversationHistory.push({ role: "user", content: message });
+        if (data && data.response) {
+            copilotConversationHistory.push({ role: "assistant", content: String(data.response).slice(0, 800) });
+        }
 
         const loader = document.getElementById(loadingId);
         if (loader) loader.remove();

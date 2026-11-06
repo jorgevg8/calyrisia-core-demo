@@ -139,6 +139,7 @@ class BrainRequest(BaseModel):
 
 class OwnerCopilotRequest(BaseModel):
     message: str = Field(min_length=1, max_length=10000)
+    history: list[dict[str, Any]] | None = None
 
 
 class BusinessBrainAnalyzeRequest(BaseModel):

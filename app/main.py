@@ -1137,6 +1137,7 @@ async def owner_copilot(
                 business_id=UUID(current_user["business_id"]),
                 user_id=UUID(current_user["id"]),
                 message=payload.message,
+                history=payload.history,
             )
         except Exception as exc:
             raise HTTPException(status_code=502, detail=f"Owner Copilot error: {exc}") from exc

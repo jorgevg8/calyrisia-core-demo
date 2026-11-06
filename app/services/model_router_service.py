@@ -21,7 +21,7 @@ class RouteDecision:
     primary_model: str
     candidate_models: list[str] = field(default_factory=list)
     plan: str = "free"
-    max_output_tokens: int = 320
+    max_output_tokens: int = 850
     temperature: float = 0.35
     reason: str = ""
     within_budget: bool = True
@@ -174,7 +174,7 @@ class ModelRouterService:
                 primary_model=self.primary_model,
                 candidate_models=list(dict.fromkeys(candidates)),
                 plan=resolved_plan,
-                max_output_tokens=420,
+                max_output_tokens=900,
                 temperature=0.35,
                 reason="Operación comercial PRO con razonamiento de catálogo y herramientas.",
                 within_budget=True,
@@ -186,7 +186,7 @@ class ModelRouterService:
             primary_model=self.economy_model,
             candidate_models=list(dict.fromkeys(candidates)),
             plan=resolved_plan,
-            max_output_tokens=280 if resolved_plan == "free" else 360,
+            max_output_tokens=750 if resolved_plan == "free" else 900,
             temperature=0.35,
             reason="Enrutamiento ágil optimizado en costo y latencia.",
             within_budget=True,
@@ -255,3 +255,83 @@ class ModelRouterService:
                     pass
 
         return record
+
+    def generate_text(
+        self,
+        *,
+        task_type: str = "general",
+        system_instruction: str = "",
+        user_prompt: str = "",
+        temperature: float = 0.35,
+        max_output_tokens: int = 850,
+        business_id: UUID | int | str | None = None,
+    ) -> dict[str, Any]:
+        """Generate text using Gemini with automatic multi-model fallback and safe error handling."""
+        try:
+            from google import genai
+            from google.genai import types
+            from app.core.config import get_settings
+        except Exception as exc:
+            return {"ok": False, "text": "", "error": f"SDK import error: {exc}"}
+
+        settings = get_settings()
+        api_key = (settings.gemini_api_key or os.getenv("GEMINI_API_KEY") or "").strip()
+        if not api_key:
+            return {"ok": False, "text": "", "error": "No GEMINI_API_KEY configured"}
+
+        try:
+            client = genai.Client(
+                api_key=api_key,
+                http_options=types.HttpOptions(
+                    timeout=14000,
+                    retry_options=types.HttpRetryOptions(attempts=1),
+                ),
+            )
+        except Exception as exc:
+            return {"ok": False, "text": "", "error": f"Client init error: {exc}"}
+
+        candidates = list(
+            dict.fromkeys(
+                [
+                    self.executive_model if "copilot" in task_type or "executive" in task_type else self.primary_model,
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                    self.economy_model,
+                ]
+            )
+        )
+
+        errors: list[str] = []
+        for model_name in candidates:
+            if not model_name or model_name == "deterministic-engine":
+                continue
+            try:
+                resp = client.models.generate_content(
+                    model=model_name,
+                    contents=user_prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=temperature,
+                        max_output_tokens=max_output_tokens,
+                    ),
+                )
+                text = (getattr(resp, "text", None) or "").strip()
+                if text:
+                    if business_id is not None and self.conn is not None:
+                        try:
+                            self.log_usage(
+                                business_id=business_id,
+                                model_name=model_name,
+                                prompt_text=f"{system_instruction}\n{user_prompt}",
+                                completion_text=text,
+                                feature_used=task_type,
+                            )
+                        except Exception:
+                            pass
+                    return {"ok": True, "text": text, "model": model_name}
+            except Exception as exc:
+                errors.append(f"{model_name}: {exc}")
+                continue
+
+        return {"ok": False, "text": "", "error": " | ".join(errors)}
+

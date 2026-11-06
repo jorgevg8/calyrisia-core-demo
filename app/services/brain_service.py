@@ -229,7 +229,7 @@ class BrainService:
         if not context.get("found"):
             return context
         # Para que la IA siempre conozca los productos del negocio y pueda recomendar con calidez humana
-        context["product_catalog"] = self._get_product_catalog(business_id, limit=40)
+        context["product_catalog"] = self._get_product_catalog(business_id, limit=60)
         try:
             with self.conn.cursor() as cur:
                 cur.execute(
@@ -244,6 +244,24 @@ class BrainService:
                         "local_currency_code": str(s_row[1] or "VES"),
                         "owner_whatsapp": str(s_row[2] or ""),
                     }
+                cur.execute(
+                    """SELECT method_code, instructions
+                       FROM public.business_payment_instructions
+                       WHERE business_id = %s AND enabled = true AND btrim(instructions) <> ''""",
+                    (str(business_id),),
+                )
+                pay_rows = cur.fetchall()
+                method_names = {
+                    "pago_movil": "Pago Móvil",
+                    "transferencia": "Transferencia Bancaria",
+                    "zelle": "Zelle (USD)",
+                    "binance": "Binance Pay (USDT)",
+                    "paypal": "PayPal",
+                }
+                context["payment_methods"] = [
+                    {"code": str(r[0]), "label": method_names.get(str(r[0]), str(r[0])), "instructions": str(r[1])}
+                    for r in pay_rows
+                ]
         except Exception:
             self.conn.rollback()
         return self._safe_json(context)
@@ -450,28 +468,42 @@ class BrainService:
 [BOTON_PAGO: 25.00|ITEMS: [{{"name": "Nombre Exacto del Producto", "qty": 1}}]]
 """
 
+        pay_methods = context.get("payment_methods") or []
+        pay_summary = ", ".join(m["label"] for m in pay_methods) if pay_methods else "Pago Móvil, Binance Pay, Zelle o Transferencia según coordinación"
+
         return f"""
-Eres el Asistente Inteligente oficial de {biz_name} ({biz_type}).
-Atiendes clientes en tiempo real por chat con excelente redacción, orden visual, puntuación impecable y trato ejecutivo.
+Eres el Asesor Comercial Inteligente y Humano de {biz_name} ({biz_type}).
+Conversas con cada cliente con calidez genuina, empatía, naturalidad humana y dominio experto del negocio, como el mejor vendedor y asesor de confianza de una tienda física de primer nivel.
 
 CATÁLOGO / SERVICIOS REALES CON PRECIOS OFICIALES EN {currency}:
 {cat_str}
 
-REGLAS ESTRICTAS DE RESPUESTA Y FORMATO:
-1. ORDEN, PUNTUACIÓN Y CLASIFICACIÓN IMPECABLE:
-- Organiza siempre tus respuestas con saltos de línea claros, listas con viñetas (•) y clasificación por categorías (▸ Categoría:) cuando muestres varios productos o un pedido.
-- Respeta estrictamente los signos de puntuación: termina cada elemento intermedio de una lista con punto y coma (;) y el último elemento con punto final (.).
-- Si te preguntan por un precio o producto específico, indica en la primera línea el nombre, categoría, precio oficial y stock disponible.
-- PROHIBIDO inventar productos, servicios o precios que no estén en el catálogo oficial.
+MÉTODOS DE PAGO HABILITADOS:
+{pay_summary}
 
-2. CERO ASTERISCOS (TEXTO LIMPIO Y ESTRUCTURADO):
+REGLAS DE PERSONALIDAD HUMANA, ASESORÍA Y FORMATO:
+1. CALIDEZ HUMANA Y TRATO CERCANO:
+- Habla de forma natural, empática y conversacional. Escucha lo que el cliente realmente necesita, valida sus dudas con amabilidad y nunca suenes como un robot rígido.
+- Organiza tus respuestas con saltos de línea claros, listas con viñetas (•) y clasificación por categorías (▸ Categoría:) cuando muestres varios artículos o un pedido.
+- Al listar varios productos en viñetas, termina cada ítem intermedio con punto y coma (;) y el último con punto final (.).
+- PROHIBIDO inventar productos o precios que no estén en el catálogo oficial.
+
+2. ASESORÍA EXPERTA SOBRE ARTÍCULOS (RECOMENDACIONES Y COMPARATIVAS):
+- Si el cliente pide asesoría, no sabe cuál elegir, busca un regalo, pregunta qué le recomiendas o tiene un presupuesto específico: actúa como un verdadero especialista.
+- Compara las opciones disponibles en el catálogo explicando sus ventajas prácticas, relación calidad-precio, marca, variantes y existencias reales.
+- Sugiere combinaciones o artículos complementarios del catálogo cuando aporten valor real al cliente.
+
+3. MANEJO INTELIGENTE DE PREGUNTAS INESPERADAS SOBRE EL NEGOCIO:
+- Si el cliente hace preguntas inesperadas sobre el negocio (¿hacen envíos o delivery?, ¿tienen tienda física?, ¿qué garantía tienen?, ¿qué pasa si algo sale con defecto?, ¿hacen descuento al mayor?, ¿cómo es el proceso de compra?, ¿es seguro comprar?, ¿a qué hora abren?), responde siempre con seguridad, transparencia y sentido común comercial:
+  • Usa primero los datos del perfil del negocio, horarios, ubicación, políticas e instrucciones del dueño ("{description}").
+  • Si pregunta por delivery o retiro: explica que coordinamos tanto retiro directo en tienda como servicio de delivery o envío acordado al confirmar el pedido.
+  • Si pregunta por garantía o calidad: confirma que trabajamos con artículos verificados y respaldo directo del negocio ante cualquier defecto de fábrica.
+  • Si pide descuento o compra por volumen: atiende su solicitud con empatía, muéstrale las opciones más competitivas del catálogo y ofrécele coordinar atención preferencial si lleva varias unidades.
+
+4. CERO ASTERISCOS (TEXTO LIMPIO Y ESTRUCTURADO):
 - ESTÁ TERMINANTEMENTE PROHIBIDO usar asteriscos (** o *). Usa numeración (1., 2., 3.), encabezados con ▸ y viñetas con •.
 
-3. CONSULTAS DE CATÁLOGO / SERVICIOS:
-- Si el negocio es de productos físicos, clasifícalos por categoría e indica precio y unidades disponibles separadas con punto y coma (;).
-- Si el negocio es de citas o servicios profesionales, indica el nombre del servicio y su tarifa e invita al cliente a agendar su cita.
-
-4. DIRECTRICES DEL DUEÑO Y TASA MULTIMONEDA (PRIORIDAD MÁXIMA):
+5. DIRECTRICES DEL DUEÑO Y TASA MULTIMONEDA (PRIORIDAD MÁXIMA):
 - Instrucciones configuradas para este negocio: "{description}"{rate_rule}{human_rule}
 {booking_rules}
 CONTEXTO OPERATIVO:
@@ -649,13 +681,20 @@ CONTEXTO OPERATIVO:
 
         cleaned = _clean(msg)
         
-        # Palabras de intención de compra o indicación de cantidades
+        # Palabras de intención de compra o indicación explícita de cantidades
+        info_only_words = (
+            "hablame", "cuentame", "dime", "informacion", "detalles", "asesor", "recomienda",
+            "diferencia", "comparar", "cual es", "que tal", "tienen", "tienes", "cuanto cuesta",
+            "que precio", "como funciona", "garantia",
+        )
         order_triggers = (
             "quiero", "llevarme", "dame", "comprar", "pedido", "anotame", "anótame",
-            "agrega", "ponme", "necesito", "ordenar", "favor", "traer"
+            "agrega", "ponme", "necesito", "ordenar", "traer", "me llevo", "enviame"
         )
-        has_trigger = any(t in cleaned for t in order_triggers)
-        has_qty = any(k in cleaned for k in ("un ", "uno ", "una ", "dos ", "tres ", "cuatro ", "cinco ", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"))
+        has_trigger = any(re.search(r"\b" + re.escape(t) + r"\b", cleaned) for t in order_triggers)
+        has_qty = bool(re.search(r"\b(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)\b", cleaned))
+        if any(w in cleaned for w in info_only_words) and not has_trigger:
+            return None
         if not has_trigger and not has_qty:
             return None
 
@@ -839,7 +878,6 @@ CONTEXTO OPERATIVO:
                     rows = cur.fetchall()
                     for r in rows:
                         txt = str(r[0])
-                        import re
                         m = re.search(r'\[BOTON_PAGO:\s*(\d+(?:\.\d{1,2})?)', txt) or re.search(r'Total a pagar:\s*[A-Z$]*\s*(\d+(?:\.\d{1,2})?)', txt, re.IGNORECASE)
                         if m:
                             total_val = float(m.group(1))
@@ -855,11 +893,7 @@ CONTEXTO OPERATIVO:
             except Exception as e:
                 print(f"[Brain] Error checking previous order context: {e}")
 
-        if is_payment_query:
-            return (
-                f"Puedo ayudarte con tu pedido en {biz_name}. Los métodos de pago disponibles dependen de las opciones que el negocio haya configurado. "
-                f"Dime qué productos necesitas y te ayudaré a revisar el total antes de indicarte cómo continuar."
-            )
+
 
         successful = [
             item
@@ -923,39 +957,236 @@ CONTEXTO OPERATIVO:
         curr = biz.get("currency") or (context.get("settings") or {}).get("currency") or "USD"
         catalog = context.get("product_catalog") or context.get("catalog") or []
 
-        # 1. Búsqueda de producto específico en el catálogo (incluyendo variantes y control de stock agotado)
-        words = [w for w in normalized.split() if len(w) >= 3 and w not in ("hola", "buenas", "cuanto", "cuánto", "tienen", "tienes", "disponible", "salen", "sale", "para", "como")]
-        for item in catalog:
-            p_name = self._normalize(str(item.get("name", "")))
-            if any(w in p_name for w in words):
+        curr_cfg = context.get("currency_settings") or {}
+        ex_rate = float(curr_cfg.get("exchange_rate") or 0)
+        local_curr = str(curr_cfg.get("local_currency_code") or "VES")
+        owner_wa = str(curr_cfg.get("owner_whatsapp") or "")
+        profile = context.get("business_profile") or {}
+        pay_methods = context.get("payment_methods") or []
+        in_stock_items = [p for p in catalog if (25 if p.get("stock") is None else float(p.get("stock") or 0)) > 0]
+
+        def _fmt_price(usd_val: Any) -> str:
+            val = float(usd_val or 0)
+            base = f"{curr} {val:.2f}"
+            if ex_rate > 0:
+                base += f" (aprox. {local_curr} {val * ex_rate:,.2f})"
+            return base
+
+        def _stem_w(w: str) -> str:
+            w = w.strip().lower()
+            if len(w) > 5 and w.endswith("es") and w[-3] not in "aeiou":
+                return w[:-2]
+            if len(w) > 3 and w.endswith("s"):
+                return w[:-1]
+            return w
+
+        # 1. ASESORÍA Y COMPARATIVA DE ARTÍCULOS ("cuál es mejor", "diferencia", "recomiéndame", "regalo", "barato", "presupuesto")
+        is_advisory = any(
+            term in normalized
+            for term in (
+                "recomienda", "recomiendas", "recomendacion", "recomendación", "asesor", "asesoria", "asesoría",
+                "aconseja", "sugiere", "sugerencia", "cual es mejor", "cuál es mejor", "diferencia entre",
+                "comparar", "comparativa", "regalo", "regalar", "barato", "economico", "económico", "accesible",
+                "mas caro", "más caro", "mejor calidad", "premium", "presupuesto", "menos de", "no se cual",
+                "no sé cuál", "ayudame a elegir", "ayúdame a elegir", "combo", "paquete",
+            )
+        )
+        if is_advisory and catalog:
+            # Check if customer mentioned a numeric budget (e.g. "tengo 40$", "menos de 30")
+            m_budget = re.search(r"(?:menos de|presupuesto de|tengo|hasta|maximo|máximo)\s*\$?\s*(\d+(?:[.,]\d{1,2})?)", normalized)
+            if m_budget:
+                budget_val = float(m_budget.group(1).replace(",", "."))
+                within = [p for p in in_stock_items if float(p.get("price") or 0) <= budget_val]
+                within.sort(key=lambda x: float(x.get("price") or 0), reverse=True)
+                if within:
+                    lines = [f"¡Con gusto te asesoro! Para tu presupuesto de hasta {curr} {budget_val:.2f}, estas son las mejores opciones disponibles hoy en {biz_name}:\n"]
+                    for idx, it in enumerate(within[:4]):
+                        punct = "." if idx == min(len(within), 4) - 1 else ";"
+                        desc_s = f" — {it['description']}" if it.get("description") else ""
+                        lines.append(f"  • {it['name']} ({it.get('category') or 'General'}): {_fmt_price(it.get('price'))} | Stock: {int(it.get('stock') or 25)} uds{desc_s}{punct}")
+                    lines.append("\nSi quieres, dime cuál te llama más la atención y te armo el pedido al instante.")
+                    return "\n".join(lines)
+                else:
+                    cheapest = sorted(in_stock_items or catalog, key=lambda x: float(x.get("price") or 0))[:2]
+                    c_str = "; ".join(f"{p['name']} ({_fmt_price(p.get('price'))})" for p in cheapest)
+                    return (
+                        f"Revisé nuestro inventario en {biz_name} y por debajo de {curr} {budget_val:.2f} no tenemos artículos activos en este momento. "
+                        f"Sin embargo, nuestras opciones más accesibles y de excelente calidad son: {c_str}. ¿Te gustaría que revisemos alguna de ellas?"
+                    )
+
+            # Check if customer is asking for the most economical/affordable items
+            if any(k in normalized for k in ("barato", "economico", "económico", "accesible", "menor precio")):
+                sorted_cheap = sorted(in_stock_items or catalog, key=lambda x: float(x.get("price") or 0))[:3]
+                lines = [f"¡Claro que sí! Si buscas cuidar tu presupuesto sin sacrificar calidad, te recomiendo estas opciones súper accesibles en {biz_name}:\n"]
+                for idx, it in enumerate(sorted_cheap):
+                    punct = "." if idx == len(sorted_cheap) - 1 else ";"
+                    lines.append(f"  • {it['name']} ({it.get('category') or 'General'}) — {_fmt_price(it.get('price'))} ({int(it.get('stock') or 25)} disp.){punct}")
+                lines.append("\n¿Te gustaría llevarte alguno de estos o prefieres que te cuente más detalles de alguno?")
+                return "\n".join(lines)
+
+            # General recommendation / comparison / gift / best choice
+            pool = in_stock_items if in_stock_items else catalog
+            sorted_by_price = sorted(pool, key=lambda x: float(x.get("price") or 0))
+            best_value = sorted_by_price[len(sorted_by_price) // 2]
+            top_tier = sorted_by_price[-1]
+            entry_tier = sorted_by_price[0]
+
+            rec_lines = [
+                f"¡Me encantaría ayudarte a elegir la mejor opción en {biz_name}! Según lo que más buscan nuestros clientes, te preparé esta asesoría rápida:\n",
+                f"▸ Equilibrio ideal calidad-precio:",
+                f"  • {best_value['name']} ({best_value.get('category') or 'Destacado'}) — {_fmt_price(best_value.get('price'))} ({int(best_value.get('stock') or 25)} unidades disponibles).",
+            ]
+            if top_tier["name"] != best_value["name"]:
+                rec_lines.append(f"▸ Opción más completa / gama superior:")
+                rec_lines.append(f"  • {top_tier['name']} — {_fmt_price(top_tier.get('price'))} ({int(top_tier.get('stock') or 25)} unidades disponibles).")
+            if entry_tier["name"] not in {best_value["name"], top_tier["name"]}:
+                rec_lines.append(f"▸ Opción más económica y práctica:")
+                rec_lines.append(f"  • {entry_tier['name']} — {_fmt_price(entry_tier.get('price'))} ({int(entry_tier.get('stock') or 25)} unidades disponibles).")
+            rec_lines.append("\nCuéntame: ¿lo buscas para uso propio, para un regalo o para trabajo? Así te doy el dato exacto del que mejor te conviene.")
+            return "\n".join(rec_lines)
+
+        # 2. BÚSQUEDA Y ASESORÍA DE PRODUCTO ESPECÍFICO (CON FLEXIBILIDAD DE PLURALES Y VARIANTES)
+        stop_q = {
+            "hola", "buenas", "cuanto", "cuánto", "tienen", "tienes", "disponible", "salen", "sale",
+            "para", "como", "precio", "cuesta", "vale", "informacion", "información", "detalles",
+            "sobre", "del", "los", "las", "una", "uno", "unos", "unas", "que", "qué", "tal",
+        }
+        q_stems = [_stem_w(w) for w in normalized.split() if len(w) >= 3 and w not in stop_q]
+        matched_items = []
+        if q_stems:
+            for item in catalog:
+                p_text = self._normalize(f"{item.get('name', '')} {item.get('category', '')} {item.get('brand', '')}")
+                p_stems = [_stem_w(w) for w in p_text.split() if len(w) >= 3]
+                if any(qs == ps or (len(qs) >= 4 and (qs in ps or ps in qs)) for qs in q_stems for ps in p_stems):
+                    matched_items.append(item)
+
+        if matched_items:
+            if len(matched_items) == 1:
+                item = matched_items[0]
                 price = item.get("price")
                 raw_stock = item.get("stock")
                 stock_qty = 25 if raw_stock is None else int(raw_stock)
-                price_str = f"{curr} {float(price):.2f}" if price is not None else "precio por confirmar"
+                price_str = _fmt_price(price) if price is not None else "precio por confirmar"
                 variants = item.get("variants") or []
                 var_text = ""
                 if isinstance(variants, list) and variants:
                     var_parts = []
-                    for v in variants[:4]:
+                    for v in variants[:5]:
                         if isinstance(v, dict):
                             v_label = v.get("color") or v.get("talla") or v.get("pack") or v.get("puerto") or v.get("name") or ""
                             v_stock = v.get("stock")
                             if v_label:
                                 var_parts.append(f"{v_label} ({v_stock} disp.)" if v_stock is not None else str(v_label))
+                        elif v:
+                            var_parts.append(str(v))
                     if var_parts:
-                        var_text = f" Variantes: {', '.join(var_parts)}."
+                        var_text = f"\n• Variantes disponibles: {', '.join(var_parts)};"
+                desc_text = f"\n• Detalle: {item['description']};" if item.get("description") else ""
+                brand_text = f" ({item['brand']})" if item.get("brand") else ""
                 if stock_qty <= 0:
-                    return (
-                        f"El artículo {item['name']} ({price_str}) se encuentra temporalmente agotado (stock: 0). "
-                        f"¿Deseas que registremos tu solicitud para avisarte apenas ingrese inventario o te muestro alternativas disponibles?"
+                    alts = [p for p in in_stock_items if p["name"] != item["name"]][:2]
+                    alt_str = (
+                        " Mientras tanto, te puedo ofrecer como alternativa inmediata: "
+                        + "; ".join(f"{a['name']} ({_fmt_price(a.get('price'))})" for a in alts)
+                        + "."
+                        if alts else ""
                     )
-                return f"{item['name']} tiene un precio de {price_str} y contamos con {stock_qty} unidades disponibles.{var_text} ¿Cuántas unidades deseas pedir?"
+                    return (
+                        f"El artículo {item['name']}{brand_text} ({price_str}) se encuentra temporalmente agotado (stock: 0).{alt_str} "
+                        f"¿Deseas que registremos tu solicitud para avisarte apenas ingrese inventario o prefieres revisar una alternativa?"
+                    )
+                return (
+                    f"¡Excelente opción! Aquí tienes la información en vivo de {item['name']}{brand_text}:\n\n"
+                    f"• Categoría: {item.get('category') or 'General'};\n"
+                    f"• Precio oficial: {price_str};{desc_text}{var_text}\n"
+                    f"• Disponibilidad inmediata: {stock_qty} unidades en stock.\n\n"
+                    f"Es uno de nuestros artículos más confiables. ¿Cuántas unidades deseas pedir o qué duda específica tienes sobre este producto?"
+                )
+            else:
+                lines = [f"¡Claro! Encontré estas {len(matched_items[:5])} opciones relacionadas en {biz_name}:\n"]
+                for idx, it in enumerate(matched_items[:5]):
+                    punct = "." if idx == len(matched_items[:5]) - 1 else ";"
+                    st_qty = 25 if it.get("stock") is None else int(it.get("stock"))
+                    st_label = f"{st_qty} disp." if st_qty > 0 else "Agotado"
+                    lines.append(f"  • {it['name']} ({it.get('category') or 'General'}) — {_fmt_price(it.get('price'))} | {st_label}{punct}")
+                lines.append("\n¿Cuál de estos modelos prefieres o te gustaría que los compare para ayudarte a decidir?")
+                return "\n".join(lines)
 
-        # 2. Consulta de catálogo general y stock clasificado por categoría con punto y coma (;) y punto final (.)
-        if any(term in normalized for term in ("producto", "productos", "disponible", "disponibles", "catalogo", "catálogo", "que venden", "qué venden", "tienen", "unidad", "unidades", "stock", "cuantas", "cuántas", "cantidad")):
+        # 3. PREGUNTAS INESPERADAS SOBRE EL NEGOCIO (ENVÍOS, GARANTÍA, HORARIOS, UBICACIÓN, PAGOS, DESCUENTOS, HUMANO)
+        # 3A. Garantía, cambios, devoluciones, calidad u originalidad
+        if any(w in normalized for w in ("garantia", "garantía", "defecto", "cambio", "devolucion", "devolución", "original", "originales", "calidad", "confiable", "seguro")):
+            pol = profile.get("policies") or biz.get("description") or ""
+            pol_note = f" Además, según nuestras políticas operativas: {pol[:240]}." if pol else ""
+            return (
+                f"En {biz_name} todos nuestros artículos son revisados antes de cada entrega y cuentan con garantía por defectos de fábrica.{pol_note} "
+                f"Si llegaras a presentar algún inconveniente con tu compra, nuestro equipo te brinda respaldo directo para cambio o revisión con tu comprobante de pedido. "
+                f"¿Qué artículo te interesa para darte todos los detalles?"
+            )
+
+        # 3B. Envíos, delivery, despacho o retiro en tienda
+        if any(w in normalized for w in ("envio", "envío", "envios", "envíos", "delivery", "domicilio", "despacho", "retiro", "tienda fisica", "tienda física", "llevan")):
+            addr_parts = [str(v) for v in (profile.get("address"), profile.get("city"), profile.get("state_province")) if v]
+            loc_str = f" Estamos ubicados en {', '.join(addr_parts)}." if addr_parts else ""
+            return (
+                f"¡Sí! En {biz_name} trabajamos tanto con retiro personal en tienda como con servicio de delivery y envíos coordinados.{loc_str} "
+                f"En cuanto eliges tus artículos aquí en el chat y reportas tu pago, preparamos tu orden de inmediato y coordinamos la entrega a tu dirección o el retiro directo. "
+                f"¿Qué productos te gustaría incluir en tu pedido?"
+            )
+
+        # 3C. Horarios de atención
+        if any(w in normalized for w in ("horario", "horarios", "abren", "cierran", "abierto", "hora", "domingo", "sabado", "sábado", "feriado")):
+            hrs = profile.get("operating_hours") or "Lunes a Sábado en horario corrido comercial (y atención automatizada 24/7 por este chat)"
+            return (
+                f"En {biz_name} nuestro horario de atención es: {hrs}. "
+                f"Además, por este canal inteligente puedes consultar existencias reales, recibir asesoría y dejar tu pedido listo las 24 horas. "
+                f"¿En qué te puedo colaborar hoy?"
+            )
+
+        # 3D. Ubicación / Dirección
+        if any(w in normalized for w in ("ubicacion", "ubicación", "direccion", "dirección", "donde estan", "dónde están", "donde quedan", "dónde quedan", "ubicados")):
+            addr_parts = [str(v) for v in (profile.get("address"), profile.get("city"), profile.get("state_province"), profile.get("country")) if v]
+            if addr_parts:
+                return f"Estamos ubicados en: {', '.join(addr_parts)}. Puedes retirar tu compra directamente o solicitar delivery a domicilio. ¿Qué artículo estás buscando?"
+            return (
+                f"Atendemos pedidos con entrega rápida y retiro coordinado en {biz_name}. "
+                f"Al confirmar tu pedido te compartimos las coordenadas exactas de retiro o enviamos tu compra con delivery. ¿Qué producto deseas consultar?"
+            )
+
+        # 3E. Métodos de pago, tasa del día, bolívares, divisas, Zelle, Binance
+        if any(w in normalized for w in ("metodo", "método", "metodos", "métodos", "tasa", "bolivar", "bolívar", "bs", "ves", "zelle", "binance", "paypal", "efectivo", "divisa", "transferencia", "pago movil")):
+            m_labels = ", ".join(m["label"] for m in pay_methods) if pay_methods else "Pago Móvil, Transferencia Bancaria, Binance Pay y Zelle"
+            rate_info = f" Nuestra tasa de cambio activa hoy es {ex_rate:.2f} {local_curr} por 1 {curr}." if ex_rate > 0 else f" Nuestros precios están expresados en {curr}."
+            return (
+                f"En {biz_name} aceptamos los siguientes métodos de pago verificados: {m_labels}.{rate_info} "
+                f"Solo dime qué artículos deseas llevar para calcularte el monto exacto y desplegarte la tarjeta de pago en el chat."
+            )
+
+        # 3F. Descuentos, compras al mayor, rebajas u objeciones de precio ("está caro", "es lo menos")
+        if any(w in normalized for w in ("descuento", "rebaja", "menos", "caro", "mayorista", "al mayor", "por mayor", "volumen", "bulto", "oferta", "promocion", "promoción")):
+            return (
+                f"Te entiendo perfectamente. En {biz_name} cuidamos mucho ofrecer precios competitivos con mercancía verificada y garantizada. "
+                f"Si deseas llevar varias unidades (compras al mayor o combos de varios artículos), dime qué cantidades tienes en mente para armarte la mejor propuesta o conectarte con gerencia para una atención preferencial."
+            )
+
+        # 3G. Hablar con un humano / asesor / dueño / teléfono
+        if any(w in normalized for w in ("humano", "persona", "asesor", "encargado", "dueño", "dueno", "whatsapp", "telefono", "teléfono", "llamar", "contacto")):
+            wa_contact = owner_wa or biz.get("phone") or ""
+            if wa_contact:
+                return (
+                    f"¡Por supuesto! Si deseas hablar directamente con una persona de nuestro equipo en {biz_name}, "
+                    f"puedes escribirnos o llamarnos al {wa_contact} (también tienes el botón Humano en la parte superior del chat). "
+                    f"Mientras tanto, si quieres ir adelantando tu consulta o cotización por aquí, estoy a tu entera disposición."
+                )
+            return (
+                f"¡Claro que sí! Puedo dejar registrada tu consulta prioritaria para que el encargado de {biz_name} te contacte personalmente, "
+                f"o si me indicas tu duda puntual por aquí, te ayudo a resolverla de inmediato."
+            )
+
+        # 4. Consulta de catálogo general y stock clasificado por categoría con punto y coma (;) y punto final (.)
+        if any(term in normalized for term in ("producto", "productos", "disponible", "disponibles", "catalogo", "catálogo", "que venden", "qué venden", "tienen", "unidad", "unidades", "stock", "cuantas", "cuántas", "cantidad", "lista", "precios", "mostrar", "ver")):
             if catalog:
                 grouped_cat: dict[str, list[dict[str, Any]]] = {}
-                for it in catalog[:10]:
+                for it in catalog[:12]:
                     c_label = str(it.get("category") or "General").strip() or "General"
                     grouped_cat.setdefault(c_label, []).append(it)
                 cat_blocks: list[str] = []
@@ -965,22 +1196,36 @@ CONTEXTO OPERATIVO:
                         punct = "." if idx == len(c_items) - 1 else ";"
                         st_qty = 25 if it.get("stock") is None else int(it.get("stock"))
                         cat_blocks.append(
-                            f"  • {it['name']} — Precio: {curr} {float(it.get('price') or 0):.2f} | Disponible: {st_qty} unid.{punct}"
+                            f"  • {it['name']} — Precio: {_fmt_price(it.get('price'))} | Disponible: {st_qty} unid.{punct}"
                         )
                 return (
-                    f"En {biz_name} contamos con los siguientes artículos disponibles clasificados por categoría:\n\n"
+                    f"¡Con mucho gusto! En {biz_name} contamos con estos artículos en inventario en tiempo real clasificados por categoría:\n\n"
                     + "\n".join(cat_blocks)
-                    + "\n\n¿Cuál de estos productos te gustaría consultar o agregar a tu pedido?"
+                    + "\n\n¿Cuál de estos artículos te gustaría pedir o sobre cuál quieres que te asesore en detalle?"
                 )
             else:
-                return f"En {biz_name} estamos actualizando nuestro catálogo en este momento. ¿Qué producto estás buscando hoy?"
+                return f"En {biz_name} estamos actualizando nuestro catálogo en este momento. Cuéntame qué artículo buscas y te confirmo disponibilidad al instante."
 
-        # 3. Saludos
-        if any(term in normalized for term in ("hola", "buenas", "buenos dias", "buenas tardes", "buenas noches", "feliz noche")):
-            return f"¡Hola! Bienvenido a {biz_name}. ¿En qué te puedo ayudar hoy?"
+        # 5. Saludos y charla empática humana
+        if any(term in normalized for term in ("hola", "buenas", "buenos dias", "buenas tardes", "buenas noches", "feliz noche", "como estas", "cómo estás", "que tal", "qué tal")):
+            sample_names = ", ".join(p["name"] for p in catalog[:3]) if catalog else "nuestros productos y servicios"
+            return (
+                f"¡Hola! Qué gusto saludarte, bienvenido a {biz_name}. "
+                f"Estoy aquí para asesorarte como en tienda física: puedo recomendarte opciones de nuestro catálogo ({sample_names}), "
+                f"confirmarte precios y stock al instante o responder cualquier duda sobre envíos, garantías y pagos. ¿Qué estás buscando hoy?"
+            )
 
-        # 4. Respuesta general amable
-        return f"En {biz_name} estamos a tu orden. Cuéntame qué producto o consulta tienes y con gusto te atiendo."
+        if any(term in normalized for term in ("gracias", "muchas gracias", "excelente", "perfecto", "genial")):
+            return f"¡Con muchísimo gusto! En {biz_name} estamos siempre para servirte. Si necesitas consultar otro artículo o confirmar tu pedido, aquí sigo atento."
+
+        # 6. Respuesta general humana, cálida y proactiva
+        if catalog:
+            highlights = "; ".join(f"{p['name']} ({_fmt_price(p.get('price'))})" for p in catalog[:3])
+            return (
+                f"¡Con gusto te ayudo! En {biz_name} contamos con artículos disponibles para entrega inmediata como: {highlights}. "
+                f"Dime si buscas algún producto en particular, si quieres que te recomiende una opción según tu presupuesto, o si tienes alguna pregunta sobre envíos, pagos o garantías."
+            )
+        return f"¡Con gusto te atiendo en {biz_name}! Cuéntame qué artículo buscas, qué presupuesto tienes en mente o qué duda tienes sobre nuestro negocio para asesorarte de inmediato."
 
     # ------------------------------------------------------------------
     # Decision metadata and persistence
@@ -1609,7 +1854,7 @@ CONTEXTO OPERATIVO:
                         config=types.GenerateContentConfig(
                             system_instruction=system_instruction,
                             temperature=0.4,
-                            max_output_tokens=320,
+                            max_output_tokens=850,
                         ),
                     )
                     if resp and resp.text:

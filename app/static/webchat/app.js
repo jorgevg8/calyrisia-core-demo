@@ -90,7 +90,14 @@ function addMessage(role, text) {
   if (cleanText) {
     const div = document.createElement("div");
     div.className = `msg ${role}`;
-    div.textContent = cleanText;
+    if (role === "bot") {
+      const safeHtml = escapeHtmlText(cleanText)
+        .replace(/^▸\s*(.+)$/gm, '<span class="cat-header">▸ $1</span>')
+        .replace(/\n/g, "<br>");
+      div.innerHTML = safeHtml;
+    } else {
+      div.textContent = cleanText;
+    }
     messagesEl.appendChild(div);
   }
 
@@ -303,7 +310,7 @@ async function initializeWebchat() {
 
     state.customerId = session.customer.id;
     setConnected(true, "En línea");
-    addMessage("bot", `¡Hola! Soy el asesor de ${state.bizName}. ¿En qué te puedo ayudar hoy?`);
+    addMessage("bot", `¡Hola! 👋 Qué gusto saludarte. Soy el asesor inteligente de ${state.bizName}.\n\nPuedo mostrarte nuestro catálogo con stock en vivo, recomendarte el artículo ideal según lo que busques o responder cualquier duda sobre envíos, garantías, horarios y pagos. ¿Qué estás buscando hoy?`);
   } catch (error) {
     setConnected(false, "Sin negocio configurado");
     addMessage("bot", `No se pudo conectar con este negocio: ${error.message}. Abre el webchat desde el enlace correcto del negocio.`);
@@ -370,3 +377,11 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   initializeWebchat();
 });
+
+
+function sendQuickPrompt(promptText) {
+  const inp = $("user-input");
+  if (!inp || !state.ready) return;
+  inp.value = promptText;
+  sendMessage();
+}
