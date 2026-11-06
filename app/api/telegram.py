@@ -155,6 +155,21 @@ def _parse_payment_marker(outbound_texts: list[str]) -> tuple[Decimal | None, li
     return None, []
 
 
+def _is_payment_info_request(text: str) -> bool:
+    value = _normalise(text)
+    if any(phrase in value for phrase in ("no quiero pagar", "no voy a pagar", "no puedo pagar", "no deseo pagar", "no me pases los datos")):
+        return False
+    phrases = (
+        "como pago", "como puedo pagar", "como hago el pago", "metodo de pago",
+        "metodos de pago", "datos para pagar", "datos de pago", "instrucciones de pago",
+        "pasame los datos", "pasame los numeros", "donde pago", "quiero pagar",
+        "voy a pagar", "listo para pagar", "para pagar", "cuenta para pagar",
+        "cuenta bancaria", "numero de cuenta", "datos bancarios", "numero de pago movil",
+        "datos del pago", "pasame la cuenta", "pasame el pago movil",
+    )
+    return any(phrase in value for phrase in phrases)
+
+
 def _looks_like_payment_submission(text: str) -> bool:
     value = _normalise(text)
     digits = bool(re.search(r"\d{4,}", value))
@@ -557,6 +572,16 @@ async def process_telegram_update(update: dict, business_id: str, token: str, re
 
         outbound = await _get_recent_outbound(business_id, customer_id, conversation_id)
         prior_amount, prior_items = _parse_payment_marker(outbound)
+        if prior_amount is not None and prior_amount > 0 and _is_payment_info_request(text) and not _looks_like_payment_submission(text):
+            payment_options = await _get_business_payment_options(business_id)
+            if payment_options:
+                details = "\n\n".join(f"{option['label']}:\n{option['instructions']}" for option in payment_options)
+                reply = f"Claro. El total de tu pedido es USD {prior_amount:.2f}. Puedes pagar con:\n\n{details}\n\nCuando pagues, envíame el método y la referencia para registrarlo."
+            else:
+                reply = "Todavía no hay métodos de pago configurados para este negocio. Por seguridad, consulta directamente con la tienda antes de transferir."
+            await _send_with_token(token, chat_id, reply)
+            return
+
         if prior_amount is not None and prior_amount > 0 and _looks_like_payment_submission(text):
             payment_options = await _get_business_payment_options(business_id)
             if not payment_options:
@@ -612,23 +637,18 @@ async def process_telegram_update(update: dict, business_id: str, token: str, re
             result = GalaxyAutopilotService(conn).respond(payload)
         response_text = str(result.get("response") or "No pude generar una respuesta. Inténtalo de nuevo.")
         clean_response, pay_amount, _pay_items = _clean_for_telegram(response_text)
-        if pay_amount is not None and pay_amount > 0:
-            label = await _get_business_label(business_id)
+        if pay_amount is not None and pay_amount > 0 and _is_payment_info_request(text):
             payment_options = await _get_business_payment_options(business_id)
             if payment_options:
                 details = "\n\n".join(f"{option['label']}:\n{option['instructions']}" for option in payment_options)
                 payment_info = (
-                    f"\n\n💳 INSTRUCCIONES DE PAGO · USD {pay_amount:.2f}\n"
-                    f"{details}\n\n"
-                    "Cuando completes el pago, envíame la referencia o los datos de la operación por este chat. "
-                    "Si hay varios métodos, incluye también en el mismo mensaje el nombre del que utilizaste (por ejemplo, Pago Móvil o Binance Pay). "
-                    "La solicitud quedará pendiente de revisión por el comercio."
+                    f"\n\nPuedes pagar USD {pay_amount:.2f} con:\n\n{details}\n\n"
+                    "Cuando pagues, envíame el método utilizado y la referencia."
                 )
             else:
                 payment_info = (
-                    f"\n\nEl monto de referencia de tu pedido es USD {pay_amount:.2f}. "
-                    "Este comercio todavía no ha configurado sus instrucciones de pago en CALYRISIA. "
-                    "Por seguridad, no transfieras dinero hasta recibir instrucciones oficiales directamente del negocio."
+                    f"\n\nEl total de referencia es USD {pay_amount:.2f}, pero este negocio aún no configuró sus datos de cobro. "
+                    "Por seguridad, no transfieras hasta recibir instrucciones oficiales."
                 )
             clean_response = (clean_response + payment_info).strip()
         if not clean_response:
@@ -1166,6 +1186,15 @@ async def _start_telethon_user_listener(business_id: str, session_str: str, api_
 
             outbound = await _get_recent_outbound(business_id, customer_id, conversation_id)
             prior_amount, prior_items = _parse_payment_marker(outbound)
+            if prior_amount is not None and prior_amount > 0 and _is_payment_info_request(text) and not _looks_like_payment_submission(text):
+                payment_options = await _get_business_payment_options(business_id)
+                if payment_options:
+                    details = "\n\n".join(f"{opt['label']}:\n{opt['instructions']}" for opt in payment_options)
+                    await event.reply(f"Claro. El total de tu pedido es USD {prior_amount:.2f}. Puedes pagar con:\n\n{details}\n\nCuando pagues, envíame el método y la referencia.")
+                else:
+                    await event.reply("Este negocio aún no ha configurado sus métodos de pago. Consulta con la tienda antes de transferir.")
+                return
+
             if prior_amount is not None and prior_amount > 0 and _looks_like_payment_submission(text):
                 payment_options = await _get_business_payment_options(business_id)
                 normalized_proof = _normalise(text)
@@ -1210,13 +1239,13 @@ async def _start_telethon_user_listener(business_id: str, session_str: str, api_
                 result = GalaxyAutopilotService(conn).respond(payload)
             raw_reply = str(result.get("response") or "").strip()
             clean_reply, pay_amount, _ = _clean_for_telegram(raw_reply)
-            if pay_amount is not None and pay_amount > 0:
+            if pay_amount is not None and pay_amount > 0 and _is_payment_info_request(text):
                 payment_options = await _get_business_payment_options(business_id)
                 if payment_options:
-                    details = "\n\n".join(f"▸ {opt['label']}:\n{opt['instructions']}" for opt in payment_options)
+                    details = "\n\n".join(f"{opt['label']}:\n{opt['instructions']}" for opt in payment_options)
                     clean_reply = (
-                        f"{clean_reply}\n\n💳 INSTRUCCIONES DE PAGO · USD {pay_amount:.2f}\n{details}\n\n"
-                        "Envíame por este mismo chat el número de referencia cuando completes el pago."
+                        f"{clean_reply}\n\nPuedes pagar USD {pay_amount:.2f} con:\n\n{details}\n\n"
+                        "Cuando pagues, envíame el método y la referencia."
                     ).strip()
             if clean_reply:
                 await event.reply(clean_reply)
