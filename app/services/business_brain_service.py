@@ -158,41 +158,6 @@ class BusinessBrainService:
         return cleaned, amount, items
 
     @staticmethod
-    def _is_payment_info_request(text: str) -> bool:
-        normalized = unicodedata.normalize("NFKD", text or "")
-        value = "".join(ch for ch in normalized if not unicodedata.combining(ch)).lower()
-        value = re.sub(r"\s+", " ", value).strip()
-        if any(phrase in value for phrase in ("no quiero pagar", "no voy a pagar", "no puedo pagar", "no deseo pagar", "no me pases los datos")):
-            return False
-        phrases = (
-            "como pago", "como puedo pagar", "como hago el pago", "metodo de pago",
-            "metodos de pago", "datos para pagar", "datos de pago", "instrucciones de pago",
-            "pasame los datos", "pasame los numeros", "donde pago", "quiero pagar",
-            "voy a pagar", "listo para pagar", "para pagar", "cuenta para pagar",
-            "cuenta bancaria", "numero de cuenta", "datos bancarios", "numero de pago movil",
-            "datos del pago", "pasame la cuenta", "pasame el pago movil",
-        )
-        return any(phrase in value for phrase in phrases)
-
-    @staticmethod
-    def _looks_like_payment_submission(text: str) -> bool:
-        decomposed = unicodedata.normalize("NFKD", text or "")
-        normalized = "".join(ch for ch in decomposed if not unicodedata.combining(ch)).lower()
-        normalized = re.sub(r"\s+", " ", normalized).strip()
-        has_number = bool(re.search(r"\d{4,}", normalized))
-        proof_phrases = (
-            "referencia", "numero de operacion", "nro de operacion", "operacion bancaria",
-            "comprobante", "captura del pago", "pago realizado", "transferencia realizada",
-            "ya pague", "he pagado", "pague por pago movil", "te envie el pago",
-            "te mande el comprobante", "aqui esta el pago", "aqui esta el comprobante", "pagado",
-        )
-        has_proof_phrase = any(phrase in normalized for phrase in proof_phrases)
-        confirmed = any(phrase in normalized for phrase in (
-            "ya pague", "he pagado", "pago realizado", "transferencia realizada", "pagado",
-        ))
-        return has_proof_phrase and (has_number or confirmed or "comprobante" in normalized or "referencia" in normalized)
-
-    @staticmethod
     def _parse_recent_payment_marker(messages: list[str]) -> tuple[Decimal | None, list[dict[str, Any]]]:
         for content in messages:
             match = _PAYMENT_BUTTON_RE.search(content or "")
@@ -221,6 +186,29 @@ class BusinessBrainService:
                 except (InvalidOperation, ValueError):
                     continue
         return None, []
+
+    @staticmethod
+    def _looks_like_payment_submission(text: str) -> bool:
+        decomposed = unicodedata.normalize("NFKD", text or "")
+        stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+        normalized = re.sub(r"\s+", " ", stripped).strip().lower()
+        digits = re.findall(r"\d{4,}", normalized)
+        keywords = (
+            "referencia",
+            "ref",
+            "comprobante",
+            "pago movil",
+            "transferencia",
+            "zelle",
+            "binance",
+            "paypal",
+            "operacion",
+            "capture",
+            "pague",
+            "ya pague",
+            "listo el pago",
+        )
+        return bool(digits and any(k in normalized for k in keywords))
 
     def _get_payment_options(self, business_id: str) -> list[dict[str, str]]:
         try:
@@ -370,7 +358,8 @@ class BusinessBrainService:
                     SELECT content FROM public.conversation_messages
                     WHERE business_id = %s::uuid AND customer_id = %s AND conversation_id = %s
                       AND direction = 'outbound'
-                    ORDER BY created_at DESC LIMIT 10
+                      AND created_at >= now() - interval '2 hours'
+                    ORDER BY created_at DESC LIMIT 4
                     """,
                     (str(tenant_id), str(customer_id), str(conversation_id)),
                 )
@@ -382,7 +371,6 @@ class BusinessBrainService:
                 pass
 
         prior_amount, prior_items = self._parse_recent_payment_marker(recent_outbound)
-        is_payment_request = self._is_payment_info_request(text)
         reply_text = ""
 
         if prior_amount is not None and prior_amount > 0 and self._looks_like_payment_submission(text):
@@ -436,26 +424,17 @@ class BusinessBrainService:
                 result = GalaxyAutopilotService(self.conn).respond(incoming)
                 raw_reply = str(result.get("response") or "¿En qué puedo ayudarte hoy?")
                 clean_reply, pay_amount, _pay_items = self._clean_omnichannel_reply(raw_reply)
-                # No enviar cuentas ni instrucciones de cobro junto a una cotización.
-                # Solo mostrarlas si el cliente pregunta cómo pagar, usando el importe
-                # del pedido de esta respuesta o el marcador guardado en el turno anterior.
-                payment_amount = (pay_amount or prior_amount) if is_payment_request else None
-                if payment_amount is not None and payment_amount > 0:
+                if pay_amount is not None and pay_amount > 0:
                     payment_options = self._get_payment_options(str(tenant_id))
                     if payment_options:
                         details = "\n\n".join(
-                            f"{opt['label']}:\n{opt['instructions']}" for opt in payment_options
+                            f"▸ {opt['label']}:\n{opt['instructions']}" for opt in payment_options
                         )
                         clean_reply = (
                             f"{clean_reply}\n\n"
-                            f"Puedes pagar USD {payment_amount:.2f} con:\n\n"
+                            f"💳 MÉTODOS DE PAGO DISPONIBLES (USD {pay_amount:.2f}):\n"
                             f"{details}\n\n"
-                            "Cuando pagues, envíame el método utilizado y la referencia."
-                        ).strip()
-                    else:
-                        clean_reply = (
-                            f"{clean_reply}\n\nEl total de referencia es USD {payment_amount:.2f}, "
-                            "pero este negocio aún no configuró sus datos de cobro. Consulta con la tienda antes de transferir."
+                            "Cuando realices el pago, envíame por este mismo chat el método utilizado y el número de referencia para registrarlo en el sistema."
                         ).strip()
                 reply_text = clean_reply
             except AIQuotaExceeded as exc:
@@ -579,7 +558,7 @@ class BusinessBrainService:
                     business_id,
                     f"Business Brain analysis: focus={focus}",
                     Jsonb(
-                        cls_safe({
+                        self._safe({
                             "focus": focus,
                             "source_event_id": event_id,
                             "insight_count": len(insights),

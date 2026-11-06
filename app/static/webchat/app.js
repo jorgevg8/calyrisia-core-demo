@@ -87,6 +87,38 @@ function addMessage(role, text) {
     .replace(/\*/g, "")
     .trim();
 
+  // Si en el Webchat ya está visible el saludo inicial de bienvenida arriba y la respuesta trae otro bloque además del saludo, evitar duplicarlo visualmente
+  if (role === "bot" && messagesEl.querySelectorAll(".msg.bot").length >= 1) {
+    const welcomePrefix = `¡Hola! Bienvenido a ${state.bizName}, ¿en qué te puedo ayudar?`;
+    if (cleanText.startsWith(welcomePrefix) && cleanText.length > welcomePrefix.length + 5) {
+      cleanText = cleanText.slice(welcomePrefix.length).trim();
+    }
+  }
+
+  // Si en el Webchat ya está visible el saludo inicial de bienvenida arriba y la respuesta trae otro bloque además del saludo, evitar duplicarlo visualmente
+  if (role === "bot" && messagesEl.querySelectorAll(".msg.bot").length >= 1) {
+    const welcomePrefix = `¡Hola! Bienvenido a ${state.bizName}, ¿en qué te puedo ayudar?`;
+    if (cleanText.startsWith(welcomePrefix) && cleanText.length > welcomePrefix.length + 5) {
+      cleanText = cleanText.slice(welcomePrefix.length).trim();
+    }
+  }
+
+  // Si en el Webchat ya está visible el saludo inicial de bienvenida arriba y la respuesta trae otro bloque además del saludo, evitar duplicarlo visualmente
+  if (role === "bot" && messagesEl.querySelectorAll(".msg.bot").length >= 1) {
+    const welcomePrefix = `¡Hola! Bienvenido a ${state.bizName}, ¿en qué te puedo ayudar?`;
+    if (cleanText.startsWith(welcomePrefix) && cleanText.length > welcomePrefix.length + 5) {
+      cleanText = cleanText.slice(welcomePrefix.length).trim();
+    }
+  }
+
+  // Si en el Webchat ya está visible el saludo inicial de bienvenida arriba y la respuesta trae otro bloque además del saludo, evitar duplicarlo visualmente
+  if (role === "bot" && messagesEl.querySelectorAll(".msg.bot").length >= 1) {
+    const welcomePrefix = `¡Hola! Bienvenido a ${state.bizName}, ¿en qué te puedo ayudar?`;
+    if (cleanText.startsWith(welcomePrefix) && cleanText.length > welcomePrefix.length + 5) {
+      cleanText = cleanText.slice(welcomePrefix.length).trim();
+    }
+  }
+
   if (cleanText) {
     const div = document.createElement("div");
     div.className = `msg ${role}`;
@@ -310,7 +342,7 @@ async function initializeWebchat() {
 
     state.customerId = session.customer.id;
     setConnected(true, "En línea");
-    addMessage("bot", `¡Hola! 👋 Qué gusto saludarte. Soy el asesor inteligente de ${state.bizName}.\n\nPuedo mostrarte nuestro catálogo con stock en vivo, recomendarte el artículo ideal según lo que busques o responder cualquier duda sobre envíos, garantías, horarios y pagos. ¿Qué estás buscando hoy?`);
+    addMessage("bot", `¡Hola! Bienvenido a ${state.bizName}, ¿en qué te puedo ayudar?`);
   } catch (error) {
     setConnected(false, "Sin negocio configurado");
     addMessage("bot", `No se pudo conectar con este negocio: ${error.message}. Abre el webchat desde el enlace correcto del negocio.`);

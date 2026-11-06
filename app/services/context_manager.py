@@ -148,6 +148,7 @@ class ContextManager:
                        intent, sentiment, tool_used, action_taken, created_at
                 FROM conversation_messages
                 WHERE conversation_id = %s AND business_id = %s
+                  AND created_at >= NOW() - INTERVAL '2 hours'
                 ORDER BY created_at DESC
                 LIMIT 8
                 """,

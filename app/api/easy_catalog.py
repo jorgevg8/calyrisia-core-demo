@@ -148,7 +148,7 @@ def _gemini_extract(prompt: str, image: tuple[bytes, str] | None = None) -> list
         image_bytes, mime_type = image
         contents = [prompt, genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
     preferred = (settings.gemini_model or "").strip()
-    models = [m for m in ["gemini-3.8-flash", preferred, "gemini-3.6-flash", "gemini-2.5-flash"] if m]
+    models = [m for m in [("gemini-2.5-flash" if "gemini-3" in preferred else preferred), "gemini-2.5-flash", "gemini-2.0-flash"] if m]
     seen: set[str] = set()
     for model in models:
         if model in seen:
@@ -239,7 +239,7 @@ Reglas estrictas:
     client = genai.Client(api_key=settings.gemini_api_key)
     contents = [prompt, genai_types.Part.from_bytes(data=audio_bytes, mime_type=mime_type)]
     preferred = (settings.gemini_model or "").strip()
-    models = [m for m in ["gemini-3.8-flash", preferred, "gemini-3.6-flash", "gemini-2.5-flash"] if m]
+    models = [m for m in [("gemini-2.5-flash" if "gemini-3" in preferred else preferred), "gemini-2.5-flash", "gemini-2.0-flash"] if m]
     errors: list[str] = []
     for model in dict.fromkeys(models):
         try:
