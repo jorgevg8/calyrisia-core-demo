@@ -155,18 +155,49 @@ def _parse_payment_marker(outbound_texts: list[str]) -> tuple[Decimal | None, li
     return None, []
 
 
+# Per-conversation memory for two-step payment reporting (e.g., customer sends "referencia 115892330" then "Pago movil", or vice versa)
+_pending_tg_payment_context: dict[str, dict[str, Any]] = {}
+
+
+def _match_payment_option_from_text(text: str, payment_options: list[dict[str, str]]) -> dict[str, str] | None:
+    norm = _normalise(text)
+    if not norm or not payment_options:
+        return None
+    for option in payment_options:
+        code = str(option.get("code") or "").lower()
+        label_norm = _normalise(option.get("label") or "")
+        if code and (code in norm or code.replace("_", " ") in norm):
+            return option
+        if label_norm and label_norm in norm:
+            return option
+        if code == "pago_movil" and ("pago movil" in norm or "pagomovil" in norm or "movil" in norm):
+            return option
+        if code == "binance" and ("binance" in norm or "usdt" in norm):
+            return option
+        if code == "zelle" and "zelle" in norm:
+            return option
+        if code == "transferencia" and ("transferencia" in norm or "banco" in norm):
+            return option
+        if code == "paypal" and "paypal" in norm:
+            return option
+    return None
+
+
 def _looks_like_payment_submission(text: str) -> bool:
     value = _normalise(text)
     digits = bool(re.search(r"\d{4,}", value))
+    # Pure reference number (6 to 20 digits) when replying to a payment prompt
+    if re.fullmatch(r"\s*(?:ref(?:erencia)?[:.#\-\s]*)?\d{5,20}\s*", value):
+        return True
     proof_words = (
-        "referencia", "nro de operacion", "numero de operacion", "operacion bancaria",
-        "comprobante", "captura del pago", "datos del pago", "pago realizado",
-        "transferencia realizada", "ya pague", "he pagado", "pague por pago movil",
+        "referencia", "ref ", "ref:", "ref#", "nro de operacion", "numero de operacion", "operacion bancaria",
+        "operacion", "comprobante", "captura", "capture", "datos del pago", "pago realizado",
+        "transferencia realizada", "ya pague", "he pagado", "pague", "pago movil", "pagomovil",
+        "binance", "zelle", "transferencia", "paypal",
         "te envie el pago", "te mande el comprobante", "aqui esta el pago", "aqui esta el comprobante",
         "pagado", "pago movil realizado",
     )
     has_proof_language = any(word in value for word in proof_words)
-    # Require either an explicit proof/reference phrase, or a clear payment confirmation plus a reference-like number.
     clear_confirmation = any(word in value for word in ("ya pague", "he pagado", "pago realizado", "transferencia realizada", "pagado"))
     explicit_receipt = any(word in value for word in ("comprobante", "referencia", "nro de operacion", "numero de operacion"))
     return has_proof_language and (digits or clear_confirmation or explicit_receipt)
@@ -567,47 +598,115 @@ async def process_telegram_update(update: dict, business_id: str, token: str, re
 
         outbound = await _get_recent_outbound(business_id, customer_id, conversation_id)
         prior_amount, prior_items = _parse_payment_marker(outbound)
-        if prior_amount is not None and prior_amount > 0 and _looks_like_payment_submission(text):
+        conv_key = f"{business_id}:{conversation_id}"
+        pending_ctx = _pending_tg_payment_context.get(conv_key) or {}
+
+        if prior_amount is not None and prior_amount > 0:
             payment_options = await _get_business_payment_options(business_id)
-            if not payment_options:
-                await _send_with_token(token, chat_id, "Este negocio aún no ha configurado métodos de cobro en CALYRISIA. Por seguridad, no envíes dinero ni datos de pago; contacta directamente con el comercio.")
-                return
-            normalized_proof = _normalise(text)
-            selected_option = None
-            if len(payment_options) == 1:
-                selected_option = payment_options[0]
-            elif "binance" in normalized_proof:
-                selected_option = next((option for option in payment_options if option["code"] == "binance"), None)
-            elif "pago movil" in normalized_proof or "pago móvil" in text.lower():
-                selected_option = next((option for option in payment_options if option["code"] == "pago_movil"), None)
-            if selected_option is None:
-                choices = " o ".join(option["label"] for option in payment_options)
-                await _send_with_token(token, chat_id, f"Antes de registrar la referencia, indica qué método utilizaste ({choices}) y vuelve a enviar el detalle de la operación en el mismo mensaje.")
-                return
-            payment_method_label = selected_option["label"] + " (Telegram)"
-            payment_id, newly_created = await _create_telegram_payment(
-                business_id=business_id,
-                customer_id=customer_id,
-                chat_id=chat_id,
-                customer_name=customer_name,
-                amount=prior_amount,
-                items=prior_items,
-                payment_details=text,
-                payment_method=payment_method_label,
-            )
-            if newly_created:
+            matched_opt = _match_payment_option_from_text(text, payment_options)
+            is_sub = _looks_like_payment_submission(text)
+
+            # Recover reference from outbound history if server restarted after asking for payment method
+            recovered_ref = pending_ctx.get("reference_text")
+            if not recovered_ref and outbound:
+                m_ref = re.search(r"Recibí tu referencia \(([^)]+)\)", outbound[0])
+                if m_ref:
+                    recovered_ref = m_ref.group(1).strip()
+
+            # Case A: User previously sent the reference (e.g. "referencia 115892330") and now replies with the method (e.g. "Pago movil")
+            if recovered_ref and matched_opt and not is_sub:
+                pending_ctx["reference_text"] = recovered_ref
+                combined_details = f"{matched_opt['label']} — {pending_ctx['reference_text']}"
+                _pending_tg_payment_context.pop(conv_key, None)
+                payment_method_label = matched_opt["label"] + " (Telegram)"
+                payment_id, newly_created = await _create_telegram_payment(
+                    business_id=business_id,
+                    customer_id=customer_id,
+                    chat_id=chat_id,
+                    customer_name=customer_name,
+                    amount=prior_amount,
+                    items=prior_items,
+                    payment_details=combined_details,
+                    payment_method=payment_method_label,
+                )
                 reply = (
-                    f"✅ Recibí tus datos de {selected_option['label']} para USD {prior_amount:.2f}.\n"
+                    f"✅ Recibí tus datos de {matched_opt['label']} ({pending_ctx['reference_text']}) para USD {prior_amount:.2f}.\n"
                     f"Tu pago quedó PENDIENTE de revisión del comercio. Te aviso por aquí cuando el dueño lo apruebe o rechace.\n"
                     f"Referencia de solicitud: {payment_id[:8].upper()}"
+                    if newly_created
+                    else f"📌 Tu solicitud de pago {payment_id[:8].upper()} ya está pendiente de revisión. Actualicé los datos enviados."
                 )
-            else:
+                await _save_catalog_fallback_message(
+                    business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=reply
+                )
+                await _send_with_token(token, chat_id, reply)
+                return
+
+            # Case B: User selects the payment method first (e.g. "Pago movil") before sending the reference digits
+            if matched_opt and not is_sub and len(_normalise(text).split()) <= 5:
+                _pending_tg_payment_context[conv_key] = {"selected_option": matched_opt}
                 reply = (
-                    f"📌 Tu solicitud de pago {payment_id[:8].upper()} ya está pendiente de revisión. "
-                    "Actualicé los datos enviados; el dueño la revisará desde CALYRISIA."
+                    f"¡Perfecto! Anoté {matched_opt['label']} para tu pedido de USD {prior_amount:.2f}.\n\n"
+                    f"▸ Datos de {matched_opt['label']}:\n{matched_opt['instructions']}\n\n"
+                    f"Envíame por aquí el número de referencia o comprobante de tu operación para registrarlo."
                 )
-            await _send_with_token(token, chat_id, reply)
-            return
+                await _save_catalog_fallback_message(
+                    business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=reply
+                )
+                await _send_with_token(token, chat_id, reply)
+                return
+
+            # Case C: User sends the payment reference / receipt
+            if is_sub:
+                if not payment_options:
+                    await _send_with_token(token, chat_id, "Este negocio aún no ha configurado métodos de cobro en CALYRISIA. Por seguridad, no envíes dinero ni datos de pago; contacta directamente con el comercio.")
+                    return
+                selected_option = matched_opt
+                if selected_option is None and len(payment_options) == 1:
+                    selected_option = payment_options[0]
+                if selected_option is None and pending_ctx.get("selected_option"):
+                    selected_option = pending_ctx["selected_option"]
+                if selected_option is None:
+                    # Save the reference in context so when the user replies "Pago movil" or "Binance", we complete it immediately!
+                    _pending_tg_payment_context[conv_key] = {"reference_text": text}
+                    choices = " o ".join(option["label"] for option in payment_options)
+                    ask_method_msg = (
+                        f"Recibí tu referencia ({text}). Para terminar de registrarla, "
+                        f"respóndeme qué método de pago utilizaste ({choices})."
+                    )
+                    await _save_catalog_fallback_message(
+                        business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=ask_method_msg
+                    )
+                    await _send_with_token(token, chat_id, ask_method_msg)
+                    return
+                _pending_tg_payment_context.pop(conv_key, None)
+                payment_method_label = selected_option["label"] + " (Telegram)"
+                payment_id, newly_created = await _create_telegram_payment(
+                    business_id=business_id,
+                    customer_id=customer_id,
+                    chat_id=chat_id,
+                    customer_name=customer_name,
+                    amount=prior_amount,
+                    items=prior_items,
+                    payment_details=text,
+                    payment_method=payment_method_label,
+                )
+                if newly_created:
+                    reply = (
+                        f"✅ Recibí tus datos de {selected_option['label']} para USD {prior_amount:.2f}.\n"
+                        f"Tu pago quedó PENDIENTE de revisión del comercio. Te aviso por aquí cuando el dueño lo apruebe o rechace.\n"
+                        f"Referencia de solicitud: {payment_id[:8].upper()}"
+                    )
+                else:
+                    reply = (
+                        f"📌 Tu solicitud de pago {payment_id[:8].upper()} ya está pendiente de revisión. "
+                        "Actualicé los datos enviados; el dueño la revisará desde CALYRISIA."
+                    )
+                await _save_catalog_fallback_message(
+                    business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=reply
+                )
+                await _send_with_token(token, chat_id, reply)
+                return
 
         payload = IncomingMessage(
             business_id=business_id,
@@ -1176,36 +1275,86 @@ async def _start_telethon_user_listener(business_id: str, session_str: str, api_
 
             outbound = await _get_recent_outbound(business_id, customer_id, conversation_id)
             prior_amount, prior_items = _parse_payment_marker(outbound)
-            if prior_amount is not None and prior_amount > 0 and _looks_like_payment_submission(text):
+            conv_key = f"{business_id}:{conversation_id}"
+            pending_ctx = _pending_tg_payment_context.get(conv_key) or {}
+            if prior_amount is not None and prior_amount > 0:
                 payment_options = await _get_business_payment_options(business_id)
-                normalized_proof = _normalise(text)
-                selected_option = payment_options[0] if len(payment_options) == 1 else None
-                if not selected_option:
-                    for opt in payment_options:
-                        if opt["code"].replace("_", " ") in normalized_proof or opt["label"].lower() in normalized_proof:
-                            selected_option = opt
-                            break
-                    if not selected_option and payment_options:
-                        selected_option = payment_options[0]
-                method_label = (selected_option["label"] if selected_option else "Pago") + " (Telegram)"
-                payment_id, newly_created = await _create_telegram_payment(
-                    business_id=business_id,
-                    customer_id=customer_id,
-                    chat_id=sender_id,
-                    customer_name=customer_name,
-                    amount=prior_amount,
-                    items=prior_items,
-                    payment_details=text,
-                    payment_method=method_label,
-                )
-                reply = (
-                    f"✅ Recibí tus datos de pago por USD {prior_amount:.2f}.\n"
-                    f"Tu pago quedó PENDIENTE de revisión en el panel del comercio (Solicitud #{payment_id[:8].upper()})."
-                    if newly_created
-                    else f"📌 Tu solicitud de pago #{payment_id[:8].upper()} fue actualizada y sigue pendiente de revisión."
-                )
-                await event.reply(reply)
-                return
+                matched_opt = _match_payment_option_from_text(text, payment_options)
+                is_sub = _looks_like_payment_submission(text)
+
+                if pending_ctx.get("reference_text") and matched_opt and not is_sub:
+                    combined_details = f"{matched_opt['label']} — {pending_ctx['reference_text']}"
+                    _pending_tg_payment_context.pop(conv_key, None)
+                    method_label = matched_opt["label"] + " (Telegram)"
+                    payment_id, newly_created = await _create_telegram_payment(
+                        business_id=business_id,
+                        customer_id=customer_id,
+                        chat_id=sender_id,
+                        customer_name=customer_name,
+                        amount=prior_amount,
+                        items=prior_items,
+                        payment_details=combined_details,
+                        payment_method=method_label,
+                    )
+                    reply = (
+                        f"✅ Recibí tus datos de {matched_opt['label']} ({pending_ctx['reference_text']}) por USD {prior_amount:.2f}.\n"
+                        f"Tu pago quedó PENDIENTE de revisión en el panel del comercio (Solicitud #{payment_id[:8].upper()})."
+                        if newly_created
+                        else f"📌 Tu solicitud de pago #{payment_id[:8].upper()} fue actualizada y sigue pendiente de revisión."
+                    )
+                    await _save_catalog_fallback_message(
+                        business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=reply
+                    )
+                    await event.reply(reply)
+                    return
+
+                if matched_opt and not is_sub and len(_normalise(text).split()) <= 5:
+                    _pending_tg_payment_context[conv_key] = {"selected_option": matched_opt}
+                    reply = (
+                        f"¡Perfecto! Anoté {matched_opt['label']} para tu pedido de USD {prior_amount:.2f}.\n\n"
+                        f"▸ Datos de {matched_opt['label']}:\n{matched_opt['instructions']}\n\n"
+                        f"Envíame por aquí el número de referencia de tu operación para registrarlo."
+                    )
+                    await _save_catalog_fallback_message(
+                        business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=reply
+                    )
+                    await event.reply(reply)
+                    return
+
+                if is_sub:
+                    selected_option = matched_opt or (payment_options[0] if len(payment_options) == 1 else pending_ctx.get("selected_option"))
+                    if not selected_option and len(payment_options) > 1:
+                        _pending_tg_payment_context[conv_key] = {"reference_text": text}
+                        choices = " o ".join(option["label"] for option in payment_options)
+                        ask_msg = f"Recibí tu referencia ({text}). Respóndeme qué método utilizaste ({choices}) para terminar de registrarla."
+                        await _save_catalog_fallback_message(
+                            business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=ask_msg
+                        )
+                        await event.reply(ask_msg)
+                        return
+                    _pending_tg_payment_context.pop(conv_key, None)
+                    method_label = (selected_option["label"] if selected_option else "Pago") + " (Telegram)"
+                    payment_id, newly_created = await _create_telegram_payment(
+                        business_id=business_id,
+                        customer_id=customer_id,
+                        chat_id=sender_id,
+                        customer_name=customer_name,
+                        amount=prior_amount,
+                        items=prior_items,
+                        payment_details=text,
+                        payment_method=method_label,
+                    )
+                    reply = (
+                        f"✅ Recibí tus datos de {selected_option['label'] if selected_option else 'pago'} por USD {prior_amount:.2f}.\n"
+                        f"Tu pago quedó PENDIENTE de revisión en el panel del comercio (Solicitud #{payment_id[:8].upper()})."
+                        if newly_created
+                        else f"📌 Tu solicitud de pago #{payment_id[:8].upper()} fue actualizada y sigue pendiente de revisión."
+                    )
+                    await _save_catalog_fallback_message(
+                        business_id=business_id, customer_id=customer_id, conversation_id=conversation_id, response_text=reply
+                    )
+                    await event.reply(reply)
+                    return
 
             payload = IncomingMessage(
                 business_id=uuid.UUID(business_id),

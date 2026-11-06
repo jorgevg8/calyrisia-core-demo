@@ -1206,6 +1206,19 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 ],
                 ensure_ascii=False,
             )
+            wants_delivery = self._has_any_term(
+                cleaned, ("delivery", "domicilio", "a domicilio", "envio", "despacho")
+            )
+            wants_pickup = self._has_any_term(
+                cleaned, ("retirar", "retiro", "retiro en tienda", "pasar por tienda", "recoger")
+            )
+            if wants_delivery and not wants_pickup:
+                delivery_line = "  • Modalidad seleccionada: Delivery a domicilio (indícanos tu dirección de entrega junto con tu pago)."
+            elif wants_pickup and not wants_delivery:
+                delivery_line = "  • Modalidad seleccionada: Retiro personal en tienda."
+            else:
+                delivery_line = "¿Deseas servicio de delivery a domicilio o pasarás a retirar por tienda?"
+
             return (
                 "¡Excelente elección! Aquí tienes el resumen organizado de tu pedido:\n\n"
                 "1. Detalle de artículos por categoría:\n"
@@ -1214,7 +1227,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 + f"  • Cantidad total: {total_units} unidad(es);\n"
                 + f"  • Total a pagar: {currency} {total:.2f}.\n\n"
                 + "3. Modalidad de entrega:\n"
-                + "¿Deseas servicio de delivery a domicilio o pasarás a retirar por tienda?\n"
+                + f"{delivery_line}\n"
                 + f"[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
             )
         return None
@@ -1248,6 +1261,18 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             "cuando quieras pagar dime",
             "pendiente de reporte de pago",
         )
+        leaked_prompt_markers = (
+            "eres el asesor especialista",
+            "objetivo principal:",
+            "flujo automatico de ventas:",
+        )
+        if any(m in cleaned_ai for m in leaked_prompt_markers):
+            return self._emergency_response(
+                user_message=user_message,
+                context=context,
+                tool_results=[],
+                conversation_id=conversation_id,
+            )
         if self._is_general_catalog_query(user_message) or self._is_informational_query(user_message):
             if "[boton_pago:" in ai_text.lower() or any(m in cleaned_ai for m in incoherent_order_markers):
                 return self._emergency_response(
@@ -1591,16 +1616,16 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 lines.append("\n¿Cuál de estos artículos prefieres o deseas que te dé más detalles de alguno?")
                 return "\n".join(lines)
 
-        # 7. Check Knowledge Base (business_knowledge_items) configured by the store owner
-        if knowledge_base and q_stems:
-            for kb in knowledge_base:
-                kb_title = self._clean_accents(str(kb.get("title") or ""))
-                kb_content = str(kb.get("content") or "").strip()
-                if kb_content and any(qs in kb_title or qs in self._clean_accents(kb_content) for qs in q_stems if len(qs) >= 4):
-                    return f"En {biz_name}: {kb_content}"
+        # 7. Filter Knowledge Base to exclude internal AI system prompts ("Eres el asesor...", "OBJETIVO PRINCIPAL:")
+        safe_kb_items = []
+        for kb in (knowledge_base or []):
+            kb_c = str(kb.get("content") or "").strip()
+            kb_c_clean = self._clean_accents(kb_c)
+            if not kb_c or any(p in kb_c_clean for p in ("eres el asesor", "objetivo principal", "flujo automatico de ventas", "instrucciones del sistema")):
+                continue
+            safe_kb_items.append(kb)
 
-        # 8. Active order delivery / pickup confirmation (ONLY when there is an active order in the last 2 hours
-        #    and the user explicitly chooses delivery or pickup, NOT when asking a general question)
+        # 8. Active order delivery / pickup confirmation OR payment method selection for an active order
         is_explicit_delivery_choice = self._has_any_term(
             cleaned,
             ("delivery", "a domicilio", "por delivery", "con delivery", "envio a domicilio"),
@@ -1700,8 +1725,57 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"Al confirmar tu pedido te compartimos las coordenadas exactas de retiro o enviamos tu compra a domicilio. ¿Qué producto deseas consultar?"
             )
 
-        # 9F. Payment methods, exchange rate, currencies
+        # 9F. Payment methods, specific payment method selection ("Pago móvil", "Binance", etc.), exchange rate
         if self._has_any_term(cleaned, ("metodo", "metodos", "formas de pago", "como pago", "pagar", "pago", "tasa", "bolivar", "bolivares", "bs", "ves", "zelle", "binance", "paypal", "efectivo", "divisa", "divisas", "transferencia", "pago movil")):
+            # Check if the user is selecting or asking for a specific configured payment method (e.g. "Pago movil", "Binance")
+            selected_pm = None
+            for pm in pay_methods:
+                pm_code_words = pm["code"].replace("_", " ")
+                pm_label_clean = self._clean_accents(pm["label"])
+                if self._has_any_term(cleaned, (pm_code_words, pm_label_clean)) or (
+                    "binance" in cleaned and "binance" in pm_code_words
+                ) or ("pago movil" in cleaned and "pago_movil" == pm["code"]):
+                    selected_pm = pm
+                    break
+
+            # Check if there is an active order total in the current conversation (< 2 hours)
+            active_total: float | None = None
+            if conversation_id and self.conn is not None:
+                try:
+                    with self.conn.cursor() as cur:
+                        cur.execute("SAVEPOINT sp_pay_total")
+                        cur.execute(
+                            """SELECT content FROM conversation_messages
+                               WHERE conversation_id = %s AND business_id = %s AND direction = 'outbound'
+                                 AND created_at >= NOW() - INTERVAL '2 hours'
+                               ORDER BY created_at DESC LIMIT 4""",
+                            (conversation_id, biz.get("id") or context.get("business_id")),
+                        )
+                        out_rows = cur.fetchall()
+                        cur.execute("RELEASE SAVEPOINT sp_pay_total")
+                        for r in out_rows:
+                            txt_out = str(r[0] or "")
+                            m_tot = re.search(r"\[BOTON_PAGO:\s*(\d+(?:\.\d{1,2})?)", txt_out) or re.search(
+                                r"Total a pagar:\s*[A-Z$]*\s*(\d+(?:\.\d{1,2})?)", txt_out, re.IGNORECASE
+                            )
+                            if m_tot:
+                                active_total = float(m_tot.group(1))
+                                break
+                except Exception:
+                    try:
+                        with self.conn.cursor() as cur:
+                            cur.execute("ROLLBACK TO SAVEPOINT sp_pay_total")
+                    except Exception:
+                        pass
+
+            if selected_pm:
+                total_line = f" para tu pedido de {_fmt_price(active_total)}" if active_total else ""
+                return (
+                    f"¡Perfecto! Aquí tienes los datos oficiales de {selected_pm['label']} en {biz_name}{total_line}:\n\n"
+                    f"{selected_pm['instructions']}\n\n"
+                    f"Apenas realices el pago, envíame por este mismo chat el número de referencia de la operación para registrarlo."
+                )
+
             if pay_methods:
                 m_labels = ", ".join(m["label"] for m in pay_methods)
             elif settings_ctx.get("payment_methods"):
@@ -1709,6 +1783,11 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             else:
                 m_labels = "Pago Móvil, Transferencia Bancaria, Binance Pay y Zelle"
             rate_info = f" Nuestra tasa de cambio activa es {ex_rate:.2f} {local_curr} por 1 {curr}." if ex_rate > 0 else f" Nuestros precios están expresados en {curr}."
+            if active_total:
+                return (
+                    f"Para tu pedido de {_fmt_price(active_total)} en {biz_name}, puedes pagar mediante: {m_labels}.{rate_info} "
+                    f"Envíame el método elegido junto con el número de referencia de tu pago para registrarlo."
+                )
             return (
                 f"En {biz_name} aceptamos los siguientes métodos de pago: {m_labels}.{rate_info} "
                 f"Indícame qué artículos de nuestro catálogo deseas llevar para calcularte el total exacto."
