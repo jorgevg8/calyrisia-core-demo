@@ -111,14 +111,34 @@ class BrainService:
         self.client = None
         self.model_candidates: list[str] = []
 
-        if self.settings.gemini_api_key and genai is not None and types is not None:
-            self.client = genai.Client(
-                api_key=self.settings.gemini_api_key,
-                http_options=types.HttpOptions(
-                    timeout=10000,
-                    retry_options=types.HttpRetryOptions(attempts=1),
-                ),
-            )
+        self.api_key = (self.settings.gemini_api_key or "").strip()
+        if self.api_key and genai is not None:
+            try:
+                is_vertex_key = self.api_key.startswith("AQ.")
+                if types is not None and hasattr(types, "HttpOptions"):
+                    http_opts = types.HttpOptions(timeout=12000)
+                    self.client = genai.Client(
+                        vertexai=is_vertex_key,
+                        api_key=self.api_key,
+                        http_options=http_opts,
+                    )
+                else:
+                    self.client = genai.Client(vertexai=is_vertex_key, api_key=self.api_key)
+            except Exception:
+                try:
+                    self.client = genai.Client(api_key=self.api_key)
+                except Exception:
+                    self.client = None
+        if self.api_key and not self.model_candidates:
+            env_model = (self.settings.gemini_model or "").strip()
+            if not env_model or "gemini-3" in env_model:
+                env_model = "gemini-2.5-flash"
+            self.model_candidates = [
+                env_model,
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-2.5-flash-lite",
+            ]
             # Sanitizar modelo configurado y usar la familia Gemini Flash ultra rápida y ligera
             env_model = (self.settings.gemini_model or "").strip()
             if not env_model or "gemini-3" in env_model:
@@ -1057,16 +1077,157 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
         except (TypeError, ValueError):
             return str(value)
 
+    def _call_gemini_rest(
+        self,
+        *,
+        model: str,
+        system_instruction: str,
+        prompt_text: str,
+        temperature: float = 0.25,
+        max_output_tokens: int = 850,
+    ) -> str | None:
+        """Direct HTTPS fallback to Google AI Studio and Vertex AI Express endpoints."""
+        import urllib.request
+        import urllib.error
+
+        api_key = getattr(self, "api_key", "") or (self.settings.gemini_api_key or "").strip()
+        if not api_key:
+            return None
+
+        payload = {
+            "systemInstruction": {"parts": [{"text": system_instruction}]},
+            "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": max_output_tokens,
+            },
+        }
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+
+        if api_key.startswith("AQ."):
+            urls = [
+                f"https://aiplatform.googleapis.com/v1beta1/publishers/google/models/{model}:generateContent?key={api_key}",
+                f"https://aiplatform.googleapis.com/v1/publishers/google/models/{model}:generateContent?key={api_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+            ]
+        else:
+            urls = [
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}",
+                f"https://aiplatform.googleapis.com/v1beta1/publishers/google/models/{model}:generateContent?key={api_key}",
+            ]
+
+        for url in urls:
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=12) as resp:
+                    body = json.loads(resp.read().decode("utf-8"))
+                candidates = body.get("candidates") or []
+                if candidates:
+                    parts = (candidates[0].get("content") or {}).get("parts") or []
+                    texts = [str(p.get("text") or "") for p in parts if p.get("text")]
+                    combined = "".join(texts).strip()
+                    if combined:
+                        return combined
+            except Exception:
+                continue
+        return None
+
+    def _build_order_summary_response(
+        self,
+        found_items: list[dict[str, Any]],
+        currency: str,
+        cleaned_msg: str = "",
+    ) -> str:
+        total = 0.0
+        total_units = 0
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for fi in found_items:
+            p = fi["product"]
+            q = int(fi["qty"])
+            st = float(fi["subtotal"])
+            total += st
+            total_units += q
+            cat_name = str(p.get("category") or "Catálogo General").strip() or "Catálogo General"
+            grouped.setdefault(cat_name, []).append(fi)
+
+        section_lines: list[str] = []
+        for cat_name, cat_items in grouped.items():
+            section_lines.append(f"▸ {cat_name}:")
+            for idx, fi in enumerate(cat_items):
+                p = fi["product"]
+                q = int(fi["qty"])
+                st = float(fi["subtotal"])
+                unit_p = float(p.get("price") or 0.0)
+                punct = "." if idx == len(cat_items) - 1 else ";"
+                section_lines.append(
+                    f"  • {q}x {p['name']} — Subtotal: {currency} {st:.2f} ({currency} {unit_p:.2f} c/u){punct}"
+                )
+
+        items_payload = json.dumps(
+            [
+                {
+                    "product_id": str(fi["product"].get("id") or ""),
+                    "name": fi["product"]["name"],
+                    "qty": fi["qty"],
+                    "price": float(fi["product"].get("price") or 0),
+                }
+                for fi in found_items
+            ],
+            ensure_ascii=False,
+        )
+
+        wants_delivery = self._has_any_term(
+            cleaned_msg, ("delivery", "domicilio", "a domicilio", "envio", "despacho")
+        )
+        wants_pickup = self._has_any_term(
+            cleaned_msg, ("retirar", "retiro", "retiro en tienda", "pasar por tienda", "recoger")
+        )
+        if wants_delivery and not wants_pickup:
+            delivery_line = "  • Modalidad seleccionada: Delivery a domicilio (indícanos tu dirección de entrega junto con tu pago)."
+        elif wants_pickup and not wants_delivery:
+            delivery_line = "  • Modalidad seleccionada: Retiro personal en tienda."
+        else:
+            delivery_line = "¿Deseas servicio de delivery a domicilio o pasarás a retirar por tienda?"
+
+        return (
+            "¡Excelente elección! Aquí tienes el resumen organizado de tu pedido:\n\n"
+            "1. Detalle de artículos por categoría:\n"
+            + "\n".join(section_lines)
+            + f"\n\n2. Resumen de cobro:\n"
+            + f"  • Cantidad total: {total_units} unidad(es);\n"
+            + f"  • Total a pagar: {currency} {total:.2f}.\n\n"
+            + "3. Modalidad de entrega:\n"
+            + f"{delivery_line}\n"
+            + f"[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
+        )
+
     def _parse_multi_item_order(self, msg: str, catalog: list[dict], currency: str = "USD") -> str | None:
         if not msg or not catalog:
             return None
-        # Never treat a greeting, catalog question, or informational inquiry as a purchase order!
-        if self._is_pure_greeting(msg) or self._is_general_catalog_query(msg) or self._is_informational_query(msg):
+        if self._is_pure_greeting(msg) or self._is_general_catalog_query(msg):
             return None
 
         cleaned = self._clean_accents(msg)
 
-        # If the user is asking a question about availability/price/catalog, do not generate an order quote
+        explicit_buy_phrases = (
+            "quiero comprar", "quisiera comprar", "quiero pedir", "quisiera pedir",
+            "para pedir", "quiero ordenar", "quisiera ordenar", "quiero llevarme",
+            "quisiera llevarme", "voy a comprar", "voy a pedir", "voy a llevar",
+            "voy a llevarme", "me llevo", "me voy a llevar", "dame", "anotame",
+            "agrega", "agregame", "ponme", "ordenar", "comprar", "enviame",
+            "mandame", "hazme un pedido", "hacer un pedido",
+        )
+        has_explicit_buy = self._has_any_term(cleaned, explicit_buy_phrases)
+
+        # If it is an informational question AND does NOT have an explicit buy phrase, return None
+        if self._is_informational_query(msg) and not has_explicit_buy:
+            return None
+
         question_indicators = (
             "quisiera saber", "quiero saber", "necesito saber", "quiero ver", "quisiera ver",
             "quiero consultar", "que productos", "cuales productos", "que venden", "que tienen",
@@ -1075,23 +1236,17 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             "detalles", "recomienda", "recomiendas", "diferencia", "comparar", "como funciona",
             "garantia", "mostrar", "muestrame", "catalogo", "disponible", "disponibles",
         )
-        Explicit_buy_phrases = (
-            "quiero comprar", "quiero pedir", "quiero ordenar", "quiero llevarme",
-            "voy a comprar", "voy a pedir", "voy a llevar", "me llevo", "dame",
-            "anotame", "agrega", "agregame", "ponme", "ordenar", "comprar",
-            "enviame", "mandame", "hazme un pedido", "hacer un pedido",
-        )
-        has_explicit_buy = self._has_any_term(cleaned, Explicit_buy_phrases)
         if self._has_any_term(cleaned, question_indicators) and not has_explicit_buy:
             return None
 
-        # Require either an explicit buy phrase or ("quiero" / "necesito" / "pedido" + explicit quantity)
-        soft_triggers = ("quiero", "llevarme", "pedido", "necesito")
-        has_soft_trigger = self._has_any_term(cleaned, soft_triggers)
-        has_qty_number = bool(
-            re.search(r"\b(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|\d+)\b", cleaned)
+        soft_triggers = (
+            "quiero", "quisiera", "llevarme", "llevar", "pedido", "pedir", "necesito",
         )
-        if not has_explicit_buy and not (has_soft_trigger and (has_qty_number or not ("?" in msg or "¿" in msg))):
+        has_soft_trigger = self._has_any_term(cleaned, soft_triggers)
+        has_qty_word = bool(
+            re.search(r"\b(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|\d+)\b", cleaned)
+        )
+        if not has_explicit_buy and not (has_soft_trigger and (has_qty_word or not ("?" in msg or "¿" in msg))):
             return None
 
         word_to_num = {
@@ -1169,68 +1324,129 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             found_items.append({"product": prod, "qty": qty, "subtotal": subtotal})
 
         if found_items:
-            total = 0.0
-            total_units = 0
-            grouped: dict[str, list[dict[str, Any]]] = {}
-            for fi in found_items:
-                p = fi["product"]
-                q = int(fi["qty"])
-                st = float(fi["subtotal"])
-                total += st
-                total_units += q
-                cat_name = str(p.get("category") or "Catálogo General").strip() or "Catálogo General"
-                grouped.setdefault(cat_name, []).append(fi)
-
-            section_lines: list[str] = []
-            for cat_name, cat_items in grouped.items():
-                section_lines.append(f"▸ {cat_name}:")
-                for idx, fi in enumerate(cat_items):
-                    p = fi["product"]
-                    q = int(fi["qty"])
-                    st = float(fi["subtotal"])
-                    unit_p = float(p.get("price") or 0.0)
-                    punct = "." if idx == len(cat_items) - 1 else ";"
-                    section_lines.append(
-                        f"  • {q}x {p['name']} — Subtotal: {currency} {st:.2f} ({currency} {unit_p:.2f} c/u){punct}"
-                    )
-
-            items_payload = json.dumps(
-                [
-                    {
-                        "product_id": str(fi["product"].get("id") or ""),
-                        "name": fi["product"]["name"],
-                        "qty": fi["qty"],
-                        "price": float(fi["product"].get("price") or 0),
-                    }
-                    for fi in found_items
-                ],
-                ensure_ascii=False,
-            )
-            wants_delivery = self._has_any_term(
-                cleaned, ("delivery", "domicilio", "a domicilio", "envio", "despacho")
-            )
-            wants_pickup = self._has_any_term(
-                cleaned, ("retirar", "retiro", "retiro en tienda", "pasar por tienda", "recoger")
-            )
-            if wants_delivery and not wants_pickup:
-                delivery_line = "  • Modalidad seleccionada: Delivery a domicilio (indícanos tu dirección de entrega junto con tu pago)."
-            elif wants_pickup and not wants_delivery:
-                delivery_line = "  • Modalidad seleccionada: Retiro personal en tienda."
-            else:
-                delivery_line = "¿Deseas servicio de delivery a domicilio o pasarás a retirar por tienda?"
-
-            return (
-                "¡Excelente elección! Aquí tienes el resumen organizado de tu pedido:\n\n"
-                "1. Detalle de artículos por categoría:\n"
-                + "\n".join(section_lines)
-                + f"\n\n2. Resumen de cobro:\n"
-                + f"  • Cantidad total: {total_units} unidad(es);\n"
-                + f"  • Total a pagar: {currency} {total:.2f}.\n\n"
-                + "3. Modalidad de entrega:\n"
-                + f"{delivery_line}\n"
-                + f"[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
-            )
+            return self._build_order_summary_response(found_items, currency, cleaned)
         return None
+
+    def _resolve_contextual_order(
+        self,
+        *,
+        user_message: str,
+        catalog: list[dict],
+        currency: str,
+        conversation_id: UUID | None,
+        business_id: Any,
+        context: dict[str, Any] | None = None,
+    ) -> str | None:
+        """Understand contextual follow-up orders where the user refers to the product just discussed
+        (e.g., 'Solo un articulo por favor', 'Que quiero ese articulo nada más', 'Dame 1', 'Uno solo', 'Me lo llevo')."""
+        if not user_message or not catalog:
+            return None
+        if self._is_pure_greeting(user_message) or self._is_general_catalog_query(user_message) or self._is_informational_query(user_message):
+            return None
+
+        cleaned = self._clean_accents(user_message)
+
+        contextual_buy_patterns = (
+            "un articulo", "una unidad", "un producto",
+            "ese articulo", "este articulo", "ese producto", "este producto",
+            "solo un", "solo uno", "solo una", "uno solo", "una sola",
+            "uno nada mas", "una nada mas", "ese nada mas", "eso nada mas",
+            "quiero ese", "quiero esa", "quiero este", "quiero esta",
+            "quisiera ese", "quisiera esa", "quisiera este", "quisiera esta",
+            "dame ese", "dame esa", "dame uno", "dame una", "dame 1", "dame 2", "dame 3",
+            "anotame uno", "anotame una", "anotame ese", "anotame 1",
+            "me lo llevo", "me la llevo", "lo quiero", "la quiero",
+            "quiero comprarlo", "quiero pedirlo", "quisiera pedirlo", "quisiera comprarlo",
+            "unidades por favor", "unidad por favor", "articulo por favor",
+        )
+        is_short_quantity_reply = bool(
+            re.fullmatch(
+                r"(?:solo\s+|solamente\s+|dame\s+|quiero\s+|quisiera\s+|anotame\s+|por\s+favor\s+)*"
+                r"(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)"
+                r"(?:\s+(?:unidad|unidades|articulo|articulos|producto|productos|nada\s+mas|por\s+favor|solo))*",
+                cleaned,
+            )
+        )
+        has_contextual_buy = self._has_any_term(cleaned, contextual_buy_patterns) or is_short_quantity_reply
+        if not has_contextual_buy:
+            return None
+
+        # Extract requested quantity
+        word_to_num = {
+            "un": 1, "uno": 1, "una": 1,
+            "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+            "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
+            "once": 11, "doce": 12,
+        }
+        qty = 1
+        m_num = re.search(r"\b(\d+)\b", cleaned)
+        if m_num:
+            qty = max(1, int(m_num.group(1)))
+        else:
+            for w_tok in cleaned.split():
+                if w_tok in word_to_num:
+                    qty = word_to_num[w_tok]
+                    break
+
+        # Find the target product from recent conversation history (< 2 hours) or single-item catalog
+        target_product = None
+        if conversation_id and self.conn is not None and business_id is not None:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("SAVEPOINT sp_ctx_prod")
+                    cur.execute(
+                        """SELECT content FROM conversation_messages
+                           WHERE conversation_id = %s AND business_id = %s
+                             AND created_at >= NOW() - INTERVAL '2 hours'
+                           ORDER BY created_at DESC OFFSET 1 LIMIT 6""",
+                        (conversation_id, business_id),
+                    )
+                    hist_rows = cur.fetchall()
+                    cur.execute("RELEASE SAVEPOINT sp_ctx_prod")
+                    for (h_txt,) in hist_rows:
+                        h_clean = self._clean_accents(str(h_txt or ""))
+                        matched_in_msg = [
+                            p for p in catalog
+                            if p.get("name") and self._clean_accents(p["name"]) in h_clean
+                        ]
+                        if len(matched_in_msg) == 1:
+                            target_product = matched_in_msg[0]
+                            break
+                        elif len(matched_in_msg) > 1 and target_product is None:
+                            target_product = matched_in_msg[0]
+            except Exception:
+                try:
+                    with self.conn.cursor() as cur:
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_ctx_prod")
+                except Exception:
+                    pass
+
+        if target_product is None and context:
+            recent_msgs = ((context.get("conversation") or {}).get("recent_messages") or [])
+            for m_obj in reversed(recent_msgs):
+                m_txt = self._clean_accents(str((m_obj or {}).get("content") or ""))
+                if not m_txt:
+                    continue
+                matched_in_ctx = [
+                    p for p in catalog
+                    if p.get("name") and self._clean_accents(p["name"]) in m_txt
+                ]
+                if len(matched_in_ctx) == 1:
+                    target_product = matched_in_ctx[0]
+                    break
+
+        if target_product is None and len(catalog) == 1:
+            target_product = catalog[0]
+
+        if target_product is None:
+            return None
+
+        subtotal = float(target_product.get("price") or 0.0) * qty
+        return self._build_order_summary_response(
+            [{"product": target_product, "qty": qty, "subtotal": subtotal}],
+            currency,
+            cleaned,
+        )
 
     def _validate_and_fix_ai_coherence(
         self,
@@ -1251,16 +1467,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
         cleaned_ai = self._clean_accents(ai_text)
         catalog = context.get("product_catalog") or context.get("catalog") or []
 
-        # 1. If the user is asking a general catalog question ("Quisiera saber que productos tienen", etc.)
-        #    or an informational question, the AI must NEVER respond with a delivery/payment confirmation!
-        incoherent_order_markers = (
-            "anote tu preferencia",
-            "preferencia de delivery",
-            "modalidad seleccionada",
-            "hemos actualizado tu solicitud de pedido",
-            "cuando quieras pagar dime",
-            "pendiente de reporte de pago",
-        )
         leaked_prompt_markers = (
             "eres el asesor especialista",
             "objetivo principal:",
@@ -1273,6 +1479,14 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 tool_results=[],
                 conversation_id=conversation_id,
             )
+
+        incoherent_order_markers = (
+            "anote tu preferencia",
+            "preferencia de delivery",
+            "hemos actualizado tu solicitud de pedido",
+            "cuando quieras pagar dime",
+            "pendiente de reporte de pago",
+        )
         if self._is_general_catalog_query(user_message) or self._is_informational_query(user_message):
             if "[boton_pago:" in ai_text.lower() or any(m in cleaned_ai for m in incoherent_order_markers):
                 return self._emergency_response(
@@ -1282,8 +1496,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     conversation_id=conversation_id,
                 )
 
-        # 2. If the user asked for the store's catalog/products and the store has products in DB,
-        #    verify that the AI actually mentioned at least one real product from the store's catalog.
         if self._is_general_catalog_query(user_message) and catalog:
             mentioned_any = False
             for item in catalog:
@@ -1292,21 +1504,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     mentioned_any = True
                     break
             if not mentioned_any:
-                return self._emergency_response(
-                    user_message=user_message,
-                    context=context,
-                    tool_results=[],
-                    conversation_id=conversation_id,
-                )
-
-        # 3. If the AI claims "anoté tu preferencia de delivery" or outputs a total to pay when the user
-        #    neither placed an order nor confirmed delivery/pickup for an active order:
-        if any(m in cleaned_ai for m in incoherent_order_markers):
-            is_explicit_delivery_choice = self._has_any_term(
-                user_message,
-                ("delivery", "domicilio", "retirar", "retiro en tienda", "paso a retirar", "pasar por tienda", "recoger"),
-            )
-            if not is_explicit_delivery_choice:
                 return self._emergency_response(
                     user_message=user_message,
                     context=context,
@@ -1338,7 +1535,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
         profile = context.get("business_profile") or {}
         settings_ctx = context.get("settings") or {}
         pay_methods = context.get("payment_methods") or []
-        knowledge_base = context.get("knowledge_base") or []
         in_stock_items = [p for p in catalog if (25 if p.get("stock") is None else float(p.get("stock") or 0)) > 0]
 
         def _fmt_price(usd_val: Any) -> str:
@@ -1383,7 +1579,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 + "\n\n¿Cuál de estos productos te interesa consultar en detalle o deseas agregar a tu pedido?"
             )
 
-        # 0. Tool results (if called after native function calling)
+        # 0. Tool results
         successful = [
             item
             for item in tool_results
@@ -1439,7 +1635,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
 
         bt_lower = str(biz.get("business_type") or "").lower()
         is_appointment_biz = any(k in bt_lower for k in ("appointment", "cita", "clinic", "clínic", "consult", "salud", "medic", "odont", "service_team", "servici"))
-        is_restaurant_biz = any(k in bt_lower for k in ("restaurant", "restaur", "caf", "comida", "gastron"))
 
         # 2. Appointment scheduling for service/clinic businesses
         if is_appointment_biz and self._has_any_term(cleaned, ("cita", "consulta", "agendar", "turno", "reservar")):
@@ -1447,7 +1642,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             if has_time:
                 phone_m = re.search(r"(\+?\d[\d\s\-]{6,14}\d)", user_message)
                 phone_val = phone_m.group(1).strip() if phone_m else ""
-                name_m = re.search(r"(?:soy|me llamo|nombre es|a nombre de)\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]{3,40})", user_message, re.IGNORECASE)
+                name_m = re.search(r"(?:soy|me llamo|nombre es|a nombre de)\\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]{3,40})", user_message, re.IGNORECASE)
                 name_val = name_m.group(1).strip() if name_m else ((context.get("customer") or {}).get("full_name") or "Cliente")
                 svc_val = catalog[0]["name"] if catalog else "Consulta General"
                 for it in catalog:
@@ -1462,13 +1657,25 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             svc_list = ", ".join(f"{it['name']} ({curr} {float(it.get('price') or 0):.2f})" for it in catalog[:5]) if catalog else "nuestras consultas y servicios"
             return f"Con gusto te ayudamos a agendar tu cita en {biz_name}. Contamos con: {svc_list}. Indícame tu nombre completo, teléfono, el servicio que deseas y para qué fecha y hora la prefieres."
 
-        # 3. Explicit multi-item order quote (only when the customer is explicitly ordering products)
+        # 3A. Explicit multi-item or single-item order by product name (e.g. "Ok perfecto, quisiera pedir un cargador")
         order_quote = self._parse_multi_item_order(user_message, catalog, curr)
         if order_quote:
             return order_quote
 
+        # 3B. Contextual follow-up order referring to the product just discussed or single-item store
+        #     (e.g. "Solo un articulo por favor", "Que quiero ese articulo nada más", "Dame 1", "Me lo llevo")
+        contextual_quote = self._resolve_contextual_order(
+            user_message=user_message,
+            catalog=catalog,
+            currency=curr,
+            conversation_id=conversation_id,
+            business_id=biz.get("id") or context.get("business_id"),
+            context=context,
+        )
+        if contextual_quote:
+            return contextual_quote
+
         # 4. General catalog / "Quisiera saber que productos tienen" / "Qué venden" query
-        #    Check if the user also mentioned a specific product; if not, return the full catalog immediately!
         stop_q = {
             "hola", "buenas", "buenos", "buen", "dias", "tardes", "noches", "saludos",
             "quisiera", "quiero", "necesito", "gustaria", "puedes", "podrias", "saber",
@@ -1485,6 +1692,15 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             "cuando", "para", "por", "con", "sin", "favor", "pana", "amigo", "amiga",
             "disculpa", "oye", "consulta", "consultar", "busco", "buscando", "interesa",
             "comprar", "pedir", "llevar", "ordenar", "color", "colores", "talla", "tallas",
+            "solo", "solamente", "unico", "unica", "ese", "esa", "este", "esta", "esos",
+            "esas", "estos", "estas", "aquel", "nada", "mas", "menos", "todo", "todos",
+            "toda", "todas", "algo", "alguno", "alguna", "ninguno", "ninguna", "otro",
+            "otra", "otros", "otras", "mismo", "misma", "ok", "okay", "perfecto",
+            "excelente", "genial", "claro", "bueno", "bien", "mal", "si", "no", "ya",
+            "ahora", "luego", "despues", "antes", "hoy", "manana", "ayer", "porfa",
+            "gracias", "muchas", "mucho", "poco", "pocos", "varios", "varias",
+            "cualquier", "cualquiera", "primero", "segundo", "ultimo", "ultima",
+            "unidad", "unidades", "dame", "anotame", "ponme", "agrega", "llevo",
         }
         q_stems = [_stem_w(w) for w in cleaned.split() if len(w) >= 3 and w not in stop_q and _stem_w(w) not in stop_q]
 
@@ -1604,7 +1820,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     f"• Categoría: {item.get('category') or 'General'};\n"
                     f"• Precio oficial: {price_str};{desc_text}{var_text}\n"
                     f"• Disponibilidad inmediata: {stock_qty} unidades en stock.\n\n"
-                    f"¿Cuántas unidades te gustaría pedir o qué otra consulta tienes sobre este artículo?"
+                    f"¿Cuántas unidades te gustaría pedir o deseas que te arme el pedido de inmediato?"
                 )
             else:
                 lines = [f"En {biz_name} contamos con estas {len(matched_items[:6])} opciones disponibles:\n"]
@@ -1616,16 +1832,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 lines.append("\n¿Cuál de estos artículos prefieres o deseas que te dé más detalles de alguno?")
                 return "\n".join(lines)
 
-        # 7. Filter Knowledge Base to exclude internal AI system prompts ("Eres el asesor...", "OBJETIVO PRINCIPAL:")
-        safe_kb_items = []
-        for kb in (knowledge_base or []):
-            kb_c = str(kb.get("content") or "").strip()
-            kb_c_clean = self._clean_accents(kb_c)
-            if not kb_c or any(p in kb_c_clean for p in ("eres el asesor", "objetivo principal", "flujo automatico de ventas", "instrucciones del sistema")):
-                continue
-            safe_kb_items.append(kb)
-
-        # 8. Active order delivery / pickup confirmation OR payment method selection for an active order
+        # 7. Active order delivery / pickup confirmation
         is_explicit_delivery_choice = self._has_any_term(
             cleaned,
             ("delivery", "a domicilio", "por delivery", "con delivery", "envio a domicilio"),
@@ -1676,14 +1883,12 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     pass
                 print(f"[Brain] Error checking previous order context: {e}")
 
-        # 9. Business Questions (Warranty, Shipping, Hours, Location, Payment Methods, Discounts, Human Contact, Store Info)
-        # 9A. Store identity / what kind of business
+        # 8. Business Questions (Warranty, Shipping, Hours, Location, Payment Methods, Discounts, Human Contact, Store Info)
         if self._has_any_term(cleaned, ("que tipo de tienda", "que tipo de negocio", "a que se dedican", "quienes son", "sobre la tienda")):
             desc = biz.get("description") or profile.get("short_description") or ""
             desc_part = f" {desc}" if desc else ""
             return f"Somos {biz_name}.{desc_part} {_format_full_catalog()}"
 
-        # 9B. Warranty, returns, quality
         if self._has_any_term(cleaned, ("garantia", "garantias", "defecto", "cambio", "devolucion", "devoluciones", "original", "originales", "calidad", "confiable", "seguro")):
             pol = profile.get("policies") or settings_ctx.get("return_policy") or biz.get("description") or ""
             pol_note = f" Según nuestras políticas: {pol[:260]}." if pol else ""
@@ -1692,7 +1897,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"¿Qué artículo del catálogo deseas consultar?"
             )
 
-        # 9C. Shipping, delivery, or store pickup info
         if self._has_any_term(cleaned, ("envio", "envios", "delivery", "domicilio", "despacho", "retiro", "tienda fisica", "llevan", "entregan")):
             addr_parts = [str(v) for v in (profile.get("address"), profile.get("city"), profile.get("state_province")) if v]
             loc_str = f" Nuestra sede está en {', '.join(addr_parts)}." if addr_parts else ""
@@ -1704,7 +1908,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"¿Qué productos te gustaría incluir en tu pedido?"
             )
 
-        # 9D. Operating hours
         if self._has_any_term(cleaned, ("horario", "horarios", "abren", "cierran", "abierto", "a que hora", "domingo", "sabado", "feriado")):
             hrs = profile.get("operating_hours") or settings_ctx.get("operating_hours") or "Lunes a Sábado en horario comercial (y atención automatizada 24/7 por este chat)"
             if isinstance(hrs, dict):
@@ -1715,7 +1918,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"¿Qué producto deseas consultar?"
             )
 
-        # 9E. Location / Address
         if self._has_any_term(cleaned, ("ubicacion", "direccion", "donde estan", "donde quedan", "ubicados")):
             addr_parts = [str(v) for v in (profile.get("address"), profile.get("city"), profile.get("state_province"), profile.get("country")) if v]
             if addr_parts:
@@ -1725,9 +1927,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"Al confirmar tu pedido te compartimos las coordenadas exactas de retiro o enviamos tu compra a domicilio. ¿Qué producto deseas consultar?"
             )
 
-        # 9F. Payment methods, specific payment method selection ("Pago móvil", "Binance", etc.), exchange rate
         if self._has_any_term(cleaned, ("metodo", "metodos", "formas de pago", "como pago", "pagar", "pago", "tasa", "bolivar", "bolivares", "bs", "ves", "zelle", "binance", "paypal", "efectivo", "divisa", "divisas", "transferencia", "pago movil")):
-            # Check if the user is selecting or asking for a specific configured payment method (e.g. "Pago movil", "Binance")
             selected_pm = None
             for pm in pay_methods:
                 pm_code_words = pm["code"].replace("_", " ")
@@ -1738,7 +1938,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     selected_pm = pm
                     break
 
-            # Check if there is an active order total in the current conversation (< 2 hours)
             active_total: float | None = None
             if conversation_id and self.conn is not None:
                 try:
@@ -1793,14 +1992,12 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"Indícame qué artículos de nuestro catálogo deseas llevar para calcularte el total exacto."
             )
 
-        # 9G. Discounts, wholesale, promotions
         if self._has_any_term(cleaned, ("descuento", "descuentos", "rebaja", "mayorista", "al mayor", "por mayor", "volumen", "bulto", "oferta", "ofertas", "promocion", "promociones")):
             return (
                 f"En {biz_name} ofrecemos precios competitivos y atención especial para compras por volumen o al mayor. "
                 f"Dime qué artículos de nuestro catálogo y qué cantidades te interesan para prepararte la cotización."
             )
 
-        # 9H. Speak to a human / owner / phone contact
         if self._has_any_term(cleaned, ("humano", "persona", "encargado", "dueno", "whatsapp", "telefono", "llamar", "contacto", "contactar")):
             wa_contact = owner_wa or biz.get("phone") or ""
             if wa_contact:
@@ -1814,23 +2011,27 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"o si me indicas qué producto o duda tienes, te respondo de inmediato."
             )
 
-        # 10. If the customer asked for a specific item name (q_stems non-empty) that does NOT exist in the store's catalog:
-        if q_stems and catalog:
+        # 9. Only report "no contamos con «X»" when the user explicitly asked for a product availability/price
+        explicit_product_inquiry = self._has_any_term(
+            cleaned,
+            ("tienen", "tienes", "venden", "vende", "hay", "manejan", "busco", "precio de", "cuanto cuesta", "cuanto vale", "en cuanto sale"),
+        )
+        if explicit_product_inquiry and q_stems and catalog:
             requested_term = " ".join(q_stems[:3])
             return (
                 f"Revisé el inventario actual de {biz_name} y en este momento no contamos con «{requested_term}» en nuestro catálogo.\n\n"
                 + _format_full_catalog()
             )
 
-        # 11. Any remaining product/stock keywords -> show full catalog
+        # 10. Any remaining product/stock keywords -> show full catalog
         if self._has_any_term(cleaned, ("producto", "productos", "disponible", "disponibles", "catalogo", "venden", "tienen", "unidad", "unidades", "stock", "cuantas", "cantidad", "lista", "precios", "mostrar", "ver")):
             return _format_full_catalog()
 
-        # 12. Courtesy / thanks
+        # 11. Courtesy / thanks
         if self._has_any_term(cleaned, ("gracias", "muchas gracias", "excelente", "perfecto", "genial", "vale", "ok", "listo")):
             return f"¡Con mucho gusto! En {biz_name} estamos para servirte. Si deseas consultar algún producto o realizar un pedido, indícamelo por aquí."
 
-        # 13. Coherent fallback grounded in the store's real catalog
+        # 12. Coherent fallback grounded in the store's real catalog
         if catalog:
             return _format_full_catalog()
         return f"En {biz_name} estamos a tu disposición. Cuéntame qué producto buscas o qué consulta tienes sobre nuestra tienda para ayudarte de inmediato."
@@ -2402,8 +2603,9 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             feature="customer_chat",
         )
 
-        # 3. Reasoning layer (Gemini with full store catalog + strict coherence validation)
-        if not self.client or not self.model_candidates:
+        # 3. Reasoning layer (Gemini SDK + direct HTTPS REST fallback for AI Studio & Vertex AI Express keys)
+        has_gemini_key = bool(getattr(self, 'api_key', '') or (self.settings.gemini_api_key or '').strip())
+        if not (self.client or has_gemini_key) or not self.model_candidates:
             tool_results: list[dict[str, Any]] = []
             final_text = self._emergency_response(
                 user_message=user_message,
@@ -2480,36 +2682,55 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             auth_failed = False
             for model in fast_models:
                 metadata["models_tried"].append(model)
-                try:
-                    print(f"⚡ Calyrisia Fast Brain: respondiendo con {model}...")
-                    resp = self.client.models.generate_content(
-                        model=model,
-                        contents=prompt_with_history,
-                        config=types.GenerateContentConfig(
-                            system_instruction=system_instruction,
-                            temperature=0.25,
-                            max_output_tokens=850,
-                        ),
-                    )
-                    if resp and resp.text:
-                        final_text = resp.text.strip()
-                        metadata = {
-                            "route": f"calyrisia_fast_{model}",
-                            "intent": "general",
-                            "confidence": 98.0,
-                            "rounds": 1,
-                            "tool_names": [],
-                            "models_tried": [model],
-                        }
-                        break
-                except Exception as exc:
-                    err_msg = f"{type(exc).__name__}: {exc}"
-                    provider_errors.append(f"{model} -> {err_msg}")
-                    print(f"⚠️ {model} falló: {err_msg[:300]}")
-                    if any(k in err_msg.upper() for k in ("API_KEY_INVALID", "INVALID_ARGUMENT", "PERMISSION_DENIED", "UNAUTHENTICATED")):
-                        auth_failed = True
-                        break
-                    continue
+                if self.client is not None and types is not None:
+                    try:
+                        print(f"⚡ Calyrisia Fast Brain: respondiendo con {model}...")
+                        resp = self.client.models.generate_content(
+                            model=model,
+                            contents=prompt_with_history,
+                            config=types.GenerateContentConfig(
+                                system_instruction=system_instruction,
+                                temperature=0.25,
+                                max_output_tokens=850,
+                            ),
+                        )
+                        if resp and resp.text:
+                            final_text = resp.text.strip()
+                            metadata = {
+                                "route": f"calyrisia_fast_{model}",
+                                "intent": "general",
+                                "confidence": 98.0,
+                                "rounds": 1,
+                                "tool_names": [],
+                                "models_tried": [model],
+                            }
+                            break
+                    except Exception as exc:
+                        err_msg = f"{type(exc).__name__}: {exc}"
+                        provider_errors.append(f"{model} -> {err_msg}")
+                        print(f"⚠️ {model} SDK falló: {err_msg[:300]}")
+                # Direct REST fallback (supports both AI Studio AIza... and Vertex AI Express AQ.... keys)
+                rest_text = self._call_gemini_rest(
+                    model=model,
+                    system_instruction=system_instruction,
+                    prompt_text=prompt_with_history,
+                    temperature=0.25,
+                    max_output_tokens=850,
+                )
+                if rest_text:
+                    final_text = rest_text
+                    metadata = {
+                        "route": f"calyrisia_rest_{model}",
+                        "intent": "general",
+                        "confidence": 98.0,
+                        "rounds": 1,
+                        "tool_names": [],
+                        "models_tried": [model],
+                    }
+                    break
+                if provider_errors and any(k in provider_errors[-1].upper() for k in ("API_KEY_INVALID", "PERMISSION_DENIED", "UNAUTHENTICATED")):
+                    auth_failed = True
+                    break
 
             if not final_text and not auth_failed:
                 for model in fast_models:
@@ -2569,6 +2790,14 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             ):
                 catalog_list = context.get("product_catalog") or []
                 parsed_quote = self._parse_multi_item_order(user_message, catalog_list, biz_info.get("currency") or "USD")
+                if not parsed_quote:
+                    parsed_quote = self._resolve_contextual_order(
+                        user_message=user_message,
+                        catalog=catalog_list,
+                        currency=biz_info.get("currency") or "USD",
+                        conversation_id=conversation_id,
+                        business_id=business_id,
+                    )
                 if parsed_quote:
                     tag_m = re.search(r"(\[BOTON_PAGO:\s*[\d.,]+(?:\s*\|\s*ITEMS:\s*\[[\s\S]*?\])?\s*\])", parsed_quote)
                     if tag_m:

@@ -145,6 +145,17 @@ def _parse_payment_marker(outbound_texts: list[str]) -> tuple[Decimal | None, li
                         items = [x for x in parsed if isinstance(x, dict)]
                 except Exception:
                     pass
+            if not items:
+                for older_text in outbound_texts:
+                    m_items = re.search(r"\[BOTON_PAGO\s*:\s*\d+(?:[.,]\d{1,2})?\s*\|\s*ITEMS\s*:\s*(\[.*?\])\s*\]", older_text or "", re.IGNORECASE | re.DOTALL)
+                    if m_items:
+                        try:
+                            parsed_older = json.loads(m_items.group(1))
+                            if isinstance(parsed_older, list):
+                                items = [x for x in parsed_older if isinstance(x, dict)]
+                                break
+                        except Exception:
+                            pass
             return amount, items
         total_match = re.search(r"Total a pagar\s*:\s*(?:USD|VES|\$)?\s*(\d+(?:[.,]\d{1,2})?)", text or "", re.I)
         if total_match:
