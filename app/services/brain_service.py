@@ -382,11 +382,21 @@ class BrainService:
         business_id: UUID,
         customer_id: UUID | None,
         conversation_id: UUID | None,
+        user_message: str = "",
     ) -> dict[str, Any]:
         """Determine whether to send the welcome greeting ('¡Hola! Bienvenido a {Tienda}, ¿en qué te puedo ayudar?'):
-        - True if this is the first time the customer writes to the store (no prior outbound message), OR
-        - True if >= 2 hours (7200 seconds) have passed since the last outbound message.
-        - False if an outbound message was sent within the last 2 hours."""
+        - True if this is the first time the customer writes to the store (no prior outbound message),
+        - True if >= 2 hours (7200 seconds) have passed since the last outbound message,
+        - True if the current message is '/start', or if the only prior message in the last 2 minutes was '/start'.
+        - False if an active conversation is already underway within the last 2 hours."""
+        cleaned_msg = self._clean_accents(user_message)
+        if cleaned_msg in {"start", "reiniciar", "reset"} or (user_message or "").strip().lower() == "/start":
+            return {
+                "should_greet": True,
+                "is_first_contact": True,
+                "inactive_over_2h": False,
+                "seconds_since_last_outbound": None,
+            }
         if self.conn is None:
             return {
                 "should_greet": False,
@@ -397,6 +407,30 @@ class BrainService:
         try:
             with self.conn.cursor() as cur:
                 cur.execute("SAVEPOINT sp_greeting_check")
+                # Check if the immediately preceding inbound message (before current) was '/start'
+                if conversation_id is not None:
+                    cur.execute(
+                        """
+                        SELECT content, EXTRACT(EPOCH FROM (NOW() - created_at))
+                        FROM conversation_messages
+                        WHERE business_id = %s
+                          AND conversation_id = %s
+                          AND direction = 'inbound'
+                        ORDER BY created_at DESC
+                        OFFSET 1 LIMIT 1
+                        """,
+                        (business_id, conversation_id),
+                    )
+                    prev_in = cur.fetchone()
+                    if prev_in and str(prev_in[0] or "").strip().lower() == "/start" and float(prev_in[1] or 999) < 120:
+                        cur.execute("RELEASE SAVEPOINT sp_greeting_check")
+                        return {
+                            "should_greet": True,
+                            "is_first_contact": True,
+                            "inactive_over_2h": False,
+                            "seconds_since_last_outbound": None,
+                        }
+
                 if customer_id is not None and conversation_id is not None:
                     cur.execute(
                         """
@@ -1094,15 +1128,28 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
         if not api_key:
             return None
 
-        payload = {
-            "systemInstruction": {"parts": [{"text": system_instruction}]},
-            "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_output_tokens,
+        payloads = [
+            {
+                "systemInstruction": {"role": "system", "parts": [{"text": system_instruction}]},
+                "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_output_tokens,
+                },
             },
-        }
-        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": f"{system_instruction}\n\n{prompt_text}"}],
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_output_tokens,
+                },
+            },
+        ]
 
         if api_key.startswith("AQ."):
             urls = [
@@ -1117,25 +1164,144 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             ]
 
         for url in urls:
-            try:
-                req = urllib.request.Request(
-                    url,
-                    data=data,
-                    headers={"Content-Type": "application/json"},
-                    method="POST",
-                )
-                with urllib.request.urlopen(req, timeout=12) as resp:
-                    body = json.loads(resp.read().decode("utf-8"))
-                candidates = body.get("candidates") or []
-                if candidates:
-                    parts = (candidates[0].get("content") or {}).get("parts") or []
-                    texts = [str(p.get("text") or "") for p in parts if p.get("text")]
-                    combined = "".join(texts).strip()
-                    if combined:
-                        return combined
-            except Exception:
-                continue
+            for p_obj in payloads:
+                try:
+                    data = json.dumps(p_obj, ensure_ascii=False).encode("utf-8")
+                    req = urllib.request.Request(
+                        url,
+                        data=data,
+                        headers={"Content-Type": "application/json"},
+                        method="POST",
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        body = json.loads(resp.read().decode("utf-8"))
+                    candidates = body.get("candidates") or []
+                    if candidates:
+                        parts = (candidates[0].get("content") or {}).get("parts") or []
+                        texts = [str(p.get("text") or "") for p in parts if p.get("text")]
+                        combined = "".join(texts).strip()
+                        if combined:
+                            return combined
+                except urllib.error.HTTPError as http_err:
+                    # If 401/403/API_KEY_INVALID on this URL, break inner payload loop and try next URL
+                    if http_err.code in (401, 403, 404):
+                        break
+                    continue
+                except Exception:
+                    break
         return None
+
+    # ------------------------------------------------------------------
+    # Spanish Conversational NLU & Multi-Turn Dialogue State Engine
+    # ------------------------------------------------------------------
+
+    ORDER_ACTION_WORDS = (
+        "pedir", "pido", "pidiendo", "pedido", "pedirlo", "pedirla", "pedirlos", "pedirlas",
+        "comprar", "compro", "comprando", "compra", "comprarlo", "comprarla", "comprarlos", "comprarlas",
+        "ordenar", "ordeno", "ordenando", "orden", "ordenarlo", "ordenarla",
+        "llevar", "llevarme", "llevo", "llevare", "llevarlo", "llevarla", "llevarmelo", "llevarmela",
+        "encargar", "encargo", "adquirir", "adquiero",
+        "dame", "deme", "darme", "danos", "damelo", "damela",
+        "ponme", "ponga", "ponerme", "pon", "ponmelo",
+        "anotame", "anota", "anotarme", "apuntame", "apunta", "anotamelo",
+        "agrega", "agregame", "agregar", "anade", "anademe",
+        "separa", "separame", "apartame", "aparta",
+        "enviame", "enviarme", "mandame", "mandarme", "traeme", "traerme",
+        "vendeme", "venderme", "facturame", "armame el pedido", "hacer el pedido", "realizar el pedido",
+    )
+
+    DESIRE_MODAL_WORDS = (
+        "quiero", "quisiera", "querria", "queria", "gustaria", "me gustaria",
+        "deseo", "desearia", "necesito", "ocupo", "voy a", "vengo a",
+    )
+
+    INFO_QUERY_WORDS = (
+        "saber", "conocer", "consultar", "preguntar", "ver", "mostrar", "muestrame",
+        "pasame", "informacion", "detalles", "caracteristicas", "especificaciones",
+        "cuanto cuesta", "cuanto cuestan", "cuanto vale", "cuanto valen",
+        "cuanto sale", "cuanto salen", "en cuanto sale", "en cuanto salen",
+        "que precio", "cual es el precio", "precio de", "precios de",
+        "que productos", "cuales productos", "que venden", "que tienen",
+        "que ofrecen", "catalogo", "lista de", "como funciona", "sirve para",
+        "es compatible", "que garantia", "tienen garantia", "a que hora",
+        "cual es el horario", "donde estan", "donde quedan",
+    )
+
+    PRODUCT_STOP_WORDS = {
+        "hola", "buenas", "buenos", "buen", "dias", "tardes", "noches", "saludos",
+        "quisiera", "quiero", "querria", "queria", "gustaria", "deseo", "desearia",
+        "necesito", "ocupo", "puedes", "podrias", "saber", "conocer", "decir", "decirme",
+        "ver", "mostrar", "muestrame", "pasame", "enviame", "mandame", "traeme",
+        "producto", "productos", "articulo", "articulos", "servicio", "servicios",
+        "catalogo", "inventario", "stock", "lista", "opciones", "mercancia", "item", "items",
+        "tienda", "negocio", "comercio", "empresa", "ustedes", "aqui", "alli",
+        "tienen", "tienes", "tiene", "tendras", "tendran", "hay", "manejan",
+        "venden", "vende", "ofrecen", "ofrece", "trabajan", "disponible", "disponibles",
+        "quedan", "queda", "cuanto", "cuantos", "cuantas", "cuesta", "cuestan",
+        "vale", "valen", "sale", "salen", "precio", "precios", "costo", "costos",
+        "informacion", "detalles", "caracteristicas", "especificaciones", "sobre",
+        "del", "los", "las", "una", "uno", "unos", "unas", "que", "cual", "cuales",
+        "como", "donde", "cuando", "para", "por", "con", "sin", "favor", "porfa",
+        "pana", "amigo", "amiga", "disculpa", "oye", "consulta", "consultar",
+        "busco", "buscando", "interesa", "comprar", "comprarlo", "comprarla",
+        "pedir", "pedirlo", "pedirla", "pedido", "llevar", "llevarme", "llevarlo",
+        "llevo", "ordenar", "encargar", "adquirir", "color", "colores", "talla", "tallas",
+        "solo", "solamente", "unico", "unica", "ese", "esa", "este", "esta", "esos",
+        "esas", "estos", "estas", "aquel", "nada", "mas", "menos", "todo", "todos",
+        "toda", "todas", "algo", "alguno", "alguna", "ninguno", "ninguna", "otro",
+        "otra", "otros", "otras", "mismo", "misma", "ok", "okay", "perfecto",
+        "excelente", "genial", "claro", "bueno", "bien", "mal", "si", "no", "ya",
+        "ahora", "luego", "despues", "antes", "hoy", "manana", "ayer", "gracias",
+        "muchas", "mucho", "poco", "pocos", "varios", "varias", "cualquier",
+        "cualquiera", "primero", "segundo", "ultimo", "ultima", "unidad", "unidades",
+        "dame", "deme", "darme", "anotame", "anota", "ponme", "agrega", "agregame",
+        "premium", "blanco", "negro", "azul", "rojo", "verde", "gris", "litro",
+        "litros", "gourmet", "entero", "completa", "completo", "familiar", "rollos",
+        "pack", "calyrisia", "general", "basico", "basica", "original", "nuevo",
+        "nueva", "combo", "tipo", "modelo", "marca", "pared", "rapido", "dos",
+        "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+    }
+
+    @classmethod
+    def _stem_word(cls, w: str) -> str:
+        w = cls._clean_accents(w).strip()
+        if len(w) > 5 and w.endswith("es") and w[-3] not in "aeiou":
+            return w[:-2]
+        if len(w) > 3 and w.endswith("s"):
+            return w[:-1]
+        return w
+
+    @classmethod
+    def _has_purchase_intent(cls, text: str) -> bool:
+        """Return True when the customer's message expresses intent to buy/order/take a product,
+        rather than merely asking for information."""
+        cleaned = cls._clean_accents(text)
+        if not cleaned:
+            return False
+        if cls._is_pure_greeting(cleaned) or cls._is_general_catalog_query(cleaned):
+            return False
+
+        # Exclude "cómo pedir / cómo comprar / cómo hago un pedido" (process questions)
+        if cls._has_any_term(cleaned, ("como pedir", "como comprar", "como hago para pedir", "como hago para comprar", "como se compra", "como es el proceso")):
+            return False
+
+        has_action = cls._has_any_term(cleaned, cls.ORDER_ACTION_WORDS)
+        has_desire = cls._has_any_term(cleaned, cls.DESIRE_MODAL_WORDS)
+        has_info_word = cls._has_any_term(cleaned, cls.INFO_QUERY_WORDS)
+
+        # If the user explicitly uses an order action verb ("pedir", "comprar", "llevarme", "dame", "anotame", "ponme")
+        # and is NOT asking for price/info ("quiero saber el precio", "cuanto cuesta"), it is an order!
+        if has_action and not cls._has_any_term(
+            cleaned,
+            ("saber", "conocer", "informacion", "detalles", "cuanto cuesta", "cuanto vale", "cuanto sale", "que precio", "cual es el precio", "que productos", "catalogo"),
+        ):
+            return True
+
+        # If the user uses a desire modal ("quiero", "quisiera", "me gustaría", "necesito") without any info query word
+        if has_desire and not has_info_word and not ("?" in text or "¿" in text):
+            return True
+
+        return False
 
     def _build_order_summary_response(
         self,
@@ -1206,90 +1372,27 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             + f"[BOTON_PAGO: {total:.2f}|ITEMS: {items_payload}]"
         )
 
-    def _parse_multi_item_order(self, msg: str, catalog: list[dict], currency: str = "USD") -> str | None:
-        if not msg or not catalog:
-            return None
-        if self._is_pure_greeting(msg) or self._is_general_catalog_query(msg):
-            return None
-
-        cleaned = self._clean_accents(msg)
-
-        explicit_buy_phrases = (
-            "quiero comprar", "quisiera comprar", "quiero pedir", "quisiera pedir",
-            "para pedir", "quiero ordenar", "quisiera ordenar", "quiero llevarme",
-            "quisiera llevarme", "voy a comprar", "voy a pedir", "voy a llevar",
-            "voy a llevarme", "me llevo", "me voy a llevar", "dame", "anotame",
-            "agrega", "agregame", "ponme", "ordenar", "comprar", "enviame",
-            "mandame", "hazme un pedido", "hacer un pedido",
-        )
-        has_explicit_buy = self._has_any_term(cleaned, explicit_buy_phrases)
-
-        # If it is an informational question AND does NOT have an explicit buy phrase, return None
-        if self._is_informational_query(msg) and not has_explicit_buy:
-            return None
-
-        question_indicators = (
-            "quisiera saber", "quiero saber", "necesito saber", "quiero ver", "quisiera ver",
-            "quiero consultar", "que productos", "cuales productos", "que venden", "que tienen",
-            "tienen", "tienes", "tendras", "tendran", "hay", "cuanto cuesta", "cuanto vale",
-            "cuanto sale", "que precio", "cual es el precio", "precio de", "informacion",
-            "detalles", "recomienda", "recomiendas", "diferencia", "comparar", "como funciona",
-            "garantia", "mostrar", "muestrame", "catalogo", "disponible", "disponibles",
-        )
-        if self._has_any_term(cleaned, question_indicators) and not has_explicit_buy:
-            return None
-
-        soft_triggers = (
-            "quiero", "quisiera", "llevarme", "llevar", "pedido", "pedir", "necesito",
-        )
-        has_soft_trigger = self._has_any_term(cleaned, soft_triggers)
-        has_qty_word = bool(
-            re.search(r"\b(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|\d+)\b", cleaned)
-        )
-        if not has_explicit_buy and not (has_soft_trigger and (has_qty_word or not ("?" in msg or "¿" in msg))):
-            return None
-
-        word_to_num = {
-            "un": 1, "uno": 1, "una": 1,
-            "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
-            "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
-            "once": 11, "doce": 12,
-        }
-
-        stop_words = {
-            "premium", "blanco", "negro", "azul", "rojo", "verde", "gris",
-            "litro", "litros", "gourmet", "entero", "completa", "completo",
-            "familiar", "rollos", "pack", "calyrisia", "comercio", "tienda",
-            "negocio", "producto", "productos", "articulo", "articulos",
-            "servicio", "servicios", "catalogo", "general", "para", "con",
-            "del", "las", "los", "por", "sin", "mas", "una", "uno", "unos",
-            "unas", "sobre", "entre", "hasta", "desde", "como", "este", "esta",
-            "estos", "estas", "ese", "esa", "esos", "esas", "basico", "basica",
-            "original", "nuevo", "nueva", "unidad", "unidades", "combo",
-            "tipo", "modelo", "marca", "talla", "color", "pared", "rapido",
-        }
-
-        product_matches = []
+    def _match_products_in_text(self, text: str, catalog: list[dict]) -> list[tuple[int, int, dict, str]]:
+        """Find all catalog product occurrences in `text` with position spans."""
+        cleaned = self._clean_accents(text)
+        if not cleaned or not catalog:
+            return []
+        product_matches: list[tuple[int, int, dict, str]] = []
         for p in catalog:
             p_clean = self._clean_accents(p.get("name", ""))
             words = re.findall(r"[a-z]{3,}", p_clean)
-            kws = [w for w in words if w not in stop_words and len(w) >= 4]
+            kws = [w for w in words if w not in self.PRODUCT_STOP_WORDS and len(w) >= 4]
             if not kws:
-                kws = [w for w in words if w not in stop_words]
+                kws = [w for w in words if w not in self.PRODUCT_STOP_WORDS]
             for kw in kws:
-                stem = kw[:-2] if (len(kw) > 5 and kw.endswith("es") and kw[-3] not in "aeiou") else (kw[:-1] if kw.endswith("s") else kw)
-                if len(stem) < 3 or stem in stop_words:
+                stem = self._stem_word(kw)
+                if len(stem) < 3 or stem in self.PRODUCT_STOP_WORDS:
                     continue
                 pattern = r"\b" + re.escape(stem) + r"(?:es|s)?\b"
                 for m in re.finditer(pattern, cleaned):
                     product_matches.append((m.start(), m.end(), p, kw))
-
-        if not product_matches:
-            return None
-
         product_matches.sort(key=lambda x: x[0])
-
-        deduped = []
+        deduped: list[tuple[int, int, dict, str]] = []
         for item in product_matches:
             if deduped:
                 prev = deduped[-1]
@@ -1297,6 +1400,35 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     deduped[-1] = (prev[0], item[1], prev[2], prev[3])
                     continue
             deduped.append(item)
+        return deduped
+
+    def _parse_multi_item_order(self, msg: str, catalog: list[dict], currency: str = "USD") -> str | None:
+        if not msg or not catalog:
+            return None
+        if self._is_pure_greeting(msg) or self._is_general_catalog_query(msg):
+            return None
+
+        cleaned = self._clean_accents(msg)
+        has_buy_intent = self._has_purchase_intent(msg)
+
+        word_to_num = {
+            "un": 1, "uno": 1, "una": 1,
+            "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+            "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10,
+            "once": 11, "doce": 12,
+        }
+        has_qty_number = bool(
+            re.search(r"\b(dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|\d+)\b", cleaned)
+        )
+
+        # If it does not have purchase intent AND does not have an explicit multi-unit quantity (without question words), return None
+        if not has_buy_intent:
+            if not (has_qty_number and not self._is_informational_query(msg) and not ("?" in msg or "¿" in msg)):
+                return None
+
+        deduped = self._match_products_in_text(cleaned, catalog)
+        if not deduped:
+            return None
 
         found_items = []
         seen_products = set()
@@ -1318,6 +1450,12 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             if num_candidates:
                 num_candidates.sort(key=lambda x: x[0])
                 qty = max(1, num_candidates[-1][1])
+            else:
+                # Also check right after the product name (e.g. "quiero cargador x2" or "dame cargador 2 unidades")
+                suffix_window = cleaned[p_end:p_end + 25].strip()
+                m_suf = re.search(r"\b(\d+)\s*(?:unidad|unidades|uds)?\b", suffix_window)
+                if m_suf and int(m_suf.group(1)) <= 50:
+                    qty = max(1, int(m_suf.group(1)))
 
             subtotal = float(prod.get("price", 0.0)) * qty
             seen_products.add(prod["name"])
@@ -1325,6 +1463,88 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
 
         if found_items:
             return self._build_order_summary_response(found_items, currency, cleaned)
+        return None
+
+    def _get_recent_conversation_messages(
+        self,
+        *,
+        conversation_id: UUID | None,
+        business_id: Any,
+        context: dict[str, Any] | None = None,
+        limit: int = 6,
+    ) -> list[dict[str, str]]:
+        """Return recent messages (newest first, excluding current inbound message) within the active 2-hour window."""
+        rows_out: list[dict[str, str]] = []
+        if conversation_id and self.conn is not None and business_id is not None:
+            try:
+                with self.conn.cursor() as cur:
+                    cur.execute("SAVEPOINT sp_get_recent_msgs")
+                    cur.execute(
+                        """SELECT direction, content FROM conversation_messages
+                           WHERE conversation_id = %s AND business_id = %s
+                             AND created_at >= NOW() - INTERVAL '2 hours'
+                           ORDER BY created_at DESC OFFSET 1 LIMIT %s""",
+                        (conversation_id, business_id, limit),
+                    )
+                    db_rows = cur.fetchall()
+                    cur.execute("RELEASE SAVEPOINT sp_get_recent_msgs")
+                    for r in db_rows:
+                        rows_out.append({"direction": str(r[0] or ""), "content": str(r[1] or "")})
+            except Exception:
+                try:
+                    with self.conn.cursor() as cur:
+                        cur.execute("ROLLBACK TO SAVEPOINT sp_get_recent_msgs")
+                except Exception:
+                    pass
+        if not rows_out and context:
+            recent_ctx = ((context.get("conversation") or {}).get("recent_messages") or [])
+            # Exclude the last item if it matches the current inbound message
+            items_to_scan = recent_ctx[:-1] if (recent_ctx and isinstance(recent_ctx[-1], dict) and recent_ctx[-1].get("direction") == "inbound") else recent_ctx
+            for m_obj in reversed(items_to_scan):
+                if isinstance(m_obj, dict) and m_obj.get("content"):
+                    rows_out.append({
+                        "direction": str(m_obj.get("direction") or ""),
+                        "content": str(m_obj.get("content") or ""),
+                    })
+        return rows_out
+
+    def _find_active_product_in_context(
+        self,
+        *,
+        catalog: list[dict],
+        conversation_id: UUID | None,
+        business_id: Any,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        if not catalog:
+            return None
+        recent_msgs = self._get_recent_conversation_messages(
+            conversation_id=conversation_id,
+            business_id=business_id,
+            context=context,
+            limit=6,
+        )
+        for msg_obj in recent_msgs:
+            txt_clean = self._clean_accents(msg_obj.get("content") or "")
+            if not txt_clean:
+                continue
+            # 1. Check exact full product name appearance
+            exact_matches = [
+                p for p in catalog
+                if p.get("name") and self._clean_accents(p["name"]) in txt_clean
+            ]
+            if len(exact_matches) == 1:
+                return exact_matches[0]
+            # 2. Check keyword stem match
+            stem_matches = self._match_products_in_text(txt_clean, catalog)
+            unique_prods = list({m[2]["name"]: m[2] for m in stem_matches}.values())
+            if len(unique_prods) == 1:
+                return unique_prods[0]
+            if len(exact_matches) > 1:
+                return exact_matches[0]
+
+        if len(catalog) == 1:
+            return catalog[0]
         return None
 
     def _resolve_contextual_order(
@@ -1337,38 +1557,89 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
         business_id: Any,
         context: dict[str, Any] | None = None,
     ) -> str | None:
-        """Understand contextual follow-up orders where the user refers to the product just discussed
-        (e.g., 'Solo un articulo por favor', 'Que quiero ese articulo nada más', 'Dame 1', 'Uno solo', 'Me lo llevo')."""
+        """Understand any contextual follow-up order where the user refers to the product in context
+        without repeating its full name:
+        - 'Me gustaría pedir uno', 'Quiero pedir uno', 'Quisiera uno', 'Dame uno', 'Quiero 2'
+        - 'Solo un articulo por favor', 'Que quiero ese articulo nada más', 'Me lo llevo'
+        - '1', '2', 'Uno', 'Dos unidades'
+        - 'Sí, por favor', 'Claro, ármame el pedido' (when the bot just asked how many units or if they want to order it)"""
         if not user_message or not catalog:
             return None
-        if self._is_pure_greeting(user_message) or self._is_general_catalog_query(user_message) or self._is_informational_query(user_message):
+        if self._is_pure_greeting(user_message) or self._is_general_catalog_query(user_message):
             return None
 
         cleaned = self._clean_accents(user_message)
 
-        contextual_buy_patterns = (
-            "un articulo", "una unidad", "un producto",
-            "ese articulo", "este articulo", "ese producto", "este producto",
+        # Check if the bot's last outbound message was asking about ordering a product ("¿Cuántas unidades te gustaría pedir...?")
+        recent_msgs = self._get_recent_conversation_messages(
+            conversation_id=conversation_id,
+            business_id=business_id,
+            context=context,
+            limit=4,
+        )
+        last_outbound_clean = ""
+        for m in recent_msgs:
+            if m.get("direction") == "outbound":
+                last_outbound_clean = self._clean_accents(m.get("content") or "")
+                break
+
+        bot_asked_units_or_order = any(
+            phrase in last_outbound_clean
+            for phrase in (
+                "cuantas unidades",
+                "deseas agregar a tu pedido",
+                "arme el pedido",
+                "cual de estos productos",
+                "te gustaria pedir",
+            )
+        )
+
+        has_buy_intent = self._has_purchase_intent(user_message)
+
+        contextual_pronoun_phrases = (
+            "un articulo", "una unidad", "un producto", "dos unidades", "tres unidades",
+            "ese articulo", "este articulo", "ese producto", "este producto", "ese mismo", "esa misma",
             "solo un", "solo uno", "solo una", "uno solo", "una sola",
             "uno nada mas", "una nada mas", "ese nada mas", "eso nada mas",
-            "quiero ese", "quiero esa", "quiero este", "quiero esta",
-            "quisiera ese", "quisiera esa", "quisiera este", "quisiera esta",
-            "dame ese", "dame esa", "dame uno", "dame una", "dame 1", "dame 2", "dame 3",
-            "anotame uno", "anotame una", "anotame ese", "anotame 1",
-            "me lo llevo", "me la llevo", "lo quiero", "la quiero",
+            "quiero ese", "quiero esa", "quiero este", "quiero esta", "quiero uno", "quiero una", "quiero dos", "quiero tres",
+            "quisiera ese", "quisiera esa", "quisiera este", "quisiera esta", "quisiera uno", "quisiera una", "quisiera dos",
+            "gustaria pedir uno", "gustaria pedir una", "gustaria pedir dos", "gustaria uno", "gustaria una",
+            "gustaria comprar uno", "gustaria comprar una", "gustaria ese", "gustaria este",
+            "pedir uno", "pedir una", "pedir dos", "pedir tres", "pedir ese", "pedir este",
+            "comprar uno", "comprar una", "comprar dos", "comprar ese", "comprar este",
+            "llevar uno", "llevar una", "llevar dos", "llevarme uno", "llevarme una", "llevarme ese",
+            "dame ese", "dame esa", "dame uno", "dame una", "dame dos", "dame tres", "dame 1", "dame 2", "dame 3",
+            "anotame uno", "anotame una", "anotame ese", "anotame 1", "anotame 2",
+            "ponme uno", "ponme una", "ponme dos", "ponme 1", "ponme 2",
+            "me lo llevo", "me la llevo", "lo quiero", "la quiero", "lo compro", "me llevo uno",
             "quiero comprarlo", "quiero pedirlo", "quisiera pedirlo", "quisiera comprarlo",
-            "unidades por favor", "unidad por favor", "articulo por favor",
+            "unidades por favor", "unidad por favor", "articulo por favor", "uno por favor", "una por favor",
         )
         is_short_quantity_reply = bool(
             re.fullmatch(
-                r"(?:solo\s+|solamente\s+|dame\s+|quiero\s+|quisiera\s+|anotame\s+|por\s+favor\s+)*"
+                r"(?:si\s+|claro\s+|ok\s+|perfecto\s+|bueno\s+|dale\s+|me\s+gustaria\s+|pedir\s+|comprar\s+|llevar\s+|llevarme\s+|solo\s+|solamente\s+|dame\s+|quiero\s+|quisiera\s+|anotame\s+|ponme\s+|por\s+favor\s+)*"
                 r"(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+)"
                 r"(?:\s+(?:unidad|unidades|articulo|articulos|producto|productos|nada\s+mas|por\s+favor|solo))*",
                 cleaned,
             )
         )
-        has_contextual_buy = self._has_any_term(cleaned, contextual_buy_patterns) or is_short_quantity_reply
-        if not has_contextual_buy:
+        is_affirmative_to_product_prompt = (
+            bot_asked_units_or_order
+            and "cuantas unidades" in last_outbound_clean
+            and bool(
+                re.fullmatch(
+                    r"(?:si|claro|ok|perfecto|dale|bueno|por\s+favor|si\s+por\s+favor|claro\s+por\s+favor|armame\s+el\s+pedido|si\s+quiero|si\s+dame\s+uno)",
+                    cleaned,
+                )
+            )
+        )
+
+        if not (
+            has_buy_intent
+            or self._has_any_term(cleaned, contextual_pronoun_phrases)
+            or is_short_quantity_reply
+            or is_affirmative_to_product_prompt
+        ):
             return None
 
         # Extract requested quantity
@@ -1380,7 +1651,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
         }
         qty = 1
         m_num = re.search(r"\b(\d+)\b", cleaned)
-        if m_num:
+        if m_num and int(m_num.group(1)) <= 100:
             qty = max(1, int(m_num.group(1)))
         else:
             for w_tok in cleaned.split():
@@ -1388,56 +1659,12 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     qty = word_to_num[w_tok]
                     break
 
-        # Find the target product from recent conversation history (< 2 hours) or single-item catalog
-        target_product = None
-        if conversation_id and self.conn is not None and business_id is not None:
-            try:
-                with self.conn.cursor() as cur:
-                    cur.execute("SAVEPOINT sp_ctx_prod")
-                    cur.execute(
-                        """SELECT content FROM conversation_messages
-                           WHERE conversation_id = %s AND business_id = %s
-                             AND created_at >= NOW() - INTERVAL '2 hours'
-                           ORDER BY created_at DESC OFFSET 1 LIMIT 6""",
-                        (conversation_id, business_id),
-                    )
-                    hist_rows = cur.fetchall()
-                    cur.execute("RELEASE SAVEPOINT sp_ctx_prod")
-                    for (h_txt,) in hist_rows:
-                        h_clean = self._clean_accents(str(h_txt or ""))
-                        matched_in_msg = [
-                            p for p in catalog
-                            if p.get("name") and self._clean_accents(p["name"]) in h_clean
-                        ]
-                        if len(matched_in_msg) == 1:
-                            target_product = matched_in_msg[0]
-                            break
-                        elif len(matched_in_msg) > 1 and target_product is None:
-                            target_product = matched_in_msg[0]
-            except Exception:
-                try:
-                    with self.conn.cursor() as cur:
-                        cur.execute("ROLLBACK TO SAVEPOINT sp_ctx_prod")
-                except Exception:
-                    pass
-
-        if target_product is None and context:
-            recent_msgs = ((context.get("conversation") or {}).get("recent_messages") or [])
-            for m_obj in reversed(recent_msgs):
-                m_txt = self._clean_accents(str((m_obj or {}).get("content") or ""))
-                if not m_txt:
-                    continue
-                matched_in_ctx = [
-                    p for p in catalog
-                    if p.get("name") and self._clean_accents(p["name"]) in m_txt
-                ]
-                if len(matched_in_ctx) == 1:
-                    target_product = matched_in_ctx[0]
-                    break
-
-        if target_product is None and len(catalog) == 1:
-            target_product = catalog[0]
-
+        target_product = self._find_active_product_in_context(
+            catalog=catalog,
+            conversation_id=conversation_id,
+            business_id=business_id,
+            context=context,
+        )
         if target_product is None:
             return None
 
@@ -1466,7 +1693,10 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             )
         cleaned_ai = self._clean_accents(ai_text)
         catalog = context.get("product_catalog") or context.get("catalog") or []
+        biz = context.get("business") or {}
+        curr = biz.get("currency") or "USD"
 
+        # 1. Never allow leaked system prompt instructions
         leaked_prompt_markers = (
             "eres el asesor especialista",
             "objetivo principal:",
@@ -1480,6 +1710,24 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 conversation_id=conversation_id,
             )
 
+        # 2. If the user is explicitly ordering (direct or contextual) and the AI failed to generate the order summary / [BOTON_PAGO:],
+        #    ensure the structured order summary is returned!
+        if "[boton_pago:" not in ai_text.lower() and self._has_purchase_intent(user_message):
+            direct_order = self._parse_multi_item_order(user_message, catalog, curr)
+            if direct_order:
+                return direct_order
+            ctx_order = self._resolve_contextual_order(
+                user_message=user_message,
+                catalog=catalog,
+                currency=curr,
+                conversation_id=conversation_id,
+                business_id=biz.get("id") or context.get("business_id"),
+                context=context,
+            )
+            if ctx_order:
+                return ctx_order
+
+        # 3. If the user is asking an informational / catalog question (and NOT ordering), never output a payment/delivery confirmation
         incoherent_order_markers = (
             "anote tu preferencia",
             "preferencia de delivery",
@@ -1487,7 +1735,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             "cuando quieras pagar dime",
             "pendiente de reporte de pago",
         )
-        if self._is_general_catalog_query(user_message) or self._is_informational_query(user_message):
+        if (self._is_general_catalog_query(user_message) or self._is_informational_query(user_message)) and not self._has_purchase_intent(user_message):
             if "[boton_pago:" in ai_text.lower() or any(m in cleaned_ai for m in incoherent_order_markers):
                 return self._emergency_response(
                     user_message=user_message,
@@ -1496,6 +1744,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     conversation_id=conversation_id,
                 )
 
+        # 4. If the user asked for the store's catalog/products, verify at least one real product is mentioned
         if self._is_general_catalog_query(user_message) and catalog:
             mentioned_any = False
             for item in catalog:
@@ -1543,14 +1792,6 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             if ex_rate > 0:
                 base += f" (aprox. {local_curr} {val * ex_rate:,.2f})"
             return base
-
-        def _stem_w(w: str) -> str:
-            w = self._clean_accents(w).strip()
-            if len(w) > 5 and w.endswith("es") and w[-3] not in "aeiou":
-                return w[:-2]
-            if len(w) > 3 and w.endswith("s"):
-                return w[:-1]
-            return w
 
         def _format_full_catalog() -> str:
             if not catalog:
@@ -1642,7 +1883,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             if has_time:
                 phone_m = re.search(r"(\+?\d[\d\s\-]{6,14}\d)", user_message)
                 phone_val = phone_m.group(1).strip() if phone_m else ""
-                name_m = re.search(r"(?:soy|me llamo|nombre es|a nombre de)\\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]{3,40})", user_message, re.IGNORECASE)
+                name_m = re.search(r"(?:soy|me llamo|nombre es|a nombre de)\s+([a-záéíóúñA-ZÁÉÍÓÚÑ\s]{3,40})", user_message, re.IGNORECASE)
                 name_val = name_m.group(1).strip() if name_m else ((context.get("customer") or {}).get("full_name") or "Cliente")
                 svc_val = catalog[0]["name"] if catalog else "Consulta General"
                 for it in catalog:
@@ -1657,13 +1898,13 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             svc_list = ", ".join(f"{it['name']} ({curr} {float(it.get('price') or 0):.2f})" for it in catalog[:5]) if catalog else "nuestras consultas y servicios"
             return f"Con gusto te ayudamos a agendar tu cita en {biz_name}. Contamos con: {svc_list}. Indícame tu nombre completo, teléfono, el servicio que deseas y para qué fecha y hora la prefieres."
 
-        # 3A. Explicit multi-item or single-item order by product name (e.g. "Ok perfecto, quisiera pedir un cargador")
+        # 3A. Explicit order naming one or more products (e.g. "Me gustaría pedir un cargador por favor", "Quiero 2 cargadores")
         order_quote = self._parse_multi_item_order(user_message, catalog, curr)
         if order_quote:
             return order_quote
 
-        # 3B. Contextual follow-up order referring to the product just discussed or single-item store
-        #     (e.g. "Solo un articulo por favor", "Que quiero ese articulo nada más", "Dame 1", "Me lo llevo")
+        # 3B. Contextual follow-up order referring to the product in conversation context
+        #     (e.g. "Me gustaría pedir uno", "Solo un articulo por favor", "Que quiero ese articulo nada más", "Dame 2", "Sí, por favor")
         contextual_quote = self._resolve_contextual_order(
             user_message=user_message,
             catalog=catalog,
@@ -1676,33 +1917,11 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             return contextual_quote
 
         # 4. General catalog / "Quisiera saber que productos tienen" / "Qué venden" query
-        stop_q = {
-            "hola", "buenas", "buenos", "buen", "dias", "tardes", "noches", "saludos",
-            "quisiera", "quiero", "necesito", "gustaria", "puedes", "podrias", "saber",
-            "decir", "decirme", "ver", "mostrar", "muestrame", "pasame", "enviame",
-            "producto", "productos", "articulo", "articulos", "servicio", "servicios",
-            "catalogo", "inventario", "stock", "lista", "opciones", "mercancia",
-            "tienda", "negocio", "comercio", "empresa", "ustedes", "aqui", "alli",
-            "tienen", "tienes", "tiene", "tendras", "tendran", "hay", "manejan",
-            "venden", "vende", "ofrecen", "ofrece", "trabajan", "disponible", "disponibles",
-            "quedan", "queda", "cuanto", "cuantos", "cuantas", "cuesta", "cuestan",
-            "vale", "valen", "sale", "salen", "precio", "precios", "costo", "costos",
-            "informacion", "detalles", "caracteristicas", "sobre", "del", "los", "las",
-            "una", "uno", "unos", "unas", "que", "cual", "cuales", "como", "donde",
-            "cuando", "para", "por", "con", "sin", "favor", "pana", "amigo", "amiga",
-            "disculpa", "oye", "consulta", "consultar", "busco", "buscando", "interesa",
-            "comprar", "pedir", "llevar", "ordenar", "color", "colores", "talla", "tallas",
-            "solo", "solamente", "unico", "unica", "ese", "esa", "este", "esta", "esos",
-            "esas", "estos", "estas", "aquel", "nada", "mas", "menos", "todo", "todos",
-            "toda", "todas", "algo", "alguno", "alguna", "ninguno", "ninguna", "otro",
-            "otra", "otros", "otras", "mismo", "misma", "ok", "okay", "perfecto",
-            "excelente", "genial", "claro", "bueno", "bien", "mal", "si", "no", "ya",
-            "ahora", "luego", "despues", "antes", "hoy", "manana", "ayer", "porfa",
-            "gracias", "muchas", "mucho", "poco", "pocos", "varios", "varias",
-            "cualquier", "cualquiera", "primero", "segundo", "ultimo", "ultima",
-            "unidad", "unidades", "dame", "anotame", "ponme", "agrega", "llevo",
-        }
-        q_stems = [_stem_w(w) for w in cleaned.split() if len(w) >= 3 and w not in stop_q and _stem_w(w) not in stop_q]
+        q_stems = [
+            self._stem_word(w)
+            for w in cleaned.split()
+            if len(w) >= 3 and w not in self.PRODUCT_STOP_WORDS and self._stem_word(w) not in self.PRODUCT_STOP_WORDS
+        ]
 
         matched_items = []
         if q_stems and catalog:
@@ -1710,7 +1929,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 p_text = self._clean_accents(
                     f"{item.get('name', '')} {item.get('category', '')} {item.get('brand', '')} {item.get('sku', '')}"
                 )
-                p_stems = [_stem_w(w) for w in p_text.split() if len(w) >= 3]
+                p_stems = [self._stem_word(w) for w in p_text.split() if len(w) >= 3]
                 if any(qs == ps or (len(qs) >= 4 and (qs in ps or ps in qs)) for qs in q_stems for ps in p_stems):
                     matched_items.append(item)
 
@@ -1820,7 +2039,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     f"• Categoría: {item.get('category') or 'General'};\n"
                     f"• Precio oficial: {price_str};{desc_text}{var_text}\n"
                     f"• Disponibilidad inmediata: {stock_qty} unidades en stock.\n\n"
-                    f"¿Cuántas unidades te gustaría pedir o deseas que te arme el pedido de inmediato?"
+                    f"¿Cuántas unidades deseas pedir para armarte el resumen de compra de inmediato?"
                 )
             else:
                 lines = [f"En {biz_name} contamos con estas {len(matched_items[:6])} opciones disponibles:\n"]
@@ -1829,7 +2048,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     st_qty = 25 if it.get("stock") is None else int(float(it.get("stock")))
                     st_label = f"{st_qty} disp." if st_qty > 0 else "Agotado"
                     lines.append(f"  • {it['name']} ({it.get('category') or 'General'}) — {_fmt_price(it.get('price'))} | {st_label}{punct}")
-                lines.append("\n¿Cuál de estos artículos prefieres o deseas que te dé más detalles de alguno?")
+                lines.append("\n¿Cuál de estos artículos deseas pedir o sobre cuál quieres más detalles?")
                 return "\n".join(lines)
 
         # 7. Active order delivery / pickup confirmation
@@ -1883,7 +2102,43 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                     pass
                 print(f"[Brain] Error checking previous order context: {e}")
 
-        # 8. Business Questions (Warranty, Shipping, Hours, Location, Payment Methods, Discounts, Human Contact, Store Info)
+        # 8. Contextual questions about the active product ("¿Cuánto cuesta en bolívares?", "¿Sirve para iPhone?", "¿Me das más detalles?")
+        active_prod = self._find_active_product_in_context(
+            catalog=catalog,
+            conversation_id=conversation_id,
+            business_id=biz.get("id") or context.get("business_id"),
+            context=context,
+        )
+        if active_prod and self._has_any_term(
+            cleaned,
+            (
+                "cuanto cuesta", "cuanto vale", "cuanto sale", "que precio", "en bolivares", "en bs",
+                "sirve para", "compatible", "caracteristicas", "especificaciones", "mas detalles",
+                "que tal es", "como funciona", "cuantos quedan", "hay disponible",
+            ),
+        ):
+            p_price = float(active_prod.get("price") or 0)
+            p_stock = 25 if active_prod.get("stock") is None else int(float(active_prod.get("stock") or 0))
+            p_desc = f" {active_prod['description']}." if active_prod.get("description") else ""
+            return (
+                f"Sobre {active_prod['name']} en {biz_name}:{p_desc}\n\n"
+                f"• Precio oficial: {_fmt_price(p_price)};\n"
+                f"• Disponibilidad actual: {p_stock} unidades en stock;\n"
+                f"• Garantía: Producto verificado con garantía directa por defecto de fábrica.\n\n"
+                f"Si deseas pedirlo, dime cuántas unidades te gustaría llevar."
+            )
+
+        # 9. Business Questions (Store Identity, How to Buy, Warranty, Shipping, Hours, Location, Payment Methods, Discounts, Human Contact)
+        if self._has_any_term(cleaned, ("como pedir", "como comprar", "como hago para pedir", "como hago para comprar", "como se compra", "como es el proceso", "proceso de compra")):
+            m_labels = ", ".join(m["label"] for m in pay_methods) if pay_methods else "Pago Móvil, Binance Pay, Zelle o Transferencia"
+            return (
+                f"Comprar en {biz_name} por aquí es muy sencillo:\n\n"
+                f"1. Indícame qué artículo de nuestro catálogo deseas pedir y cuántas unidades;\n"
+                f"2. Dime si prefieres servicio de delivery a domicilio o retiro personal en tienda;\n"
+                f"3. Realiza el pago mediante cualquiera de nuestros métodos activos ({m_labels}) y envíame el número de referencia por este chat para aprobar tu orden.\n\n"
+                f"¿Qué artículo te gustaría pedir?"
+            )
+
         if self._has_any_term(cleaned, ("que tipo de tienda", "que tipo de negocio", "a que se dedican", "quienes son", "sobre la tienda")):
             desc = biz.get("description") or profile.get("short_description") or ""
             desc_part = f" {desc}" if desc else ""
@@ -1894,7 +2149,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             pol_note = f" Según nuestras políticas: {pol[:260]}." if pol else ""
             return (
                 f"En {biz_name} todos nuestros artículos son verificados antes de cada entrega y cuentan con respaldo por defectos de fábrica.{pol_note} "
-                f"¿Qué artículo del catálogo deseas consultar?"
+                f"¿Qué artículo del catálogo deseas consultar o pedir?"
             )
 
         if self._has_any_term(cleaned, ("envio", "envios", "delivery", "domicilio", "despacho", "retiro", "tienda fisica", "llevan", "entregan")):
@@ -2011,11 +2266,16 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 f"o si me indicas qué producto o duda tienes, te respondo de inmediato."
             )
 
-        # 9. Only report "no contamos con «X»" when the user explicitly asked for a product availability/price
+        # 10. Negative / postponement ("no gracias", "solo estaba viendo", "luego te aviso")
+        if self._has_any_term(cleaned, ("no gracias", "solo estaba viendo", "solo viendo", "luego te aviso", "despues te aviso", "otro dia", "cancelar")):
+            return f"¡Con todo gusto! En {biz_name} estamos a tu completa disposición cuando lo necesites. Si te surge cualquier otra consulta, escríbeme con confianza."
+
+        # 11. Only report "no contamos con «X»" when the user explicitly asked for a product availability/price/order
+        #     and `q_stems` contains a genuine noun not in PRODUCT_STOP_WORDS
         explicit_product_inquiry = self._has_any_term(
             cleaned,
             ("tienen", "tienes", "venden", "vende", "hay", "manejan", "busco", "precio de", "cuanto cuesta", "cuanto vale", "en cuanto sale"),
-        )
+        ) or self._has_purchase_intent(user_message)
         if explicit_product_inquiry and q_stems and catalog:
             requested_term = " ".join(q_stems[:3])
             return (
@@ -2023,15 +2283,15 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                 + _format_full_catalog()
             )
 
-        # 10. Any remaining product/stock keywords -> show full catalog
+        # 12. Any remaining product/stock keywords -> show full catalog
         if self._has_any_term(cleaned, ("producto", "productos", "disponible", "disponibles", "catalogo", "venden", "tienen", "unidad", "unidades", "stock", "cuantas", "cantidad", "lista", "precios", "mostrar", "ver")):
             return _format_full_catalog()
 
-        # 11. Courtesy / thanks
+        # 13. Courtesy / thanks
         if self._has_any_term(cleaned, ("gracias", "muchas gracias", "excelente", "perfecto", "genial", "vale", "ok", "listo")):
             return f"¡Con mucho gusto! En {biz_name} estamos para servirte. Si deseas consultar algún producto o realizar un pedido, indícamelo por aquí."
 
-        # 12. Coherent fallback grounded in the store's real catalog
+        # 14. Coherent fallback grounded in the store's real catalog
         if catalog:
             return _format_full_catalog()
         return f"En {biz_name} estamos a tu disposición. Cuéntame qué producto buscas o qué consulta tienes sobre nuestra tienda para ayudarte de inmediato."
@@ -2513,6 +2773,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
             business_id=business_id,
             customer_id=customer_id,
             conversation_id=conversation_id,
+            user_message=user_message,
         )
         should_greet = bool(greeting_state.get("should_greet"))
 
@@ -2797,6 +3058,7 @@ REGLAS ESTRICTAS DE COHERENCIA Y RESPUESTA:
                         currency=biz_info.get("currency") or "USD",
                         conversation_id=conversation_id,
                         business_id=business_id,
+                        context=context,
                     )
                 if parsed_quote:
                     tag_m = re.search(r"(\[BOTON_PAGO:\s*[\d.,]+(?:\s*\|\s*ITEMS:\s*\[[\s\S]*?\])?\s*\])", parsed_quote)
